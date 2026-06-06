@@ -1,8 +1,11 @@
-using CampusLibrary.Api._2_Shared;
-using CampusLibrary.Api._3_Core.Readers.Application.Dtos;
-using CampusLibrary.Api._3_Core.Readers.Application.Ports;
-using CampusLibrary.Api._3_Core.Readers.Domain;
-namespace CampusLibrary.Api._3_Core.Readers.Application.UseCases;
+using CampusLibraryApi._2_Shared;
+using CampusLibraryApi._2_Shared._1_Ports;
+using CampusLibraryApi._3_Core.Readers._1_Ports;
+using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
+using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
+using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
+using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
+namespace CampusLibraryApi._3_Core.Readers._2_Application.UseCases;
 
 public sealed class ReaderUcCreate(
    IReaderRepository readerRepository,

@@ -1,6 +1,8 @@
-using CampusLibrary.Api._2_Shared;
-using CampusLibrary.Api._4_Infrastructure.Persistence;
-using CampusLibrary.Api.Configure;
+using CampusLibraryApi._2_Shared._1_Ports;
+using CampusLibraryApi._3_Core.Readers._1_Ports;
+using CampusLibraryApi._4_Infrastructure.Persistence;
+using CampusLibraryApi._4_Infrastructure.Persistence.Database;
+using CampusLibraryApi.Configure;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);

@@ -1,10 +1,9 @@
-using CampusLibrary.Api._2_Shared;
-using CampusLibrary.Api._3_Core.Readers.Application.Dtos;
-using CampusLibrary.Api._3_Core.Readers.Application.Ports;
-using CampusLibrary.Api._3_Core.Readers.Domain;
-using CampusLibrary.Api._4_Infrastructure.Persistence;
+using CampusLibraryApi._2_Shared;
+using CampusLibraryApi._3_Core.Readers._1_Ports;
+using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
+using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
 using Microsoft.EntityFrameworkCore;
-namespace CampusLibrary.Api._4_Infrastructure.Readers;
+namespace CampusLibraryApi._4_Infrastructure.Persistence.ReadModels;
 
 internal sealed class ReaderReadModelEf(
    IReadersDbContext dbContext

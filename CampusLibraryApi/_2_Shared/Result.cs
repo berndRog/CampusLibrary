@@ -1,4 +1,5 @@
-namespace CampusLibrary.Api._2_Shared;
+using CampusLibraryApi._2_Shared._3_Domain.Errors;
+namespace CampusLibraryApi._2_Shared;
 
 public class Result {
 

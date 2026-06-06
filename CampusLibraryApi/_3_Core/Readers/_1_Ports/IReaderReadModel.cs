@@ -1,6 +1,6 @@
-using CampusLibrary.Api._2_Shared;
-using CampusLibrary.Api._3_Core.Readers.Application.Dtos;
-namespace CampusLibrary.Api._3_Core.Readers.Application.Ports;
+using CampusLibraryApi._2_Shared;
+using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
+namespace CampusLibraryApi._3_Core.Readers._1_Ports;
 
 public interface IReaderReadModel {
    Task<Result<IReadOnlyList<ReaderDto>>> SelectAllAsync(CancellationToken ct);

@@ -1,7 +1,8 @@
-using CampusLibrary.Api._3_Core.Readers.Application.Ports;
-using CampusLibrary.Api._3_Core.Readers.Application.UseCases;
-using CampusLibrary.Api._4_Infrastructure.Readers;
-namespace CampusLibrary.Api.Configure;
+using CampusLibraryApi._3_Core.Readers._1_Ports;
+using CampusLibraryApi._3_Core.Readers._2_Application.UseCases;
+using CampusLibraryApi._4_Infrastructure.Persistence.ReadModels;
+using CampusLibraryApi._4_Infrastructure.Persistence.Repositories;
+namespace CampusLibraryApi.Configure;
 
 public static class DiReaders {
 

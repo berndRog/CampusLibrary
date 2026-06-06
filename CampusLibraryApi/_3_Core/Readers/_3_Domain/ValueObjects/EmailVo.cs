@@ -1,5 +1,6 @@
-using CampusLibrary.Api._2_Shared;
-namespace CampusLibrary.Api._3_Core.Readers.Domain;
+using CampusLibraryApi._2_Shared;
+using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
+namespace CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
 
 public sealed record EmailVo {
 

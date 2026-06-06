@@ -1,8 +1,8 @@
-using CampusLibrary.Api._3_Core.Readers.Application.Dtos;
-using CampusLibrary.Api._3_Core.Readers.Application.Ports;
-using CampusLibrary.Api._3_Core.Readers.Application.UseCases;
+using CampusLibraryApi._3_Core.Readers._1_Ports;
+using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
+using CampusLibraryApi._3_Core.Readers._2_Application.UseCases;
 using Microsoft.AspNetCore.Mvc;
-namespace CampusLibrary.Api._1_Web.Controllers;
+namespace CampusLibraryApi._1_Web.Controllers;
 
 [ApiController]
 [Route("library/v1/readers")]

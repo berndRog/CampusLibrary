@@ -1,5 +1,5 @@
-using CampusLibrary.Api._2_Shared;
-namespace CampusLibrary.Api._3_Core.Readers.Domain;
+using CampusLibraryApi._2_Shared._3_Domain.Errors;
+namespace CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
 
 public static class ReaderErrors {
 

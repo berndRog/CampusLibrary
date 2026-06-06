@@ -1,6 +1,8 @@
-using CampusLibrary.Api._3_Core.Readers.Domain;
+using CampusLibraryApi._3_Core.Readers._1_Ports;
+using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
+using CampusLibraryApi._4_Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
-namespace CampusLibrary.Api._4_Infrastructure.Persistence;
+namespace CampusLibraryApi._4_Infrastructure.Persistence.Database;
 
 public sealed class LibraryDbContext(
    DbContextOptions<LibraryDbContext> options

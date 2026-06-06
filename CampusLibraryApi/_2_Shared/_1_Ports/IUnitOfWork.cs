@@ -1,4 +1,4 @@
-namespace CampusLibrary.Api._2_Shared;
+namespace CampusLibraryApi._2_Shared._1_Ports;
 
 public interface IUnitOfWork {
 

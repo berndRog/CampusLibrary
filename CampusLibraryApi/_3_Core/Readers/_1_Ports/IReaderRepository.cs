@@ -1,5 +1,5 @@
-using CampusLibrary.Api._3_Core.Readers.Domain;
-namespace CampusLibrary.Api._3_Core.Readers.Application.Ports;
+using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
+namespace CampusLibraryApi._3_Core.Readers._1_Ports;
 
 public interface IReaderRepository {
    Task<bool> ExistsBySubjectAsync(string subject, CancellationToken ct);

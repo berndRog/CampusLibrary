@@ -1,7 +1,8 @@
-using CampusLibrary.Api._3_Core.Readers.Domain;
+using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
+using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-namespace CampusLibrary.Api._4_Infrastructure.Persistence;
+namespace CampusLibraryApi._4_Infrastructure.Persistence.Configurations;
 
 internal sealed class ConfigReader : IEntityTypeConfiguration<Reader> {
    

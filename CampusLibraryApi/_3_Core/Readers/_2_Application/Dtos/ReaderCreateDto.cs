@@ -1,4 +1,4 @@
-namespace CampusLibrary.Api._3_Core.Readers.Application.Dtos;
+namespace CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
 
 public sealed record ReaderCreateDto(
    string Subject,
