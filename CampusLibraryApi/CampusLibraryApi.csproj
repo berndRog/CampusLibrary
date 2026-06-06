@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Configure\" />
     <Folder Include="_2_Shared\_2_Application\" />
     <Folder Include="_3_Core\" />
   </ItemGroup>
