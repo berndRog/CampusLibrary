@@ -1,0 +1,21 @@
+@baseUrl = https://localhost:8010/library/v1
+
+### Create Reader
+POST {{baseUrl}}/readers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "subject": "reader-001",
+  "email": "reader1@library.local",
+  "displayName": "Reader One"
+}
+
+### Select all Readers
+GET {{baseUrl}}/readers
+Accept: application/json
+
+### Find Reader by Id
+@readerId = 00000000-0000-0000-0000-000000000000
+GET {{baseUrl}}/readers/{{readerId}}
+Accept: application/json
