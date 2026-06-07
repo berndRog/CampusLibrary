@@ -7,6 +7,7 @@ using CampusLibraryApi._3_Core.Readers._2_Application.Mappings;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
+
 namespace CampusLibraryApi._3_Core.Readers._2_Application.UseCases;
 
 public sealed class ReaderUcCreate(
@@ -20,22 +21,23 @@ public sealed class ReaderUcCreate(
       CancellationToken ct
    ) {
       if (dto == default)
-         return Result<ReaderDto>.Failure(ReaderErrors.CustomerCreateDtoRequired);
+         return Result<ReaderDto>.Failure(ReaderErrors.ReaderCreateDtoRequired);
 
       var subject = dto.Subject.Trim();
       if (await repository.ExistsBySubjectAsync(subject, ct))
          return Result<ReaderDto>.Failure(ReaderErrors.SubjectAlreadyExists);
 
       var resultEmail = EmailVo.Create(dto.Email);
-      if (!resultEmail.IsSuccess || resultEmail.Value is null)
-         return Result<ReaderDto>.Failure(resultEmail.Error!);
-      var emailVo = resultEmail.Value;
-      // check email uniqueness
-      if (await repository.FindByEmailAsync(emailVo, ct) != null) {
-         return Result<ReaderDto>.Failure(ReaderErrors.EmailAlreadyInUse);
-      }
+      if (resultEmail.IsFailure)
+         return Result<ReaderDto>.Failure(resultEmail.Error);
 
-      // validate address if provided and create AddressVo
+      var emailVo = resultEmail.Value;
+
+      // Check email uniqueness.
+      if (await repository.FindByEmailAsync(emailVo, ct) is not null)
+         return Result<ReaderDto>.Failure(ReaderErrors.EmailAlreadyInUse);
+
+      // Validate address and create AddressVo.
       var addressDto = dto.AddressDto;
       var resultAddress = AddressVo.Create(
          street: addressDto.Street,
@@ -45,15 +47,17 @@ public sealed class ReaderUcCreate(
       );
       if (resultAddress.IsFailure)
          return Result<ReaderDto>.Failure(resultAddress.Error);
+
       var addressVo = resultAddress.Value;
 
-      // Resolve (or generate) aggregate id
-      var resultId = EntityId.Resolve(dto.Id, ReaderErrors.InvalidEmail);
+      // Resolve or generate aggregate id.
+      var resultId = EntityId.Resolve(dto.Id, ReaderErrors.InvalidId);
       if (resultId.IsFailure)
          return Result<ReaderDto>.Failure(resultId.Error);
+
       var id = resultId.Value;
 
-      // create a Reader entity using factory method 
+      // Create Reader aggregate using factory method.
       var resultReader = Reader.Create(
          id: id,
          subject: subject,
@@ -63,18 +67,19 @@ public sealed class ReaderUcCreate(
          addressVo: addressVo,
          createdAt: clock.UtcNow
       );
-      if (!resultReader.IsSuccess || resultReader.Value is null)
-         return Result<ReaderDto>.Failure(resultReader.Error!);
+      if (resultReader.IsFailure)
+         return Result<ReaderDto>.Failure(resultReader.Error);
+
       var reader = resultReader.Value;
 
-      // Add reader to repository (tracked by EF)
+      // Add reader to repository (tracked by EF Core).
       repository.Add(reader);
-      
-      var rows = await unitOfWork.SaveAllChangesAsync("ReadUcCreate", ct);
-      
-      logger.LogInformation("CustomerUcCreate={id} rows={rows}",
+
+      var rows = await unitOfWork.SaveAllChangesAsync("ReaderUcCreate", ct);
+
+      logger.LogInformation("ReaderUcCreate: readerId={ReaderId} rows={Rows}",
          reader.Id, rows);
-      
+
       return Result<ReaderDto>.Success(reader.ToReaderDto());
    }
 }
