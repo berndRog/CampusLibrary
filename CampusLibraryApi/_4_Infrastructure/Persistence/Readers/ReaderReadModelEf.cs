@@ -36,9 +36,14 @@ internal sealed class ReaderReadModelEf(
    }
    
    public async Task<Result<ReaderDto>> FindByEmailAsync(
-      EmailVo emailVo, 
+      string email, 
       CancellationToken ct
    ) {
+      var result = EmailVo.Create(email.Trim());
+      if(result.IsFailure)
+         return Result<ReaderDto>.Failure(result.Error);
+      var emailVo = result.Value;
+      
       var reader = await dbContext.Readers
          .AsNoTracking()
          .Where(r => r.EmailVo == emailVo)

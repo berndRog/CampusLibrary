@@ -12,6 +12,11 @@ public interface IReaderReadModel {
       string subject, 
       CancellationToken ct
    );
+   
+   Task<Result<ReaderDto>> FindByEmailAsync(
+      string email, 
+      CancellationToken ct
+   );
 
    Task<Result<IReadOnlyList<ReaderDto>>> SelectAllAsync(CancellationToken ct);
 }
