@@ -18,7 +18,8 @@
 
   <ItemGroup>
     <Folder Include="Configure\" />
-    <Folder Include="_2_Shared\_2_Application\" />
+    <Folder Include="_2_Shared\_3_Domain\Enums\" />
+    <Folder Include="_2_Shared\_3_Domain\ValueObjects\" />
     <Folder Include="_3_Core\" />
   </ItemGroup>
 
