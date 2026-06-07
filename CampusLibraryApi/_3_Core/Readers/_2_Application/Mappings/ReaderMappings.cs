@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
@@ -13,6 +14,23 @@ public static class ReaderMappings {
       Email: reader.EmailVo.Value,
       AddressDto: reader.AddressVo.ToAddressDto()
    );
+   
+   // when using in EFCore Select
+   public static readonly Expression<Func<Reader, ReaderDto>> ToReaderDtoExpr =
+      reader => new ReaderDto(
+         reader.Id,
+         reader.Subject,
+         reader.Firstname,
+         reader.Lastname,
+         reader.EmailVo.Value,
+         new AddressDto(
+            reader.AddressVo.Street,
+            reader.AddressVo.PostalCode,
+            reader.AddressVo.City,
+            reader.AddressVo.Country
+         )
+      );
+   
    
    public static AddressDto ToAddressDto(this AddressVo addressVo) => new AddressDto(
       Street: addressVo.Street,

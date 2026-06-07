@@ -15,7 +15,7 @@ internal sealed class ReaderReadModelEf(
       var reader = await dbContext.Readers
          .AsNoTracking()
          .Where(r => r.Id == id)
-         .Select(r => r.ToReaderDto())
+         .Select(ReaderMappings.ToReaderDtoExpr)
          .SingleOrDefaultAsync(ct);
 
       return reader is null
@@ -27,7 +27,7 @@ internal sealed class ReaderReadModelEf(
       var reader = await dbContext.Readers
          .AsNoTracking()
          .Where(r => r.Subject == subject)
-         .Select(r => r.ToReaderDto())
+         .Select(ReaderMappings.ToReaderDtoExpr)
          .SingleOrDefaultAsync(ct);
 
       return reader is null
@@ -47,7 +47,7 @@ internal sealed class ReaderReadModelEf(
       var reader = await dbContext.Readers
          .AsNoTracking()
          .Where(r => r.EmailVo == emailVo)
-         .Select(r => r.ToReaderDto())
+         .Select(ReaderMappings.ToReaderDtoExpr)
          .SingleOrDefaultAsync(ct);
 
       return reader is null
@@ -58,8 +58,9 @@ internal sealed class ReaderReadModelEf(
    public async Task<Result<IReadOnlyList<ReaderDto>>> SelectAllAsync(CancellationToken ct) {
       var readers = await dbContext.Readers
          .AsNoTracking()
-         .OrderBy(r => r.Firstname)
-         .Select(r => r.ToReaderDto())
+         .OrderBy(r => r.Lastname)
+         .ThenBy(r => r.Firstname)
+         .Select(ReaderMappings.ToReaderDtoExpr)
          .ToListAsync(ct);
 
       return Result<IReadOnlyList<ReaderDto>>.Success(readers);

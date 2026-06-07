@@ -1,0 +1,241 @@
+@baseUrl = http://localhost:5000/library/v1
+
+### ---------------------------------------------------------------------------
+### Reader: Create
+### ---------------------------------------------------------------------------
+# Erwartung:
+# - 201 Created
+# - Location-Header auf GET by id
+# - Response enthält ReaderDto
+#
+# Hinweis:
+# Id ist optional.
+# Wenn Id = null, wird im Use Case eine neue Guid erzeugt.
+
+POST {{baseUrl}}/readers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "subject": "reader-001",
+  "firstname": "Max",
+  "lastname": "Mustermann",
+  "email": "Max.Mustermann@Example.com",
+  "addressDto": {
+    "street": "Musterstraße 12",
+    "postalCode": "12345",
+    "city": "Musterstadt",
+    "country": "Germany"
+  },
+  "id": null
+}
+
+
+### ---------------------------------------------------------------------------
+### Reader: Create with fixed Id
+### ---------------------------------------------------------------------------
+# Diese Variante ist nützlich für wiederholbare Tests.
+
+@readerId = 11111111-1111-1111-1111-111111111111
+@readerEmail = erika.mustermann@example.com
+
+POST {{baseUrl}}/readers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "subject": "reader-002",
+  "firstname": "Erika",
+  "lastname": "Mustermann",
+  "email": "{{readerEmail}}",
+  "addressDto": {
+    "street": "Beispielweg 7",
+    "postalCode": "54321",
+    "city": "Beispielstadt",
+    "country": "Germany"
+  },
+  "id": "{{readerId}}"
+}
+
+
+### ---------------------------------------------------------------------------
+### Reader: Get all
+### ---------------------------------------------------------------------------
+# Erwartung:
+# - 200 OK
+# - Liste von ReaderDto
+
+GET {{baseUrl}}/readers
+Accept: application/json
+
+
+### ---------------------------------------------------------------------------
+### Reader: Get by Id
+### ---------------------------------------------------------------------------
+# Erwartung:
+# - 200 OK, wenn Reader existiert
+# - 404 Not Found, wenn Reader nicht existiert
+
+GET {{baseUrl}}/readers/{{readerId}}
+Accept: application/json
+
+
+### ---------------------------------------------------------------------------
+### Reader: Get by Email
+### ---------------------------------------------------------------------------
+# Route:
+# GET /library/v1/readers/email?email=...
+#
+# Erwartung:
+# - 200 OK, wenn Reader existiert
+# - 404 Not Found, wenn kein Reader mit dieser E-Mail existiert
+# - 400 Bad Request, wenn die E-Mail ungültig ist
+#
+# Hinweis:
+# Die E-Mail darf bewusst anders geschrieben sein.
+# EmailVo normalisiert auf lowercase.
+
+GET {{baseUrl}}/readers/email?email=Erika.Mustermann@Example.com
+Accept: application/json
+
+
+### ---------------------------------------------------------------------------
+### Reader: Get by Email using variable
+### ---------------------------------------------------------------------------
+
+GET {{baseUrl}}/readers/email?email={{readerEmail}}
+Accept: application/json
+
+
+### ---------------------------------------------------------------------------
+### Negative Test: Create duplicate subject
+### ---------------------------------------------------------------------------
+# Erwartung:
+# - 409 Conflict
+# sofern reader-002 bereits existiert
+
+POST {{baseUrl}}/readers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "subject": "reader-002",
+  "firstname": "Erika",
+  "lastname": "Musterfrau",
+  "email": "duplicate.subject@example.com",
+  "addressDto": {
+    "street": "Neue Straße 1",
+    "postalCode": "11111",
+    "city": "Teststadt",
+    "country": "Germany"
+  },
+  "id": null
+}
+
+
+### ---------------------------------------------------------------------------
+### Negative Test: Create duplicate email
+### ---------------------------------------------------------------------------
+# Erwartung:
+# - 409 Conflict
+# sofern erika.mustermann@example.com bereits existiert
+
+POST {{baseUrl}}/readers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "subject": "reader-003",
+  "firstname": "Erika",
+  "lastname": "Musterfrau",
+  "email": "{{readerEmail}}",
+  "addressDto": {
+    "street": "Neue Straße 1",
+    "postalCode": "11111",
+    "city": "Teststadt",
+    "country": "Germany"
+  },
+  "id": null
+}
+
+
+### ---------------------------------------------------------------------------
+### Negative Test: Get by unknown Id
+### ---------------------------------------------------------------------------
+# Erwartung:
+# - 404 Not Found
+
+GET {{baseUrl}}/readers/99999999-9999-9999-9999-999999999999
+Accept: application/json
+
+
+### ---------------------------------------------------------------------------
+### Negative Test: Get by unknown Email
+### ---------------------------------------------------------------------------
+# Erwartung:
+# - 404 Not Found
+
+GET {{baseUrl}}/readers/email?email=unknown@example.com
+Accept: application/json
+
+
+### ---------------------------------------------------------------------------
+### Negative Test: Get by invalid Email
+### ---------------------------------------------------------------------------
+# Erwartung:
+# - 400 Bad Request
+# Falls der Controller DomainError.Status korrekt auf HTTP abbildet.
+# Wenn aktuell noch hart NotFound(...) verwendet wird, kommt hier vermutlich falsch 404.
+
+GET {{baseUrl}}/readers/email?email=invalid-email
+Accept: application/json
+
+
+### ---------------------------------------------------------------------------
+### Negative Test: Create invalid firstname
+### ---------------------------------------------------------------------------
+# Erwartung:
+# - 400 Bad Request
+
+POST {{baseUrl}}/readers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "subject": "reader-004",
+  "firstname": "A",
+  "lastname": "Mustermann",
+  "email": "reader004@example.com",
+  "addressDto": {
+    "street": "Musterstraße 12",
+    "postalCode": "12345",
+    "city": "Musterstadt",
+    "country": "Germany"
+  },
+  "id": null
+}
+
+
+### ---------------------------------------------------------------------------
+### Negative Test: Create invalid Id
+### ---------------------------------------------------------------------------
+# Erwartung:
+# - 400 Bad Request
+
+POST {{baseUrl}}/readers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "subject": "reader-005",
+  "firstname": "Max",
+  "lastname": "Mustermann",
+  "email": "reader005@example.com",
+  "addressDto": {
+    "street": "Musterstraße 12",
+    "postalCode": "12345",
+    "city": "Musterstadt",
+    "country": "Germany"
+  },
+  "id": "not-a-guid"
+}
