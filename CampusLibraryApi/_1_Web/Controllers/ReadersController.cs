@@ -11,8 +11,8 @@ public sealed class ReadersController(
    ReaderUcCreate readerUcCreate
 ) : ControllerBase {
 
-   [HttpGet("readers")]
-   public async Task<ActionResult<IReadOnlyList<ReaderDto>>> SelectAllAsync(CancellationToken ct) {
+   [HttpGet("readers", Name = nameof(GetAllAsync))]
+   public async Task<ActionResult<IReadOnlyList<ReaderDto>>> GetAllAsync(CancellationToken ct) {
       var result = await readerReadModel.SelectAllAsync(ct);
       
       return result.IsSuccess 
@@ -20,8 +20,8 @@ public sealed class ReadersController(
          : Problem(result.Error?.Message);
    }
 
-   [HttpGet("readers/{id:guid}")]
-   public async Task<ActionResult<ReaderDto>> FindByIdAsync(
+   [HttpGet("readers/{id:guid}", Name = nameof(GetByIdAsync))]
+   public async Task<ActionResult<ReaderDto>> GetByIdAsync(
       [FromRoute] Guid id, 
       CancellationToken ct
    ) {
@@ -33,8 +33,8 @@ public sealed class ReadersController(
          : NotFound(result.Error);
    }
 
-   [HttpGet("readers/email")]
-   public async Task<ActionResult<ReaderDto>> FindByEmailAsync(
+   [HttpGet("readers/email", Name=nameof(GetByEmailAsync))]
+   public async Task<ActionResult<ReaderDto>> GetByEmailAsync(
       [FromQuery] string email, 
       CancellationToken ct
    ) {
@@ -47,7 +47,7 @@ public sealed class ReadersController(
          : NotFound(result.Error);
    }
    
-   [HttpPost("readers")]
+   [HttpPost("readers", Name = nameof(CreateAsync))]
    public async Task<ActionResult<ReaderDto>> CreateAsync(
       [FromBody] ReaderCreateDto dto, 
       CancellationToken ct
@@ -57,8 +57,8 @@ public sealed class ReadersController(
       if (!result.IsSuccess || result.Value is null)
          return BadRequest(result.Error);
      
-      return CreatedAtAction(
-         nameof(FindByIdAsync),
+      return CreatedAtRoute(
+         nameof(GetByIdAsync),
          new { id = result.Value.Id },
          result.Value
       );

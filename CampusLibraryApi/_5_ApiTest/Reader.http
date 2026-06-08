@@ -1,119 +1,95 @@
 @baseUrl = http://localhost:5000/library/v1
 
-### ---------------------------------------------------------------------------
-### Reader: Create
-### ---------------------------------------------------------------------------
-# Erwartung:
-# - 201 Created
-# - Location-Header auf GET by id
-# - Response enthält ReaderDto
-#
-# Hinweis:
-# Id ist optional.
-# Wenn Id = null, wird im Use Case eine neue Guid erzeugt.
-
+### 
+# create reader 1
 POST {{baseUrl}}/readers
 Content-Type: application/json
 Accept: application/json
 
 {
+  "firstname": "Erika",
+  "lastname": "Mustermann",
+  "email": "e.mustermann@t-online.de",
+  "addressDto": {
+    "street": "Hauptstr. 12",
+    "postalCode": "29556",
+    "city": "Suderburg",
+    "country": "DE"
+  },
   "subject": "reader-001",
+  "id": "10000000-0000-0000-0000-000000000000"
+}
+
+###
+# create reader 2
+POST {{baseUrl}}/readers
+Content-Type: application/json
+Accept: application/json
+
+{
   "firstname": "Max",
   "lastname": "Mustermann",
-  "email": "Max.Mustermann@Example.com",
+  "email": "m.mustermann@gmail.com",
   "addressDto": {
-    "street": "Musterstraße 12",
-    "postalCode": "12345",
-    "city": "Musterstadt",
-    "country": "Germany"
+    "street": "Hauptstr. 12",
+    "postalCode": "29556",
+    "city": "Suderburg",
+    "country": "DE"
   },
+  "subject": "reader-002",
+  "id": "20000000-0000-0000-0000-000000000000"
+}
+
+###
+#
+POST {{baseUrl}}/readers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "firstname": "Arne",
+  "lastname": "Arndt",
+  "email": "a.arndt@t-online.de",
+  "addressDto": {
+    "street": "Neuperverstr. 29",
+    "postalCode": "29410",
+    "city": "Salzwedel",
+    "country": "DE"
+  },
+  "subject": "reader-003",
   "id": null
 }
 
 
-### ---------------------------------------------------------------------------
-### Reader: Create with fixed Id
-### ---------------------------------------------------------------------------
-# Diese Variante ist nützlich für wiederholbare Tests.
-
-@readerId = 11111111-1111-1111-1111-111111111111
-@readerEmail = erika.mustermann@example.com
-
-POST {{baseUrl}}/readers
-Content-Type: application/json
-Accept: application/json
-
-{
-  "subject": "reader-002",
-  "firstname": "Erika",
-  "lastname": "Mustermann",
-  "email": "{{readerEmail}}",
-  "addressDto": {
-    "street": "Beispielweg 7",
-    "postalCode": "54321",
-    "city": "Beispielstadt",
-    "country": "Germany"
-  },
-  "id": "{{readerId}}"
-}
-
-
-### ---------------------------------------------------------------------------
-### Reader: Get all
-### ---------------------------------------------------------------------------
-# Erwartung:
-# - 200 OK
-# - Liste von ReaderDto
-
+### 
+# Reader: Get all
 GET {{baseUrl}}/readers
 Accept: application/json
 
 
-### ---------------------------------------------------------------------------
-### Reader: Get by Id
-### ---------------------------------------------------------------------------
-# Erwartung:
-# - 200 OK, wenn Reader existiert
-# - 404 Not Found, wenn Reader nicht existiert
+###
+#Reader: Get by Id
+GET {{baseUrl}}/readers/10000000-0000-0000-0000-000000000000
+Accept: application/json
 
-GET {{baseUrl}}/readers/{{readerId}}
+###
+#Reader: Get by Id
+GET {{baseUrl}}/readers/20000000-0000-0000-0000-000000000000
 Accept: application/json
 
 
-### ---------------------------------------------------------------------------
-### Reader: Get by Email
-### ---------------------------------------------------------------------------
-# Route:
-# GET /library/v1/readers/email?email=...
-#
-# Erwartung:
-# - 200 OK, wenn Reader existiert
-# - 404 Not Found, wenn kein Reader mit dieser E-Mail existiert
-# - 400 Bad Request, wenn die E-Mail ungültig ist
-#
-# Hinweis:
-# Die E-Mail darf bewusst anders geschrieben sein.
-# EmailVo normalisiert auf lowercase.
-
-GET {{baseUrl}}/readers/email?email=Erika.Mustermann@Example.com
+###
+# Reader: Get reader 1 by Email
+GET {{baseUrl}}/readers/email?email=e.mustermann@t-online.de
 Accept: application/json
 
-
-### ---------------------------------------------------------------------------
-### Reader: Get by Email using variable
-### ---------------------------------------------------------------------------
-
-GET {{baseUrl}}/readers/email?email={{readerEmail}}
+###
+# Reader: Get reader 2 by Email
+GET {{baseUrl}}/readers/email?email=m.mustermann@gmail.com
 Accept: application/json
 
-
 ### ---------------------------------------------------------------------------
-### Negative Test: Create duplicate subject
-### ---------------------------------------------------------------------------
-# Erwartung:
-# - 409 Conflict
-# sofern reader-002 bereits existiert
-
+# Negative Test: Create duplicate subject
 POST {{baseUrl}}/readers
 Content-Type: application/json
 Accept: application/json
@@ -133,12 +109,8 @@ Accept: application/json
 }
 
 
-### ---------------------------------------------------------------------------
-### Negative Test: Create duplicate email
-### ---------------------------------------------------------------------------
-# Erwartung:
-# - 409 Conflict
-# sofern erika.mustermann@example.com bereits existiert
+###
+# Negative Test: Create duplicate email
 
 POST {{baseUrl}}/readers
 Content-Type: application/json

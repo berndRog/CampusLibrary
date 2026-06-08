@@ -13,7 +13,10 @@ public sealed record AddressVo {
    public string City { get; private init; } = string.Empty;
    public string? Country { get; private init; }
 
-   // private Ctor
+   // Ctor required by EF Core.
+   private AddressVo() {
+   }
+   // Domain ctor
    private AddressVo(
       string street,
       string postalCode,
