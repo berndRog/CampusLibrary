@@ -33,7 +33,7 @@ public sealed class ReadersController(
       if (result.IsSuccess)
          return Ok(result.Value);
 
-      var problem = ProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+      var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
 
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),
@@ -60,7 +60,7 @@ public sealed class ReadersController(
       if (result.IsSuccess)
          return Ok(result.Value);
 
-      var problem = ProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+      var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
 
       return result.Error.Status switch {
          WebErrorStatus.NotFound => NotFound(problem),
@@ -88,7 +88,7 @@ public sealed class ReadersController(
       if (result.IsSuccess)
          return Ok(result.Value);
 
-      var problem = ProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+      var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
 
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),
@@ -98,7 +98,7 @@ public sealed class ReadersController(
    }
 
    /// <summary>
-   ///    Creates a new reader.
+   /// Creates a new reader.
    /// </summary>
    /// <param name="dto">Reader data used to create the resource.</param>
    /// <param name="ct">Cancellation token.</param>
@@ -123,7 +123,7 @@ public sealed class ReadersController(
          );
       }
 
-      var problem = ProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+      var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
 
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),

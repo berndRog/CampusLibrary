@@ -6,7 +6,7 @@ namespace CampusLibraryApi._1_Web.Common;
 // Factory for creating standardized ProblemDetails objects.
 // Controllers still decide the HTTP response type explicitly.
 // This factory only centralizes the shape of error responses.
-public static class ProblemDetailsFactory {
+public static class DomainProblemDetailsFactory {
    // Create ProblemDetails from a domain error and the current HTTP context.
    public static ProblemDetails FromDomainError(
       DomainError error,
