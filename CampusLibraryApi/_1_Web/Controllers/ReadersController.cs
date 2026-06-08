@@ -27,6 +27,8 @@ public sealed class ReadersController(
    [HttpGet("readers", Name = nameof(GetAllAsync))]
    [ProducesResponseType<IReadOnlyList<ReaderDto>>(StatusCodes.Status200OK)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    public async Task<ActionResult<IReadOnlyList<ReaderDto>>> GetAllAsync(CancellationToken ct) {
       var result = await readerReadModel.SelectAllAsync(ct);
 
@@ -37,6 +39,8 @@ public sealed class ReadersController(
 
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),
+         WebErrorStatus.Unauthorized => Unauthorized(problem),
+         WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
          _ => BadRequest(problem)
       };
    }
@@ -50,6 +54,8 @@ public sealed class ReadersController(
    // Query one reader by id through the read model.
    [HttpGet("readers/{id:guid}", Name = nameof(GetByIdAsync))]
    [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
    public async Task<ActionResult<ReaderDto>> GetByIdAsync(
       [FromRoute] Guid id,
@@ -63,6 +69,8 @@ public sealed class ReadersController(
       var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
 
       return result.Error.Status switch {
+         WebErrorStatus.Unauthorized => Unauthorized(problem),
+         WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
          WebErrorStatus.NotFound => NotFound(problem),
          _ => BadRequest(problem)
       };
@@ -78,6 +86,8 @@ public sealed class ReadersController(
    [HttpGet("readers/email", Name = nameof(GetByEmailAsync))]
    [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
    public async Task<ActionResult<ReaderDto>> GetByEmailAsync(
       [FromQuery] string email,
@@ -92,13 +102,15 @@ public sealed class ReadersController(
 
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),
+         WebErrorStatus.Unauthorized => Unauthorized(problem),
+         WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
          WebErrorStatus.NotFound => NotFound(problem),
          _ => BadRequest(problem)
       };
    }
 
    /// <summary>
-   /// Creates a new reader.
+   ///    Creates a new reader.
    /// </summary>
    /// <param name="dto">Reader data used to create the resource.</param>
    /// <param name="ct">Cancellation token.</param>
@@ -108,6 +120,8 @@ public sealed class ReadersController(
    [Consumes("application/json")]
    [ProducesResponseType<ReaderDto>(StatusCodes.Status201Created)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
    public async Task<ActionResult<ReaderDto>> CreateAsync(
       [FromBody] ReaderCreateDto dto,
@@ -127,6 +141,8 @@ public sealed class ReadersController(
 
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),
+         WebErrorStatus.Unauthorized => Unauthorized(problem),
+         WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
          WebErrorStatus.Conflict => Conflict(problem),
          _ => BadRequest(problem)
       };
@@ -157,9 +173,13 @@ Die Fallunterscheidung im Controller ist bewusst explizit gehalten.
 Dadurch sehen Studierende direkt, welcher DomainError.Status zu welcher
 HTTP-Antwort führt.
 
-ProblemDetailsFactory erzeugt nur das standardisierte Fehlerobjekt.
-Die Entscheidung über BadRequest, NotFound oder Conflict bleibt im
-Controller sichtbar.
+DomainProblemDetailsFactory erzeugt nur das standardisierte Fehlerobjekt.
+Die Entscheidung über BadRequest, Unauthorized, Forbidden, NotFound oder
+Conflict bleibt im Controller sichtbar.
+
+401 Unauthorized und 403 Forbidden sind bereits in Swagger dokumentiert.
+Die Endpunkte können später mit [Authorize] und Policies geschützt werden,
+ohne die API-Dokumentation grundsätzlich neu aufzubauen.
 
 CreatedAtRoute erzeugt bei erfolgreicher Erstellung eine 201-Created-
 Antwort mit Location-Header auf die neu erzeugte Ressource.
@@ -174,6 +194,7 @@ Lernziele
 - Unterschied zwischen GET/ReadModel und POST/UseCase erkennen
 - REST-Verhalten von 201 Created und Location-Header nachvollziehen
 - DomainError.Status explizit auf HTTP-Antworten abbilden
+- 401 Unauthorized und 403 Forbidden unterscheiden
 - ProblemDetails als standardisiertes Fehlerformat verwenden
 - Swagger-Metadaten für API-Dokumentation einsetzen
 - Keine Domainlogik im Controller platzieren
