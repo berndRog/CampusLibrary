@@ -1,3 +1,5 @@
+using CampusLibraryApi._1_Web.Common;
+using CampusLibraryApi._2_Shared._3_Domain.Enums;
 using CampusLibraryApi._3_Core.Readers._1_Ports;
 using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Readers._2_Application.UseCases;
@@ -10,62 +12,124 @@ namespace CampusLibraryApi._1_Web.Controllers;
 // Contains no domain logic.
 [ApiController]
 [Route("library/v1")]
+[Produces("application/json")]
 public sealed class ReadersController(
    IReaderReadModel readerReadModel,
    ReaderUcCreate readerUcCreate
 ) : ControllerBase {
+
+   /// <summary>
+   ///    Returns all readers.
+   /// </summary>
+   /// <param name="ct">Cancellation token.</param>
+   /// <returns>A list of reader resources.</returns>
    // Query all readers through the read model.
    [HttpGet("readers", Name = nameof(GetAllAsync))]
+   [ProducesResponseType<IReadOnlyList<ReaderDto>>(StatusCodes.Status200OK)]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    public async Task<ActionResult<IReadOnlyList<ReaderDto>>> GetAllAsync(CancellationToken ct) {
       var result = await readerReadModel.SelectAllAsync(ct);
 
-      return result.IsSuccess
-         ? Ok(result.Value)
-         : Problem(result.Error?.Message);
+      if (result.IsSuccess)
+         return Ok(result.Value);
+
+      var problem = ProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+
+      return result.Error.Status switch {
+         WebErrorStatus.BadRequest => BadRequest(problem),
+         _ => BadRequest(problem)
+      };
    }
 
+   /// <summary>
+   ///    Returns one reader by id.
+   /// </summary>
+   /// <param name="id">Reader unique id.</param>
+   /// <param name="ct">Cancellation token.</param>
+   /// <returns>The requested reader resource.</returns>
    // Query one reader by id through the read model.
    [HttpGet("readers/{id:guid}", Name = nameof(GetByIdAsync))]
+   [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
    public async Task<ActionResult<ReaderDto>> GetByIdAsync(
       [FromRoute] Guid id,
       CancellationToken ct
    ) {
       var result = await readerReadModel.FindByIdAsync(id, ct);
 
-      return result.IsSuccess
-         ? Ok(result.Value)
-         : NotFound(result.Error);
+      if (result.IsSuccess)
+         return Ok(result.Value);
+
+      var problem = ProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+
+      return result.Error.Status switch {
+         WebErrorStatus.NotFound => NotFound(problem),
+         _ => BadRequest(problem)
+      };
    }
 
+   /// <summary>
+   ///    Returns one reader by email address.
+   /// </summary>
+   /// <param name="email">Reader email address.</param>
+   /// <param name="ct">Cancellation token.</param>
+   /// <returns>The requested reader resource.</returns>
    // Query one reader by email through the read model.
    [HttpGet("readers/email", Name = nameof(GetByEmailAsync))]
+   [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
    public async Task<ActionResult<ReaderDto>> GetByEmailAsync(
       [FromQuery] string email,
       CancellationToken ct
    ) {
       var result = await readerReadModel.FindByEmailAsync(email, ct);
 
-      return result.IsSuccess
-         ? Ok(result.Value)
-         : NotFound(result.Error);
+      if (result.IsSuccess)
+         return Ok(result.Value);
+
+      var problem = ProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+
+      return result.Error.Status switch {
+         WebErrorStatus.BadRequest => BadRequest(problem),
+         WebErrorStatus.NotFound => NotFound(problem),
+         _ => BadRequest(problem)
+      };
    }
 
+   /// <summary>
+   ///    Creates a new reader.
+   /// </summary>
+   /// <param name="dto">Reader data used to create the resource.</param>
+   /// <param name="ct">Cancellation token.</param>
+   /// <returns>The created reader resource.</returns>
    // Create a new reader through the write-side use case.
    [HttpPost("readers", Name = nameof(CreateAsync))]
+   [Consumes("application/json")]
+   [ProducesResponseType<ReaderDto>(StatusCodes.Status201Created)]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
    public async Task<ActionResult<ReaderDto>> CreateAsync(
       [FromBody] ReaderCreateDto dto,
       CancellationToken ct
    ) {
       var result = await readerUcCreate.ExecuteAsync(dto, ct);
 
-      if (!result.IsSuccess || result.Value is null)
-         return BadRequest(result.Error);
+      if (result.IsSuccess) {
+         return CreatedAtRoute(
+            nameof(GetByIdAsync),
+            new { id = result.Value.Id },
+            result.Value
+         );
+      }
 
-      return CreatedAtRoute(
-         nameof(GetByIdAsync),
-         new { id = result.Value.Id },
-         result.Value
-      );
+      var problem = ProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+
+      return result.Error.Status switch {
+         WebErrorStatus.BadRequest => BadRequest(problem),
+         WebErrorStatus.Conflict => Conflict(problem),
+         _ => BadRequest(problem)
+      };
    }
 }
 
@@ -89,8 +153,19 @@ Der POST-Endpunkt verwendet den schreibenden Use Case:
 
 - CreateAsync      -> ReaderUcCreate.ExecuteAsync
 
+Die Fallunterscheidung im Controller ist bewusst explizit gehalten.
+Dadurch sehen Studierende direkt, welcher DomainError.Status zu welcher
+HTTP-Antwort führt.
+
+ProblemDetailsFactory erzeugt nur das standardisierte Fehlerobjekt.
+Die Entscheidung über BadRequest, NotFound oder Conflict bleibt im
+Controller sichtbar.
+
 CreatedAtRoute erzeugt bei erfolgreicher Erstellung eine 201-Created-
 Antwort mit Location-Header auf die neu erzeugte Ressource.
+
+Swagger-Attribute dokumentieren die erwarteten Erfolgs- und Fehlerantworten.
+Sie machen die API für Clients und Tests explizit nachvollziehbar.
 
 Lernziele
 ---------
@@ -98,6 +173,8 @@ Lernziele
 - Controller als HTTP-Adapter verstehen
 - Unterschied zwischen GET/ReadModel und POST/UseCase erkennen
 - REST-Verhalten von 201 Created und Location-Header nachvollziehen
+- DomainError.Status explizit auf HTTP-Antworten abbilden
+- ProblemDetails als standardisiertes Fehlerformat verwenden
+- Swagger-Metadaten für API-Dokumentation einsetzen
 - Keine Domainlogik im Controller platzieren
-- Result in HTTP-Antworten übersetzen
 */
