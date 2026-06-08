@@ -15,7 +15,7 @@ namespace CampusLibraryApi._1_Web.Controllers;
 [Produces("application/json")]
 public sealed class ReadersController(
    IReaderReadModel readerReadModel,
-   ReaderUcCreate readerUcCreate
+   IReaderUseCases readerUseCases
 ) : ControllerBase {
 
    /// <summary>
@@ -127,7 +127,7 @@ public sealed class ReadersController(
       [FromBody] ReaderCreateDto dto,
       CancellationToken ct
    ) {
-      var result = await readerUcCreate.ExecuteAsync(dto, ct);
+      var result = await readerUseCases.CreateAsync(dto, ct);
 
       if (result.IsSuccess) {
          return CreatedAtRoute(

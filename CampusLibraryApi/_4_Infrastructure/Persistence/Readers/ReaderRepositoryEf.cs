@@ -1,8 +1,9 @@
+using System.Runtime.CompilerServices;
 using CampusLibraryApi._3_Core.Readers._1_Ports;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
-
+[assembly: InternalsVisibleTo("CampusLibraryApiTest")]
 namespace CampusLibraryApi._4_Infrastructure.Persistence.Repositories;
 
 // EF Core implementation of the Reader repository port.

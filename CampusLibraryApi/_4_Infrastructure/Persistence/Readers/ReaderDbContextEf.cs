@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 using CampusLibraryApi._3_Core.Readers._1_Ports;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
 using CampusLibraryApi._4_Infrastructure.Persistence.Database;
-[assembly: InternalsVisibleTo("BankingApiTest")]
+[assembly: InternalsVisibleTo("CampusLibraryApiTest")]
 namespace CampusLibraryApi._4_Infrastructure.Persistence.Readers;
 
 internal sealed class ReaderDbContextEf(
