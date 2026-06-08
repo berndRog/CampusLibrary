@@ -3,11 +3,10 @@ using CampusLibraryApi._2_Shared._3_Domain.Errors;
 namespace CampusLibraryApi._2_Shared._3_Domain.Entities;
 
 // Base class for all aggregate roots in the domain model.
-//
 // Responsibilities:
 // - Inherits identity semantics from Entity.
 // - Manages audit timestamps (CreatedAt, UpdatedAt).
-// - Receives timestamps from the application layer.
+// - Receives UTC timestamps from the application layer.
 // - Does not access the system clock directly.
 public abstract class AggregateRoot : Entity {
    // Timestamp when the aggregate was created. Should only be set once.
@@ -21,7 +20,7 @@ public abstract class AggregateRoot : Entity {
    }
 
    // Explicitly sets the creation timestamp.
-   // Expected domain/application errors are returned as Result, not thrown.
+   // Expected validation errors are returned as Result, not thrown.
    protected Result Initialize(DateTime createdAt) {
       if (createdAt == default)
          return Result.Failure(AggregateErrors.CreatedAtRequired);
@@ -36,7 +35,7 @@ public abstract class AggregateRoot : Entity {
    }
 
    // Updates the modification timestamp.
-   // Expected domain/application errors are returned as Result, not thrown.
+   // Expected validation errors are returned as Result, not thrown.
    protected Result Touch(DateTime updatedAt) {
       if (updatedAt == default)
          return Result.Failure(AggregateErrors.UpdatedAtRequired);
@@ -54,36 +53,40 @@ public abstract class AggregateRoot : Entity {
 }
 
 /*
-================================================================================
-DIDAKTIK UND LERNZIELE (Aggregate Root – Minimalversion)
-================================================================================
+Didaktik
+--------
 
-1. Unterschied zwischen Entity und AggregateRoot verstehen
-   - Entity: Identitätskonzept.
-   - AggregateRoot: Einstiegspunkt eines Konsistenzbereichs (Consistency Boundary).
+AggregateRoot erweitert Entity um den Lebenszyklus eines Aggregats.
 
-2. Zeit als Abhängigkeit modellieren
-   - Kein direkter Zugriff auf DateTime.UtcNow im Aggregate.
-   - Der Zeitpunkt wird von außen übergeben, typischerweise aus IClock im Use Case.
-   - Ermöglicht deterministische Unit Tests.
+Eine Entity beschreibt Identität. Ein Aggregate Root ist zusätzlich der
+Einstiegspunkt in einen fachlichen Konsistenzbereich. Von außen sollen
+Änderungen nur über das Aggregate Root erfolgen.
 
-3. Audit-Felder als Domänenverantwortung
-   - CreatedAt und UpdatedAt gehören zum Lebenszyklus des Aggregats.
-   - Touch(updatedAt) verdeutlicht explizite Zustandsänderung.
+CreatedAt und UpdatedAt gehören zum Lebenszyklus des Aggregats. Der
+Zeitpunkt wird aber nicht im Aggregate selbst erzeugt. Stattdessen wird
+er vom Use Case übergeben, typischerweise aus einem IClock-Port.
 
-4. Konsistenzgrenzen begreifen
-   - Nur AggregateRoot darf von außen referenziert werden.
-   - Innere Entities sind nur über das Root manipulierbar.
+Dadurch gilt:
 
-5. Fehlerstrategie konsistent anwenden
-   - Erwartbare Regelverletzungen werden als Result zurückgegeben.
-   - Exceptions bleiben technischen oder programmatischen Fehlern vorbehalten.
+- keine direkte Abhängigkeit auf DateTime.UtcNow in der Domain
+- deterministische Tests durch kontrollierte Zeitwerte
+- klare UTC-Regel für intern gespeicherte Zeitpunkte
 
-Zentrales Lernziel:
-Studierende sollen verstehen, dass ein Aggregate Root
-nicht nur eine Entity mit zusätzlichen Feldern ist,
-sondern eine fachliche Konsistenz- und Transaktionsgrenze
-im Sinne von Domain-Driven Design darstellt.
+CampusLibrary verwendet intern UTC-DateTime. DateTimeOffset bleibt eine
+mögliche API-Grenzentscheidung, wird aber nicht für SQLite-Queries im
+Persistenzmodell verwendet.
 
-================================================================================
+Initialize(...) und Touch(...) liefern Result zurück. Damit bleibt die
+Fehlerstrategie konsistent: erwartbare Validierungsfehler werden nicht
+als Exceptions geworfen, sondern als DomainError über Result transportiert.
+
+Lernziele
+---------
+
+- Entity und AggregateRoot unterscheiden
+- Aggregate Root als Konsistenz- und Transaktionsgrenze verstehen
+- Audit-Felder als Teil des Aggregate-Lebenszyklus einordnen
+- Zeit als Abhängigkeit über den Use Case zuführen
+- UTC-DateTime als interne Zeitregel anwenden
+- Result statt Exceptions für erwartbare Regelverletzungen nutzen
 */
