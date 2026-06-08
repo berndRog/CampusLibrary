@@ -1,18 +1,16 @@
-using CampusLibraryApi._2_Shared._3_Domain.Errors;
 namespace CampusLibraryApi._2_Shared._3_Domain.Entities;
 
 // Base class for all domain entities.
 // Identity semantics:
 // - Equality is based solely on Id.
-// - Two entities are equal if and only if their Id values are equal.
+// - Two persisted entities are equal if their Id values are equal.
 // - Transient entities (Id == Guid.Empty) are never considered equal.
 public abstract class Entity : IEquatable<Entity> {
-   // Primary key of the entity.
-   // Must be unique and immutable once persisted.
+   // Technical primary key of the entity.
+   // Must be unique and stable after creation.
    public Guid Id { get; protected set; }
-   
 
-   // Overrides object equality.
+   // Overrides object equality using DDD identity semantics.
    public override bool Equals(object? obj) {
       if (obj is not Entity other)
          return false;
@@ -20,7 +18,7 @@ public abstract class Entity : IEquatable<Entity> {
       if (ReferenceEquals(this, other))
          return true;
 
-      // Transient entities are never equal
+      // Transient entities are never equal.
       if (Id == Guid.Empty || other.Id == Guid.Empty)
          return false;
 
@@ -32,7 +30,7 @@ public abstract class Entity : IEquatable<Entity> {
       Equals((object?)other);
 
    // Hash code is derived from Id.
-   // Required for correct behavior in hash-based collections.
+   // Do not use transient entities as stable keys in hash-based collections.
    public override int GetHashCode() =>
       Id.GetHashCode();
 
@@ -49,42 +47,35 @@ public abstract class Entity : IEquatable<Entity> {
 }
 
 /*
-================================================================================
-DIDAKTIK UND LERNZIELE (für Vorlesung / 4. Semester Softwarearchitektur)
-================================================================================
+Didaktik
+--------
 
-1. Unterschied zwischen OOP-Gleichheit und DDD-Identität verstehen
-   - Standard-OOP: Referenzgleichheit
-   - Entity (DDD): Identitätsgleichheit (Primary Key)
-   - Value Object: Wertgleichheit
+Entity ist die Basisklasse für Objekte mit fachlicher Identität.
 
-2. Datenbank-Identität vs. Objektzustand unterscheiden
-   - Eine Entity bleibt fachlich gleich, auch wenn sich ihr Zustand ändert.
-   - Gleichheit basiert ausschließlich auf der Identität (Guid).
+Im Domain-Driven Design wird eine Entity nicht über alle Eigenschaften
+verglichen, sondern über ihre Identität. Ein Reader bleibt also derselbe
+Reader, auch wenn sich Name, Adresse oder E-Mail-Adresse ändern.
 
-3. Transiente Entities korrekt behandeln
-   - Entities ohne gesetzte Id (Guid.Empty) dürfen niemals als gleich gelten.
-   - Verhindert subtile Fehler in Collections und EF Core Tracking.
+Die Id ist hier ein Guid und damit eine technische Identität. Die fachliche
+Bedeutung entsteht erst in den konkreten Aggregates, z. B. Reader oder Book.
 
-4. Technische vs. fachliche Verantwortung reflektieren
-   - Die Domäne arbeitet mit Guid (Identität).
-   - String-Parsing stammt aus dem Application/API-Layer.
-   - ResolveId ist eine pragmatische, aber bewusst technische Lösung.
+Wichtig ist die Behandlung transienter Entities:
 
-5. Saubere Modellierung von Identität
-   - Guid als technische Identität.
-   - Optionale Weiterentwicklung: Strongly Typed Id (OwnerId, AccountId).
+- Guid.Empty bedeutet: noch keine gültige Identität gesetzt
+- solche Objekte gelten niemals als gleich
+- dadurch werden Fehler in Collections und beim EF-Core-Tracking reduziert
 
-6. Architekturprinzipien anwenden
-   - Kapselung von Gleichheitslogik.
-   - Konsistente Identitätssemantik im gesamten System.
-   - Vermeidung von Copy-Paste-Guid-Parsing.
+String-Parsing oder das Erzeugen einer neuen Guid aus optionalen API-Daten
+gehört nicht in Entity. Diese Logik liegt bewusst außerhalb der Domain-Basis,
+z. B. in EntityId.Resolve(...) in der Application-/Utility-Schicht.
 
-Didaktisches Ziel:
-Studierende sollen erkennen, dass eine Entity kein Objekt,
-sondern ein Identitätskonzept ist. Die Implementierung spiegelt
-gleichzeitig OOP-Prinzipien, DDD-Konzepte und relationale
-Datenbanksemantik wider.
+Lernziele
+---------
 
-================================================================================
+- Unterschied zwischen Referenzgleichheit und Identitätsgleichheit verstehen
+- Entity und Value Object voneinander abgrenzen
+- Datenbankidentität und fachlichen Objektzustand unterscheiden
+- transiente Entities korrekt behandeln
+- Guid als einfache technische Identität einordnen
+- erkennen, warum Parsing-Logik nicht in die Entity-Basisklasse gehört
 */
