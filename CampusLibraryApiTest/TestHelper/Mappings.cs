@@ -14,15 +14,11 @@ public static class Mappings {
       Id: reader.Id.ToString()
    );
    
-   public static ReaderUpdateDto ToReaderUpdateDto(Reader reader) => new( 
+   public static ReaderUpdateDto ToReaderUpdateDto(Reader reader) => new(
+      Firstname: reader.Firstname,
       Lastname: reader.Lastname,
       Email: reader.EmailVo.Value,
-      AddressDto: new AddressDto(
-         Street: "Hauptstr. 23",
-         PostalCode: "29556",
-         City: "Suderburg",
-         Country: "DE"
-      )
+      AddressDto: reader.AddressVo.ToAddressDto()
    );
    
 }
