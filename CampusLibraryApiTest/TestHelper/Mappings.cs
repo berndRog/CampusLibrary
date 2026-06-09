@@ -15,9 +15,26 @@ public static class Mappings {
    );
    
    public static ReaderUpdateDto ToReaderUpdateDto(Reader reader) => new(
-      Firstname: reader.Firstname,
       Lastname: reader.Lastname,
       Email: reader.EmailVo.Value,
+      AddressDto: reader.AddressVo.ToAddressDto()
+   );
+
+   public static ReaderUpdateDto ToReaderUpdateLastnameDto(Reader reader) => new(
+      Lastname: reader.Lastname,
+      Email: null,
+      AddressDto: null
+   );
+
+   public static ReaderUpdateDto ToReaderUpdateEmailDto(Reader reader) => new(
+      Lastname: null,
+      Email: reader.EmailVo.Value,
+      AddressDto: null
+   );
+
+   public static ReaderUpdateDto ToReaderUpdateAddressDto(Reader reader) => new(
+      Lastname: null,
+      Email: null,
       AddressDto: reader.AddressVo.ToAddressDto()
    );
    
