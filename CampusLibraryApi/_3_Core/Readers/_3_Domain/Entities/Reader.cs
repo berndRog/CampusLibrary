@@ -63,7 +63,7 @@ public sealed class Reader : AggregateRoot {
       lastname = lastname.Trim();
       subject = subject.Trim();
 
-      // Validate reuired input fields
+      // Validate required input fields
       if (id == Guid.Empty)
          return Result<Reader>.Failure(ReaderErrors.IdRequired);
       
@@ -103,28 +103,39 @@ public sealed class Reader : AggregateRoot {
    }
 
    //--- domain methods --------------------------------------------------------
-   // Update mutable reader profile data.
-   // The technical identity subject is intentionally not changed here.
+   // Partially updates mutable reader profile data.
+   // Null means: keep the current value.
+   // Firstname and Subject are intentionally not changed here.
    public Result UpdateProfile(
       string? lastname,
       EmailVo? emailVo,
       AddressVo? addressVo,
       DateTime updatedAt
    ) {
-      lastname = lastname?.Trim();
+      var hasChange = lastname is not null || emailVo is not null || addressVo is not null;
+      if (!hasChange)
+         return Result.Success();
 
-      if (!string.IsNullOrWhiteSpace(lastname) && lastname.Length is < 2 or > 80)
-         return Result.Failure(ReaderErrors.InvalidLastname);
-      
-      // Apply changes
-      if (lastname is not null) Lastname = lastname;
-      if (emailVo is not null) EmailVo = emailVo;
-      if (addressVo is not null) AddressVo = addressVo;
+      string? normalizedLastname = null;
+      if (lastname is not null) {
+         normalizedLastname = lastname.Trim();
+
+         if (string.IsNullOrWhiteSpace(normalizedLastname))
+            return Result.Failure(ReaderErrors.LastnameIsRequired);
+
+         if (normalizedLastname.Length is < 2 or > 80)
+            return Result.Failure(ReaderErrors.InvalidLastname);
+      }
 
       var touchResult = Touch(updatedAt);
       if (touchResult.IsFailure)
          return Result.Failure(touchResult.Error);
-      
+
+      // Apply changes only after all validations have succeeded.
+      if (normalizedLastname is not null) Lastname = normalizedLastname;
+      if (emailVo is not null) EmailVo = emailVo;
+      if (addressVo is not null) AddressVo = addressVo;
+
       return Result.Success();
    }
 }
@@ -143,9 +154,9 @@ Die Factory-Methode Create(...) stellt sicher, dass ein Reader nur in
 einem gültigen Zustand erzeugt wird. Erwartbare Regelverletzungen
 werden als Result zurückgegeben und nicht als Exceptions geworfen.
 
-UpdateProfile(...) ändert nur fachliche Profildaten. Die technische
-Identität Subject bleibt unverändert, weil sie vom Identity Server kommt
-und nicht Teil der normalen Profilpflege ist.
+UpdateProfile(...) führt ein partielles Update aus. Nur Lastname, EmailVo
+und AddressVo können geändert werden. Null bedeutet jeweils: den aktuellen
+Wert beibehalten. Firstname und Subject bleiben unverändert.
 
 Die Value Objects EmailVo und AddressVo kapseln eigene Validierungs-
 und Normalisierungsregeln. Dadurch bleibt Reader auf seine fachliche
@@ -158,6 +169,7 @@ Lernziele
 - Fachlichen Reader vom technischen Benutzerkonto unterscheiden
 - Factory-Methode zur Erzeugung gültiger Domain-Objekte einsetzen
 - Änderungsmethoden am Aggregate statt direkte Setter verwenden
+- partielle Updates mit nullable Eingabewerten modellieren
 - Value Objects zur Kapselung fachlicher Werte verwenden
 - Result als Fehlerstrategie in der Domain anwenden
 */
