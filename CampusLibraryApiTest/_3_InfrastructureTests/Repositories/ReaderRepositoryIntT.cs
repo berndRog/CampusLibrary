@@ -43,6 +43,8 @@ public sealed class ReaderRepositoryIntT : TestBaseIntegration {
       // actualReader.AddressVo.Should().BeEquivalentTo(reader1.AddressVo);
       // actualReader.CreatedAt.Should().Be(reader1.CreatedAt);
       // actualReader.UpdatedAt.Should().Be(reader1.UpdatedAt);
+      // Structural comparison:
+      // verifies that the persisted and reloaded aggregate contains the same data.
       actualReader.Should().BeEquivalentTo(reader1);
    }
 
