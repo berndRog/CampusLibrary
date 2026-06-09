@@ -173,11 +173,7 @@ public sealed class ReaderRepositoryIntT : TestBaseIntegration {
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
 
       // Arrange
-      var readers = new[] {
-         seed.Reader1(),
-         seed.Reader2(),
-         seed.Reader3()
-      };
+      var readers = seed.Readers;
 
       repository.AddRange(readers);
       var savedRows = await unitOfWork.SaveAllChangesAsync("Three readers inserted", ct);
