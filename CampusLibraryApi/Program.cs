@@ -21,3 +21,6 @@ if (app.Environment.IsDevelopment()) {
 app.MapControllers();
 
 app.Run();
+
+// Exposes the top-level Program type to WebApplicationFactory in API tests.
+public partial class Program { }
