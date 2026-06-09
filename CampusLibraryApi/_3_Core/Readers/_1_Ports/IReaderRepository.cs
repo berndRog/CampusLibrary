@@ -33,7 +33,12 @@ public interface IReaderRepository {
 
    // Add a new reader aggregate to the current unit of work.
    void Add(Reader reader);
+
+   // Add multiple reader aggregates to the current unit of work.
    void AddRange(IEnumerable<Reader> readers);
+
+   // Remove a reader aggregate from the current unit of work.
+   void Remove(Reader reader);
 }
 
 /*
