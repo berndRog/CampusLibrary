@@ -2,7 +2,6 @@ using CampusLibraryApi._1_Web.Common;
 using CampusLibraryApi._2_Shared._3_Domain.Enums;
 using CampusLibraryApi._3_Core.Readers._1_Ports;
 using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
-using CampusLibraryApi._3_Core.Readers._2_Application.UseCases;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CampusLibraryApi._1_Web.Controllers;
@@ -147,6 +146,77 @@ public sealed class ReadersController(
          _ => BadRequest(problem)
       };
    }
+
+   /// <summary>
+   ///    Updates an existing reader.
+   /// </summary>
+   /// <param name="id">Reader unique id.</param>
+   /// <param name="dto">Reader data used to update the resource.</param>
+   /// <param name="ct">Cancellation token.</param>
+   /// <returns>The updated reader resource.</returns>
+   // Update an existing reader through the write-side use case.
+   [HttpPut("readers/{id:guid}", Name = nameof(UpdateAsync))]
+   [Consumes("application/json")]
+   [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
+   public async Task<ActionResult<ReaderDto>> UpdateAsync(
+      [FromRoute] Guid id,
+      [FromBody] ReaderUpdateDto dto,
+      CancellationToken ct
+   ) {
+      var result = await readerUseCases.UpdateAsync(id, dto, ct);
+
+      if (result.IsSuccess)
+         return Ok(result.Value);
+
+      var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+
+      return result.Error.Status switch {
+         WebErrorStatus.BadRequest => BadRequest(problem),
+         WebErrorStatus.Unauthorized => Unauthorized(problem),
+         WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
+         WebErrorStatus.NotFound => NotFound(problem),
+         WebErrorStatus.Conflict => Conflict(problem),
+         _ => BadRequest(problem)
+      };
+   }
+
+   /// <summary>
+   ///    Deletes an existing reader.
+   /// </summary>
+   /// <param name="id">Reader unique id.</param>
+   /// <param name="ct">Cancellation token.</param>
+   /// <returns>No content on success.</returns>
+   // Delete an existing reader through the write-side use case.
+   [HttpDelete("readers/{id:guid}", Name = nameof(DeleteAsync))]
+   [ProducesResponseType(StatusCodes.Status204NoContent)]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
+   public async Task<IActionResult> DeleteAsync(
+      [FromRoute] Guid id,
+      CancellationToken ct
+   ) {
+      var result = await readerUseCases.DeleteAsync(id, ct);
+
+      if (result.IsSuccess)
+         return NoContent();
+
+      var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+
+      return result.Error.Status switch {
+         WebErrorStatus.BadRequest => BadRequest(problem),
+         WebErrorStatus.Unauthorized => Unauthorized(problem),
+         WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
+         WebErrorStatus.NotFound => NotFound(problem),
+         _ => BadRequest(problem)
+      };
+   }
 }
 
 /*
@@ -165,9 +235,11 @@ GET-Endpunkte verwenden das ReadModel:
 - GetByIdAsync     -> IReaderReadModel.FindByIdAsync
 - GetByEmailAsync  -> IReaderReadModel.FindByEmailAsync
 
-Der POST-Endpunkt verwendet den schreibenden Use Case:
+Schreibende Endpunkte verwenden die UseCase-Fassade:
 
-- CreateAsync      -> ReaderUcCreate.ExecuteAsync
+- CreateAsync      -> IReaderUseCases.CreateAsync
+- UpdateAsync      -> IReaderUseCases.UpdateAsync
+- DeleteAsync      -> IReaderUseCases.DeleteAsync
 
 Die Fallunterscheidung im Controller ist bewusst explizit gehalten.
 Dadurch sehen Studierende direkt, welcher DomainError.Status zu welcher
@@ -191,8 +263,9 @@ Lernziele
 ---------
 
 - Controller als HTTP-Adapter verstehen
-- Unterschied zwischen GET/ReadModel und POST/UseCase erkennen
+- Unterschied zwischen GET/ReadModel und schreibenden UseCases erkennen
 - REST-Verhalten von 201 Created und Location-Header nachvollziehen
+- REST-Verhalten von 200 OK bei Update und 204 NoContent bei Delete verstehen
 - DomainError.Status explizit auf HTTP-Antworten abbilden
 - 401 Unauthorized und 403 Forbidden unterscheiden
 - ProblemDetails als standardisiertes Fehlerformat verwenden
