@@ -11,7 +11,11 @@ public static class DiReaders {
    ) {
       services.AddScoped<IReaderRepository, ReaderRepositoryEf>();
       services.AddScoped<IReaderReadModel, ReaderReadModelEf>();
+
+      services.AddScoped<IReaderUseCases, ReaderUseCases>();
       services.AddScoped<ReaderUcCreate>();
+      services.AddScoped<ReaderUcUpdate>();
+      services.AddScoped<ReaderUcDelete>();
 
       return services;
    }
