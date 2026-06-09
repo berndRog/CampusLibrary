@@ -40,9 +40,11 @@ public static class DiTestModules {
       // Repositories
       services.AddScoped<IReaderRepository, ReaderRepositoryEf>();
 
-      // Customer UseCases
+      // Reader UseCases
       services.AddScoped<IReaderUseCases, ReaderUseCases>();
       services.AddScoped<ReaderUcCreate>();
+      services.AddScoped<ReaderUcUpdate>();
+      services.AddScoped<ReaderUcDelete>();
       
       // Unit of Work
       services.AddScoped<IUnitOfWork, UnitOfWorkEf>();
