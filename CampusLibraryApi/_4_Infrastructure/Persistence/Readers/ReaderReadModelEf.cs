@@ -15,6 +15,7 @@ namespace CampusLibraryApi._4_Infrastructure.Persistence.ReadModels;
 internal sealed class ReaderReadModelEf(
    IReaderDbContext dbContext
 ) : IReaderReadModel {
+   
    // Find a reader DTO by technical identifier.
    public async Task<Result<ReaderDto>> FindByIdAsync(Guid id, CancellationToken ct) {
       var reader = await dbContext.Readers
