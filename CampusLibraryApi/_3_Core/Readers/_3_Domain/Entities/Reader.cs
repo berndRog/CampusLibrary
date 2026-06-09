@@ -60,17 +60,14 @@ public sealed class Reader : AggregateRoot {
       if (string.IsNullOrWhiteSpace(subject))
          return Result<Reader>.Failure(ReaderErrors.SubjectRequired);
 
-      if (string.IsNullOrWhiteSpace(firstname))
-         return Result<Reader>.Failure(ReaderErrors.FirstnameIsRequired);
-
-      if (firstname.Length is < 2 or > 80)
-         return Result<Reader>.Failure(ReaderErrors.InvalidFirstname);
-
-      if (string.IsNullOrWhiteSpace(lastname))
-         return Result<Reader>.Failure(ReaderErrors.LastnameIsRequired);
-
-      if (lastname.Length is < 2 or > 80)
-         return Result<Reader>.Failure(ReaderErrors.InvalidLastname);
+      var profileResult = ValidateProfile(
+         firstname: firstname,
+         lastname: lastname,
+         emailVo: emailVo,
+         addressVo: addressVo
+      );
+      if (profileResult.IsFailure)
+         return Result<Reader>.Failure(profileResult.Error);
 
       var reader = new Reader(
          id: id,
@@ -86,6 +83,66 @@ public sealed class Reader : AggregateRoot {
          return Result<Reader>.Failure(initResult.Error);
 
       return Result<Reader>.Success(reader);
+   }
+
+   // Update mutable reader profile data.
+   // The technical identity subject is intentionally not changed here.
+   public Result UpdateProfile(
+      string firstname,
+      string lastname,
+      EmailVo emailVo,
+      AddressVo addressVo,
+      DateTime updatedAt
+   ) {
+      firstname = firstname.Trim();
+      lastname = lastname.Trim();
+
+      var profileResult = ValidateProfile(
+         firstname: firstname,
+         lastname: lastname,
+         emailVo: emailVo,
+         addressVo: addressVo
+      );
+      if (profileResult.IsFailure)
+         return Result.Failure(profileResult.Error);
+
+      var touchResult = Touch(updatedAt);
+      if (touchResult.IsFailure)
+         return Result.Failure(touchResult.Error);
+
+      Firstname = firstname;
+      Lastname = lastname;
+      EmailVo = emailVo;
+      AddressVo = addressVo;
+
+      return Result.Success();
+   }
+
+   private static Result ValidateProfile(
+      string firstname,
+      string lastname,
+      EmailVo emailVo,
+      AddressVo addressVo
+   ) {
+      if (emailVo is null)
+         return Result.Failure(ReaderErrors.InvalidEmail);
+
+      if (addressVo is null)
+         return Result.Failure(ReaderErrors.AddressRequired);
+
+      if (string.IsNullOrWhiteSpace(firstname))
+         return Result.Failure(ReaderErrors.FirstnameIsRequired);
+
+      if (firstname.Length is < 2 or > 80)
+         return Result.Failure(ReaderErrors.InvalidFirstname);
+
+      if (string.IsNullOrWhiteSpace(lastname))
+         return Result.Failure(ReaderErrors.LastnameIsRequired);
+
+      if (lastname.Length is < 2 or > 80)
+         return Result.Failure(ReaderErrors.InvalidLastname);
+
+      return Result.Success();
    }
 }
 
@@ -103,6 +160,10 @@ Die Factory-Methode Create(...) stellt sicher, dass ein Reader nur in
 einem gültigen Zustand erzeugt wird. Erwartbare Regelverletzungen
 werden als Result zurückgegeben und nicht als Exceptions geworfen.
 
+UpdateProfile(...) ändert nur fachliche Profildaten. Die technische
+Identität Subject bleibt unverändert, weil sie vom Identity Server kommt
+und nicht Teil der normalen Profilpflege ist.
+
 Die Value Objects EmailVo und AddressVo kapseln eigene Validierungs-
 und Normalisierungsregeln. Dadurch bleibt Reader auf seine fachliche
 Hauptverantwortung konzentriert.
@@ -113,6 +174,7 @@ Lernziele
 - Aggregate Root als Einstiegspunkt eines Konsistenzbereichs verstehen
 - Fachlichen Reader vom technischen Benutzerkonto unterscheiden
 - Factory-Methode zur Erzeugung gültiger Domain-Objekte einsetzen
+- Änderungsmethoden am Aggregate statt direkte Setter verwenden
 - Value Objects zur Kapselung fachlicher Werte verwenden
 - Result als Fehlerstrategie in der Domain anwenden
 */
