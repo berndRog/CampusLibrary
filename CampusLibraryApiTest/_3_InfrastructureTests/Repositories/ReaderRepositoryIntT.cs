@@ -35,14 +35,15 @@ public sealed class ReaderRepositoryIntT : TestBaseIntegration {
 
       // Assert
       actualReader.Should().NotBeNull();
-      actualReader!.Id.Should().Be(reader1.Id);
-      actualReader.Firstname.Should().Be(reader1.Firstname);
-      actualReader.Lastname.Should().Be(reader1.Lastname);
-      actualReader.Subject.Should().Be(reader1.Subject);
-      actualReader.EmailVo.Value.Should().Be(reader1.EmailVo.Value);
-      actualReader.AddressVo.Should().BeEquivalentTo(reader1.AddressVo);
-      actualReader.CreatedAt.Should().Be(reader1.CreatedAt);
-      actualReader.UpdatedAt.Should().Be(reader1.UpdatedAt);
+      // actualReader!.Id.Should().Be(reader1.Id);
+      // actualReader.Firstname.Should().Be(reader1.Firstname);
+      // actualReader.Lastname.Should().Be(reader1.Lastname);
+      // actualReader.Subject.Should().Be(reader1.Subject);
+      // actualReader.EmailVo.Value.Should().Be(reader1.EmailVo.Value);
+      // actualReader.AddressVo.Should().BeEquivalentTo(reader1.AddressVo);
+      // actualReader.CreatedAt.Should().Be(reader1.CreatedAt);
+      // actualReader.UpdatedAt.Should().Be(reader1.UpdatedAt);
+      actualReader.Should().BeEquivalentTo(reader1);
    }
 
    [Fact]
@@ -81,8 +82,7 @@ public sealed class ReaderRepositoryIntT : TestBaseIntegration {
 
       // Assert
       actualReader.Should().NotBeNull();
-      actualReader!.Id.Should().Be(reader1.Id);
-      actualReader.Subject.Should().Be(reader1.Subject);
+      actualReader.Should().BeEquivalentTo(reader1);
    }
 
    [Fact]
@@ -105,8 +105,23 @@ public sealed class ReaderRepositoryIntT : TestBaseIntegration {
 
       // Assert
       actualReader.Should().NotBeNull();
-      actualReader!.Id.Should().Be(reader1.Id);
-      actualReader.EmailVo.Value.Should().Be(reader1.EmailVo.Value);
+      actualReader.Should().BeEquivalentTo(reader1);
+   }
+   
+   [Fact]
+   public async Task FindByEmailAsync_unknown_email_returns_null() {
+      using var scope = Root.CreateDefaultScope();
+      var ct = TestContext.Current.CancellationToken;
+      var repository = scope.ServiceProvider.GetRequiredService<IReaderRepository>();
+
+      // Arrange
+      var unknownEmail = EmailVo.Create("unknown.reader@example.com").GetValueOrThrow();
+
+      // Act
+      var actualReader = await repository.FindByEmailAsync(unknownEmail, ct);
+
+      // Assert
+      actualReader.Should().BeNull();
    }
 
    [Fact]
@@ -180,21 +195,5 @@ public sealed class ReaderRepositoryIntT : TestBaseIntegration {
       actualReader1!.Id.Should().Be(readers[0].Id);
       actualReader2!.Id.Should().Be(readers[1].Id);
       actualReader3!.Id.Should().Be(readers[2].Id);
-   }
-
-   [Fact]
-   public async Task FindByEmailAsync_unknown_email_returns_null() {
-      using var scope = Root.CreateDefaultScope();
-      var ct = TestContext.Current.CancellationToken;
-      var repository = scope.ServiceProvider.GetRequiredService<IReaderRepository>();
-
-      // Arrange
-      var unknownEmail = EmailVo.Create("unknown.reader@example.com").GetValueOrThrow();
-
-      // Act
-      var actualReader = await repository.FindByEmailAsync(unknownEmail, ct);
-
-      // Assert
-      actualReader.Should().BeNull();
    }
 }
