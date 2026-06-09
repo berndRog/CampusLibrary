@@ -17,5 +17,7 @@ internal sealed class ReaderDbContextEf(
 
    public void AddRange(IEnumerable<Reader> readers)
       => db.Set<Reader>().AddRange(readers);
-   
+
+   public void Remove(Reader reader) 
+      => db.Set<Reader>().Remove(reader);
 }

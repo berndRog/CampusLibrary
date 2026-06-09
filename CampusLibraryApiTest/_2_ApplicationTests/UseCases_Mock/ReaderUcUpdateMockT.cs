@@ -12,7 +12,7 @@ using Moq;
 
 namespace CampusLibraryApiTest._2_ApplicationTests.UseCases;
 
-public sealed class ReaderUcUpdateUt {
+public sealed class ReaderUcUpdateMockT {
    private static readonly DateTime CreatedAt =
       new(2025, 01, 01, 00, 00, 00, DateTimeKind.Utc);
 
