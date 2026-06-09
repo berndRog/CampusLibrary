@@ -47,6 +47,10 @@ internal sealed class ReaderRepositoryEf(
    // Add multiple aggregates to the EF Core change tracker.
    public void AddRange(IEnumerable<Reader> readers) =>
       dbContext.AddRange(readers);
+
+   // Mark aggregate as deleted in the EF Core change tracker.
+   public void Remove(Reader reader) =>
+      dbContext.Remove(reader);
 }
 
 /*
@@ -63,6 +67,10 @@ sichtbar ist nur das Interface im Core-Modul.
 Repositories arbeiten auf der Write-Seite mit Aggregates. Sie sind
 nicht für Listenansichten oder DTO-Projektionen optimiert. Dafür gibt
 es ReadModels.
+
+Add(...), AddRange(...) und Remove(...) verändern zunächst nur den
+EF-Core-Change-Tracker. Das tatsächliche Schreiben in die Datenbank
+erfolgt erst über die UnitOfWork.
 
 Lernziele
 ---------
