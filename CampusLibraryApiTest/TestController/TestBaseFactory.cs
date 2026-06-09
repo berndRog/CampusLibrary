@@ -12,7 +12,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace CampusLibraryApiTest.TestController;
 
 /// <summary>
-///    Integration-test host for BankingApi.
+///    Integration-test host for CampusLibraryApi.
 ///    Uses the real Program.cs DI setup and only replaces selected infrastructure services (e.g., the database).
 /// </summary>
 public sealed class TestBaseFactory : WebApplicationFactory<Program> {
@@ -88,10 +88,10 @@ public sealed class TestBaseFactory : WebApplicationFactory<Program> {
          services.RemoveAll<DbContextOptions<AppDbContext>>();
          services.RemoveAll<AppDbContext>();
 
-         // Optional: if you use IDbContextFactory<BankingDbContext> anywhere
+         // Optional: if you use IDbContextFactory<AppDbContext> anywhere
          services.RemoveAll<IDbContextFactory<AppDbContext>>();
 
-         // 2) Re-register BankingDbContext using the test connection
+         // 2) Re-register AppDbContext using the test connection
          services.AddDbContext<AppDbContext>(options => {
             options.UseSqlite(_dbConnection);
             if (_enableSensitiveDataLogging) options.EnableSensitiveDataLogging();
@@ -104,6 +104,9 @@ public sealed class TestBaseFactory : WebApplicationFactory<Program> {
          // replace more infrastructure for tests here (Clock, IdentityGateway)
          services.RemoveAll(typeof(IClock));
          services.AddSingleton<IClock>(new FakeClock(TestCreatedAt));
+
+         // Seed helpers used by controller/end-to-end tests
+         services.AddScoped<TestSeed>();
 
          // services.RemoveAll(typeof(IIdentityGateway));
          // services.AddScoped<IIdentityGateway>(_ => new FakeIdentityGateway {
