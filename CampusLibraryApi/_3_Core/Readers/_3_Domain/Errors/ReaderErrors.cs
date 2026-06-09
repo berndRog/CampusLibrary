@@ -89,6 +89,20 @@ public static class ReaderErrors {
          "A ReaderCreateDto object must be provided."
       );
 
+   public static readonly DomainError ReaderUpdateDtoRequired =
+      new(
+         WebErrorStatus.BadRequest,
+         "Reader: ReaderUpdateDtoRequired",
+         "A ReaderUpdateDto object must be provided."
+      );
+
+   public static readonly DomainError AddressRequired =
+      new(
+         WebErrorStatus.BadRequest,
+         "Reader: AddressRequired",
+         "A reader address must be provided."
+      );
+
    // Address value object
    // ------------------------------------------------------------------------
    public static readonly DomainError StreetIsRequired =
