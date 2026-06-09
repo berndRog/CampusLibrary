@@ -4,44 +4,63 @@ using CampusLibraryApi._2_Shared._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
-
+using CampusLibraryApiTest.TestInfrastructure;
 namespace CampusLibraryApiTest._1_DomainTests.Entities;
 
 public sealed class ReaderUt {
+
+   private readonly TestSeed _seed;
+   private readonly Reader _reader1;
+
+   public ReaderUt() {
+      _seed = new TestSeed();
+      _reader1 = _seed.Reader1();
+   }   
+   
    private static readonly DateTime CreatedAt =
       new(2025, 01, 01, 00, 00, 00, DateTimeKind.Utc);
 
    private static readonly DateTime UpdatedAt =
       new(2025, 01, 02, 00, 00, 00, DateTimeKind.Utc);
-
+   
    [Fact]
    public void Create_ok() {
       // Act
       var result = Reader.Create(
-         id: Guid.Parse("10000000-0000-0000-0000-000000000000"),
-         firstname: " Erika ",
-         lastname: " Mustermann ",
-         emailVo: CreateEmail("ERIKA.MUSTERMANN@EXAMPLE.COM"),
-         addressVo: CreateAddress(),
-         subject: " subject-001 ",
-         createdAt: CreatedAt
+         id: _reader1.Id,
+         firstname: _reader1.Firstname,
+         lastname: _reader1.Lastname,
+         emailVo: _reader1.EmailVo,
+         addressVo: _reader1.AddressVo,
+         subject: _reader1.Subject,
+         createdAt: _reader1.CreatedAt
       );
 
       // Assert
       result.IsSuccess.Should().BeTrue();
-      result.Value.Id.Should().Be(Guid.Parse("10000000-0000-0000-0000-000000000000"));
-      result.Value.Firstname.Should().Be("Erika");
-      result.Value.Lastname.Should().Be("Mustermann");
-      result.Value.EmailVo.Value.Should().Be("erika.mustermann@example.com");
-      result.Value.Subject.Should().Be("subject-001");
-      result.Value.CreatedAt.Should().Be(CreatedAt);
-      result.Value.UpdatedAt.Should().Be(CreatedAt);
+      var actual = result.Value;
+      actual.Id.Should().Be(_reader1.Id);
+      actual.Firstname.Should().Be(_reader1.Firstname);
+      actual.Lastname.Should().Be(_reader1.Lastname);
+      actual.EmailVo.Should().Be(_reader1.EmailVo);
+      actual.AddressVo.Should().Be(_reader1.AddressVo);
+      actual.Subject.Should().Be(_reader1.Subject);
+      actual.CreatedAt.Should().Be(CreatedAt);
+      actual.UpdatedAt.Should().Be(CreatedAt);
    }
 
    [Fact]
    public void Create_empty_id_fails() {
       // Act
-      var result = CreateReader(id: Guid.Empty);
+      var result = Reader.Create(
+         id: Guid.Empty,
+         firstname: _reader1.Firstname,
+         lastname: _reader1.Lastname,
+         emailVo: _reader1.EmailVo,
+         addressVo: _reader1.AddressVo,
+         subject: _reader1.Subject,
+         createdAt: _reader1.CreatedAt
+      );
 
       // Assert
       result.IsFailure.Should().BeTrue();
@@ -51,8 +70,16 @@ public sealed class ReaderUt {
    [Fact]
    public void Create_empty_subject_fails() {
       // Act
-      var result = CreateReader(subject: "   ");
-
+      var result = Reader.Create(
+         id: _reader1.Id,
+         firstname: _reader1.Firstname,
+         lastname: _reader1.Lastname,
+         emailVo: _reader1.EmailVo,
+         addressVo: _reader1.AddressVo,
+         subject: "       ",
+         createdAt: _reader1.CreatedAt
+      );
+      
       // Assert
       result.IsFailure.Should().BeTrue();
       result.Error.Should().Be(ReaderErrors.SubjectRequired);
@@ -81,7 +108,15 @@ public sealed class ReaderUt {
    [Fact]
    public void Create_createdAt_default_fails() {
       // Act
-      var result = CreateReader(createdAt: default);
+      var result = Reader.Create(
+         id: _reader1.Id,
+         firstname: _reader1.Firstname,
+         lastname: _reader1.Lastname,
+         emailVo: _reader1.EmailVo,
+         addressVo: _reader1.AddressVo,
+         subject: _reader1.Subject,
+         createdAt: default
+      );
 
       // Assert
       result.IsFailure.Should().BeTrue();
@@ -104,7 +139,7 @@ public sealed class ReaderUt {
    public void UpdateProfile_ok() {
       // Arrange
       var reader = CreateReader().GetValueOrThrow();
-      var newEmailVo = CreateEmail("ERNA.MUSTERFRAU@EXAMPLE.COM");
+      var newEmailVo = CreateEmail("e.meier@gmx.de");
       var newAddressVo = AddressVo.Create(
          street: "Neue Straße 5",
          postalCode: "30123",
@@ -114,8 +149,7 @@ public sealed class ReaderUt {
 
       // Act
       var result = reader.UpdateProfile(
-         firstname: " Erna ",
-         lastname: " Musterfrau ",
+         lastname: " Meier ",
          emailVo: newEmailVo,
          addressVo: newAddressVo,
          updatedAt: UpdatedAt
@@ -123,31 +157,30 @@ public sealed class ReaderUt {
 
       // Assert
       result.IsSuccess.Should().BeTrue();
-      reader.Firstname.Should().Be("Erna");
-      reader.Lastname.Should().Be("Musterfrau");
-      reader.EmailVo.Value.Should().Be("erna.musterfrau@example.com");
+      
+      reader.Firstname.Should().Be("Erika");
+      reader.Lastname.Should().Be("Meier");
+      reader.EmailVo.Value.Should().Be("e.meier@gmx.de");
       reader.AddressVo.Should().BeEquivalentTo(newAddressVo);
       reader.UpdatedAt.Should().Be(UpdatedAt);
    }
 
    [Fact]
-   public void UpdateProfile_invalid_firstname_fails() {
+   public void UpdateProfile_invalid_lastname_fails() {
       // Arrange
       var reader = CreateReader().GetValueOrThrow();
 
       // Act
       var result = reader.UpdateProfile(
-         firstname: "A",
-         lastname: "Musterfrau",
-         emailVo: CreateEmail("erna.musterfrau@example.com"),
+         lastname: "M",
+         emailVo: CreateEmail("e.meier@gmx.de"),
          addressVo: CreateAddress(),
          updatedAt: UpdatedAt
       );
 
       // Assert
       result.IsFailure.Should().BeTrue();
-      result.Error.Should().Be(ReaderErrors.InvalidFirstname);
-      reader.Firstname.Should().Be("Erika");
+      result.Error.Should().Be(ReaderErrors.InvalidLastname);
    }
 
    [Fact]
@@ -157,9 +190,8 @@ public sealed class ReaderUt {
 
       // Act
       var result = reader.UpdateProfile(
-         firstname: "Erna",
-         lastname: "Musterfrau",
-         emailVo: CreateEmail("erna.musterfrau@example.com"),
+         lastname: "Meier",
+         emailVo: CreateEmail("e.meier@gmx.de"),
          addressVo: CreateAddress(),
          updatedAt: CreatedAt.AddDays(-1)
       );
@@ -174,7 +206,7 @@ public sealed class ReaderUt {
       Guid? id = null,
       string firstname = "Erika",
       string lastname = "Mustermann",
-      string email = "erika.mustermann@example.com",
+      string email = "erika.mustermann@t-online.de",
       string subject = "subject-001",
       DateTime? createdAt = null
    ) => Reader.Create(

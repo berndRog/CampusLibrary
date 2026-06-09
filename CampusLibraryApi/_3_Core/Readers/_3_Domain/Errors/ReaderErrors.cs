@@ -68,6 +68,13 @@ public static class ReaderErrors {
          "The provided email address is already in use."
       );
 
+   public static readonly DomainError TimestampIsRequired =
+      new(
+         WebErrorStatus.BadRequest,
+         "Reader: Timestamp is required",
+         "A valid timestamp must be provided for this operation."
+      );
+   
    public static readonly DomainError ReaderNotFound =
       new(
          WebErrorStatus.NotFound,

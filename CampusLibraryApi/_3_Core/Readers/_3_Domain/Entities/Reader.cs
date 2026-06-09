@@ -10,6 +10,12 @@ namespace CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
 // Identity is inherited from AggregateRoot/Entity and is independent of mutable data.
 public sealed class Reader : AggregateRoot {
 
+   //--- properties ------------------------------------------------------------
+   // inherited from Entity + Aggregate root base class
+   // public Guid Id { get; private set; } 
+   // public DateTimeOffset CreatedAt { get; private set; }
+   // public DateTimeOffset UpdatedAt { get; private set; }
+
    // Reader profile data.
    public string Firstname { get; private set; } = string.Empty;
    public string Lastname { get; private set; } = string.Empty;
@@ -19,10 +25,13 @@ public sealed class Reader : AggregateRoot {
    // Technical identity subject from the Identity Server.
    public string Subject { get; private set; } = string.Empty;
 
+   //--- constructors ----------------------------------------------------------
+   // EF Core ctor
    private Reader() {
       // Required by EF Core.
    }
 
+   // Domain ctor (used by factories)
    private Reader(
       Guid id,
       string firstname,
@@ -39,7 +48,7 @@ public sealed class Reader : AggregateRoot {
       Subject = subject;
    }
 
-   // Factory method for creating a valid Reader aggregate.
+   // --- static factory to create a Reader object ---------------------------
    // Expected validation errors are returned as Result failures.
    public static Result<Reader> Create(
       Guid id,
@@ -54,21 +63,29 @@ public sealed class Reader : AggregateRoot {
       lastname = lastname.Trim();
       subject = subject.Trim();
 
+      // Validate reuired input fields
       if (id == Guid.Empty)
          return Result<Reader>.Failure(ReaderErrors.IdRequired);
+      
+      if (string.IsNullOrWhiteSpace(firstname))
+         return Result<Reader>.Failure(ReaderErrors.FirstnameIsRequired);
+      if (firstname.Length is < 2 or > 80)
+         return Result<Reader>.Failure(ReaderErrors.InvalidFirstname);
+      
+      if (string.IsNullOrWhiteSpace(lastname))
+         return Result<Reader>.Failure(ReaderErrors.LastnameIsRequired);
+      if (lastname.Length is < 2 or > 80)
+         return Result<Reader>.Failure(ReaderErrors.InvalidLastname);
+
+      if (emailVo is null)
+         return Result<Reader>.Failure(ReaderErrors.InvalidEmail);
+
+      if (addressVo is null)
+         return Result<Reader>.Failure(ReaderErrors.AddressRequired);
 
       if (string.IsNullOrWhiteSpace(subject))
          return Result<Reader>.Failure(ReaderErrors.SubjectRequired);
-
-      var profileResult = ValidateProfile(
-         firstname: firstname,
-         lastname: lastname,
-         emailVo: emailVo,
-         addressVo: addressVo
-      );
-      if (profileResult.IsFailure)
-         return Result<Reader>.Failure(profileResult.Error);
-
+      
       var reader = new Reader(
          id: id,
          firstname: firstname,
@@ -85,63 +102,29 @@ public sealed class Reader : AggregateRoot {
       return Result<Reader>.Success(reader);
    }
 
+   //--- domain methods --------------------------------------------------------
    // Update mutable reader profile data.
    // The technical identity subject is intentionally not changed here.
    public Result UpdateProfile(
-      string firstname,
-      string lastname,
-      EmailVo emailVo,
-      AddressVo addressVo,
+      string? lastname,
+      EmailVo? emailVo,
+      AddressVo? addressVo,
       DateTime updatedAt
    ) {
-      firstname = firstname.Trim();
-      lastname = lastname.Trim();
+      lastname = lastname?.Trim();
 
-      var profileResult = ValidateProfile(
-         firstname: firstname,
-         lastname: lastname,
-         emailVo: emailVo,
-         addressVo: addressVo
-      );
-      if (profileResult.IsFailure)
-         return Result.Failure(profileResult.Error);
+      if (!string.IsNullOrWhiteSpace(lastname) && lastname.Length is < 2 or > 80)
+         return Result.Failure(ReaderErrors.InvalidLastname);
+      
+      // Apply changes
+      if (lastname is not null) Lastname = lastname;
+      if (emailVo is not null) EmailVo = emailVo;
+      if (addressVo is not null) AddressVo = addressVo;
 
       var touchResult = Touch(updatedAt);
       if (touchResult.IsFailure)
          return Result.Failure(touchResult.Error);
-
-      Firstname = firstname;
-      Lastname = lastname;
-      EmailVo = emailVo;
-      AddressVo = addressVo;
-
-      return Result.Success();
-   }
-
-   private static Result ValidateProfile(
-      string firstname,
-      string lastname,
-      EmailVo emailVo,
-      AddressVo addressVo
-   ) {
-      if (emailVo is null)
-         return Result.Failure(ReaderErrors.InvalidEmail);
-
-      if (addressVo is null)
-         return Result.Failure(ReaderErrors.AddressRequired);
-
-      if (string.IsNullOrWhiteSpace(firstname))
-         return Result.Failure(ReaderErrors.FirstnameIsRequired);
-
-      if (firstname.Length is < 2 or > 80)
-         return Result.Failure(ReaderErrors.InvalidFirstname);
-
-      if (string.IsNullOrWhiteSpace(lastname))
-         return Result.Failure(ReaderErrors.LastnameIsRequired);
-
-      if (lastname.Length is < 2 or > 80)
-         return Result.Failure(ReaderErrors.InvalidLastname);
-
+      
       return Result.Success();
    }
 }

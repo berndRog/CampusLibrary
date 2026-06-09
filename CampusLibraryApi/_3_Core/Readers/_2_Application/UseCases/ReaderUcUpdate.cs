@@ -33,40 +33,45 @@ public sealed class ReaderUcUpdate(
       if (reader is null)
          return Result<ReaderDto>.Failure(ReaderErrors.ReaderNotFound);
 
-      // Normalize and validate email input using the value object.
-      var resultEmail = EmailVo.Create(dto.Email);
-      if (resultEmail.IsFailure)
-         return Result<ReaderDto>.Failure(resultEmail.Error);
+      // 2) DomainModel
+      // Normalize and validate email input
+      EmailVo? newEmailVo;
+      if (dto.Email is null) {
+         newEmailVo = null;
+      }
+      else {
+         var resultEmail = EmailVo.Create(dto.Email);
+         if (resultEmail.IsFailure) return Result<ReaderDto>.Failure(resultEmail.Error);
+         newEmailVo = resultEmail.Value;
+         
+         // Check email uniqueness
+         var readerWithSameEmail = await repository.FindByEmailAsync(newEmailVo, ct);
+         if (readerWithSameEmail is not null && readerWithSameEmail.Id != reader.Id)
+            return Result<ReaderDto>.Failure(ReaderErrors.EmailAlreadyInUse);
+      }
 
-      var emailVo = resultEmail.Value;
-
-      // Check email uniqueness, but allow the current reader to keep its own email.
-      var readerWithSameEmail = await repository.FindByEmailAsync(emailVo, ct);
-      if (readerWithSameEmail is not null && readerWithSameEmail.Id != reader.Id)
-         return Result<ReaderDto>.Failure(ReaderErrors.EmailAlreadyInUse);
-
-      var addressDto = dto.AddressDto;
-      if (addressDto is null)
-         return Result<ReaderDto>.Failure(ReaderErrors.AddressRequired);
-
-      // Validate address input and create AddressVo.
-      var resultAddress = AddressVo.Create(
-         street: addressDto.Street,
-         postalCode: addressDto.PostalCode,
-         city: addressDto.City,
-         country: addressDto.Country
-      );
-      if (resultAddress.IsFailure)
-         return Result<ReaderDto>.Failure(resultAddress.Error);
-
-      var addressVo = resultAddress.Value;
-
+      // check Address
+      AddressVo? newAddressVo;
+      if (dto.AddressDto is null) {
+         newAddressVo = null;
+      }
+      else {
+         var resultAddressVo = AddressVo.Create(
+            street: dto.AddressDto.Street,
+            postalCode: dto.AddressDto!.PostalCode,
+            city: dto.AddressDto!.City,
+            country: dto.AddressDto!.Country
+         );
+         if (resultAddressVo.IsFailure)
+            return Result<ReaderDto>.Failure(resultAddressVo.Error);
+         newAddressVo = resultAddressVo.Value;
+      }
+      
       // Update the aggregate through its domain method.
       var updateResult = reader.UpdateProfile(
-         firstname: dto.Firstname,
          lastname: dto.Lastname,
-         emailVo: emailVo,
-         addressVo: addressVo,
+         emailVo: newEmailVo,
+         addressVo: newAddressVo,
          updatedAt: clock.UtcNow
       );
       if (updateResult.IsFailure)

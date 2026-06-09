@@ -1,9 +1,12 @@
 using AwesomeAssertions;
+using CampusLibraryApi._2_Shared._1_Ports;
 using CampusLibraryApi._3_Core.Readers._1_Ports;
 using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
+using CampusLibraryApi._3_Core.Readers._2_Application.Mappings;
+using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
+using CampusLibraryApiTest.TestHelper.Mappings;
 using CampusLibraryApiTest.TestInfrastructure;
 using Microsoft.Extensions.DependencyInjection;
-
 namespace CampusLibraryApiTest._2_ApplicationTests.UseCases_Integration;
 
 public sealed class ReaderUseCasesIntT : TestBaseIntegration {
@@ -14,33 +17,30 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
       SensitiveDataLogging = true;
    }
 
+   #region ReaderUcCreate
    [Fact]
    public async Task CreateAsync_ok_persists_reader_to_database() {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var useCases = scope.ServiceProvider.GetRequiredService<IReaderUseCases>();
       var readModel = scope.ServiceProvider.GetRequiredService<IReaderReadModel>();
+      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
+      var reader1 = seed.Reader1();
 
       // Arrange
-      var dto = CreateDto(
-         id: "81000000-0000-0000-0000-000000000000",
-         firstname: "Ina",
-         lastname: "Integration",
-         email: "INA.INTEGRATION@EXAMPLE.COM",
-         subject: "81000000-0000-0000-0000-000000000000"
-      );
+      var dto = Mappings.ToReaderCreateDto(reader1);
 
       // Act
-      var createResult = await useCases.CreateAsync(dto, ct);
-      var findResult = await readModel.FindByIdAsync(createResult.Value.Id, ct);
-
+      var resultCreateReader1Dto = await useCases.CreateAsync(dto, ct);
+      resultCreateReader1Dto.IsSuccess.Should().BeTrue();
+      var createReader1Dto = resultCreateReader1Dto.Value;
+      
       // Assert
-      createResult.IsSuccess.Should().BeTrue();
-      createResult.Value.Id.Should().Be(Guid.Parse(dto.Id!));
-      createResult.Value.Email.Should().Be("ina.integration@example.com");
-
-      findResult.IsSuccess.Should().BeTrue();
-      findResult.Value.Should().BeEquivalentTo(createResult.Value);
+      var resultFind = await readModel.FindByIdAsync(createReader1Dto.Id, ct);
+      
+      resultFind.IsSuccess.Should().BeTrue();
+      var actualReader1Dto = resultFind.Value;
+      actualReader1Dto.Should().BeEquivalentTo(createReader1Dto);
    }
 
    [Fact]
@@ -48,36 +48,32 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var useCases = scope.ServiceProvider.GetRequiredService<IReaderUseCases>();
-      var readModel = scope.ServiceProvider.GetRequiredService<IReaderReadModel>();
-
+      var repository = scope.ServiceProvider.GetRequiredService<IReaderRepository>();
+      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
+      
       // Arrange
-      var firstDto = CreateDto(
-         id: "82000000-0000-0000-0000-000000000000",
-         firstname: "Erster",
-         lastname: "Reader",
-         email: "duplicate.reader@example.com",
-         subject: "82000000-0000-0000-0000-000000000000"
-      );
-      var secondDto = CreateDto(
-         id: "83000000-0000-0000-0000-000000000000",
-         firstname: "Zweiter",
-         lastname: "Reader",
-         email: "DUPLICATE.READER@EXAMPLE.COM",
-         subject: "83000000-0000-0000-0000-000000000000"
-      );
+      var reader1 = seed.Reader1();
+      var reader2Dto = Mappings.ToReaderCreateDto(seed.Reader2());
+      var reader2DtoWithSameEmail = reader2Dto with {
+         Email = reader1.EmailVo.Value
+      };
 
-      var firstResult = await useCases.CreateAsync(firstDto, ct);
+      repository.Add(reader1);
+      await unitOfWork.SaveAllChangesAsync("Reader1 inserted", ct);
+      unitOfWork.ClearChangeTracker();
 
       // Act
-      var secondResult = await useCases.CreateAsync(secondDto, ct);
-      var readSecondResult = await readModel.FindByIdAsync(Guid.Parse(secondDto.Id!), ct);
-
+      var result = await useCases.CreateAsync(reader2DtoWithSameEmail, ct);
+     
       // Assert
-      firstResult.IsSuccess.Should().BeTrue();
-      secondResult.IsFailure.Should().BeTrue();
-      readSecondResult.IsFailure.Should().BeTrue();
+      result.IsFailure.Should().BeTrue();
+      result.Error.Should().Be(ReaderErrors.EmailAlreadyInUse);
+      
    }
+   #endregion
 
+   #region ReadUcUpdate
    [Fact]
    public async Task UpdateAsync_ok_persists_changes_to_database() {
       using var scope = Root.CreateDefaultScope();
@@ -85,7 +81,7 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
       var useCases = scope.ServiceProvider.GetRequiredService<IReaderUseCases>();
       var repository = scope.ServiceProvider.GetRequiredService<IReaderRepository>();
       var readModel = scope.ServiceProvider.GetRequiredService<IReaderReadModel>();
-      var unitOfWork = scope.ServiceProvider.GetRequiredService<CampusLibraryApi._2_Shared._1_Ports.IUnitOfWork>();
+      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
 
       // Arrange
@@ -94,32 +90,25 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
       await unitOfWork.SaveAllChangesAsync("Reader1 inserted", ct);
       unitOfWork.ClearChangeTracker();
 
+      var addressDto = seed.Address4Vo.ToAddressDto();
       var dto = new ReaderUpdateDto(
-         Firstname: "Erna",
-         Lastname: "Musterfrau",
-         Email: "ERNA.MUSTERFRAU@EXAMPLE.COM",
-         AddressDto: new AddressDto(
-            Street: "Neue Straße 5",
-            PostalCode: "30123",
-            City: "Hannover",
-            Country: "DE"
-         )
+         Lastname: "Meier",
+         Email: "e.meier@gmx.de",
+         AddressDto: addressDto
       );
 
       // Act
-      var updateResult = await useCases.UpdateAsync(reader.Id, dto, ct);
+      var resultUpdate = await useCases.UpdateAsync(reader.Id, dto, ct);
+      
+      resultUpdate.IsSuccess.Should().BeTrue();
+      var updatedReader1Dto = resultUpdate.Value;
       unitOfWork.ClearChangeTracker();
-      var findResult = await readModel.FindByIdAsync(reader.Id, ct);
-
+      
       // Assert
-      updateResult.IsSuccess.Should().BeTrue();
-      updateResult.Value.Firstname.Should().Be("Erna");
-      updateResult.Value.Lastname.Should().Be("Musterfrau");
-      updateResult.Value.Email.Should().Be("erna.musterfrau@example.com");
-      updateResult.Value.AddressDto.City.Should().Be("Hannover");
-
-      findResult.IsSuccess.Should().BeTrue();
-      findResult.Value.Should().BeEquivalentTo(updateResult.Value);
+      var resultFind = await readModel.FindByIdAsync(reader.Id, ct);
+      resultFind.IsSuccess.Should().BeTrue();
+      var actualReader1Dto = resultFind.Value;
+      actualReader1Dto.Should().BeEquivalentTo(updatedReader1Dto);
    }
 
    [Fact]
@@ -129,7 +118,7 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
       var useCases = scope.ServiceProvider.GetRequiredService<IReaderUseCases>();
       var repository = scope.ServiceProvider.GetRequiredService<IReaderRepository>();
       var readModel = scope.ServiceProvider.GetRequiredService<IReaderReadModel>();
-      var unitOfWork = scope.ServiceProvider.GetRequiredService<CampusLibraryApi._2_Shared._1_Ports.IUnitOfWork>();
+      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
 
       // Arrange
@@ -140,23 +129,20 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
       unitOfWork.ClearChangeTracker();
 
       var dto = new ReaderUpdateDto(
-         Firstname: "Erna",
-         Lastname: "Musterfrau",
+         Lastname: "Meier",
          Email: reader2.EmailVo.Value,
-         AddressDto: reader1.AddressVo.ToAddressDtoForTest()
+         AddressDto: reader1.AddressVo.ToAddressDto()
       );
 
       // Act
-      var updateResult = await useCases.UpdateAsync(reader1.Id, dto, ct);
+      var resultUpdate = await useCases.UpdateAsync(reader1.Id, dto, ct);
       unitOfWork.ClearChangeTracker();
-      var findResult = await readModel.FindByIdAsync(reader1.Id, ct);
-
+      
       // Assert
-      updateResult.IsFailure.Should().BeTrue();
-      findResult.IsSuccess.Should().BeTrue();
-      findResult.Value.Email.Should().Be(reader1.EmailVo.Value);
-      findResult.Value.Firstname.Should().Be(reader1.Firstname);
+      resultUpdate.IsFailure.Should().BeTrue();
+      resultUpdate.Error.Should().Be(ReaderErrors.EmailAlreadyInUse);
    }
+   #endregion
 
    [Fact]
    public async Task DeleteAsync_ok_removes_reader_from_database() {
@@ -165,22 +151,22 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
       var useCases = scope.ServiceProvider.GetRequiredService<IReaderUseCases>();
       var repository = scope.ServiceProvider.GetRequiredService<IReaderRepository>();
       var readModel = scope.ServiceProvider.GetRequiredService<IReaderReadModel>();
-      var unitOfWork = scope.ServiceProvider.GetRequiredService<CampusLibraryApi._2_Shared._1_Ports.IUnitOfWork>();
+      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
 
       // Arrange
-      var reader = seed.Reader3();
+      var reader = seed.Reader1();
       repository.Add(reader);
-      await unitOfWork.SaveAllChangesAsync("Reader3 inserted", ct);
+      await unitOfWork.SaveAllChangesAsync("Reader1 inserted", ct);
       unitOfWork.ClearChangeTracker();
 
       // Act
-      var deleteResult = await useCases.DeleteAsync(reader.Id, ct);
+      var resultDelete = await useCases.DeleteAsync(reader.Id, ct);
+      resultDelete.IsSuccess.Should().BeTrue();
       unitOfWork.ClearChangeTracker();
-      var findResult = await readModel.FindByIdAsync(reader.Id, ct);
 
       // Assert
-      deleteResult.IsSuccess.Should().BeTrue();
+      var findResult = await readModel.FindByIdAsync(reader.Id, ct);
       findResult.IsFailure.Should().BeTrue();
    }
 
@@ -199,35 +185,4 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
       // Assert
       deleteResult.IsFailure.Should().BeTrue();
    }
-
-   private static ReaderCreateDto CreateDto(
-      string id,
-      string firstname,
-      string lastname,
-      string email,
-      string subject
-   ) => new(
-      Firstname: firstname,
-      Lastname: lastname,
-      Email: email,
-      AddressDto: new AddressDto(
-         Street: "Teststraße 1",
-         PostalCode: "29556",
-         City: "Suderburg",
-         Country: "DE"
-      ),
-      Subject: subject,
-      Id: id
-   );
-}
-
-file static class ReaderUseCasesIntTExtensions {
-   public static AddressDto ToAddressDtoForTest(
-      this CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects.AddressVo addressVo
-   ) => new(
-      Street: addressVo.Street,
-      PostalCode: addressVo.PostalCode,
-      City: addressVo.City,
-      Country: addressVo.Country
-   );
 }

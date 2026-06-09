@@ -97,7 +97,7 @@ Accept: application/json
 {
   "subject": "reader-002",
   "firstname": "Erika",
-  "lastname": "Musterfrau",
+  "lastname": "Meier",
   "email": "duplicate.subject@example.com",
   "addressDto": {
     "street": "Neue Straße 1",
@@ -119,7 +119,7 @@ Accept: application/json
 {
   "subject": "reader-003",
   "firstname": "Erika",
-  "lastname": "Musterfrau",
+  "lastname": "Meier",
   "email": "{{readerEmail}}",
   "addressDto": {
     "street": "Neue Straße 1",
