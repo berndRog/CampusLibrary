@@ -11,7 +11,7 @@ public sealed class ReaderRepositoryIntT : TestBaseIntegration {
 
    public ReaderRepositoryIntT() {
       DbName = nameof(ReaderRepositoryIntT);
-      DbMode = DbMode.FileUnique;
+      DbMode = DbMode.InMemory;
       SensitiveDataLogging = true;
    }
 

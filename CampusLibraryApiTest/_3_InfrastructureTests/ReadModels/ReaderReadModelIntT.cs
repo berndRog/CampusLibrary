@@ -10,7 +10,7 @@ public sealed class ReaderReadModelIntT : TestBaseIntegration {
    
    public ReaderReadModelIntT() {
       DbName = nameof(ReaderReadModelIntT);
-      DbMode = DbMode.FileUnique;
+      DbMode = DbMode.InMemory;
       SensitiveDataLogging = true;
    }
 
