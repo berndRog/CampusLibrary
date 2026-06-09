@@ -137,10 +137,10 @@ public sealed class ReadersControllerE2eT : TestBaseEndToEnd {
          expectedReaderDto = new ReaderDto(
             Id: reader1.Id,
             Subject: reader1.Subject,
-            Firstname: updateDto.Firstname,
-            Lastname: updateDto.Lastname,
-            Email: updateDto.Email,
-            AddressDto: updateDto.AddressDto
+            Firstname: reader1.Firstname,
+            Lastname: updateDto.Lastname ?? reader1.Lastname,
+            Email: updateDto.Email ?? reader1.EmailVo.Value,
+            AddressDto: updateDto.AddressDto ?? reader1.AddressVo.ToAddressDto()
          );
 
          repository.Add(reader1);
