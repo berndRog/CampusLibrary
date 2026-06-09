@@ -8,5 +8,13 @@ public interface IReaderUseCases {
       ReaderCreateDto dto,
       CancellationToken ct
    );
+   
+   public interface IReaderUseCases {
 
+      Task<Result<ReaderDto>> CreateAsync(
+         ReaderCreateDto dto,
+         CancellationToken ct
+      );
+      
+   }
 }
