@@ -27,7 +27,8 @@ public sealed class TestBaseFactory : WebApplicationFactory<Program> {
 
    public string TestSubject { get; set; } = "11111111-a224-492b-bb8f-b4bac23d7c88";
    public string TestUsername { get; set; } = "j.doe@mail.local";
-   public DateTime TestCreatedAt { get; set; } = DateTime.Parse("2025-01-01T00:00:00Z");
+   public DateTime TestCreatedAt { get; set; } =
+      new(2025, 01, 01, 00, 00, 00, DateTimeKind.Utc);
    public int TestAdminRights { get; set; }
 
    public TestBaseFactory(
