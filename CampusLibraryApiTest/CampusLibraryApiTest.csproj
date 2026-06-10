@@ -38,7 +38,6 @@
 
   <ItemGroup>
     <Folder Include="_2_ApplicationTests\UseCases_Integration\" />
-    <Folder Include="_4_ApiTests\"/>
   </ItemGroup>
 
   <ItemGroup>

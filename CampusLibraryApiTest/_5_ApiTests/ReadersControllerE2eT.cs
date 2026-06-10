@@ -9,8 +9,7 @@ using CampusLibraryApiTest.TestController;
 using CampusLibraryApiTest.TestHelper.Mappings;
 using CampusLibraryApiTest.TestInfrastructure;
 using Microsoft.Extensions.DependencyInjection;
-
-namespace CampusLibraryApiTest._4_ApiTests;
+namespace CampusLibraryApiTest._4_WebTests;
 
 public sealed class ReadersControllerE2eT : TestBaseEndToEnd {
    protected override string DatabaseName => nameof(ReadersControllerE2eT);

@@ -1,26 +1,31 @@
 using CampusLibraryApi._4_Infrastructure;
 using CampusLibraryApi.Configure;
 
-var builder = WebApplication.CreateBuilder(args);
+namespace CampusLibraryApi;
 
-builder.Services.AddControllers();
-builder.Services.AddReadersModule();
+public class Program {
 
-builder.Services.AddInfrastructureModule(builder.Configuration);
+   public static async Task Main(string[] args) {
+   
+      var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+      builder.Services.AddControllers();
+      builder.Services.AddReadersModule();
 
-var app = builder.Build();
+      builder.Services.AddInfrastructureModule(builder.Configuration);
 
-if (app.Environment.IsDevelopment()) {
-   app.UseSwagger();
-   app.UseSwaggerUI();
+      builder.Services.AddEndpointsApiExplorer();
+      builder.Services.AddSwaggerGen();
+
+      var app = builder.Build();
+
+      if (app.Environment.IsDevelopment()) {
+         app.UseSwagger();
+         app.UseSwaggerUI();
+      }
+
+      app.MapControllers();
+
+      await app.RunAsync();
+   }
 }
-
-app.MapControllers();
-
-app.Run();
-
-// Exposes the top-level Program type to WebApplicationFactory in API tests.
-public partial class Program { }
