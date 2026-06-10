@@ -1,3 +1,4 @@
+using Asp.Versioning.ApiExplorer;
 using CampusLibraryApi._4_Infrastructure;
 using CampusLibraryApi.Configure;
 
@@ -15,14 +16,57 @@ public class Program {
       builder.Services.AddInfrastructureModule(builder.Configuration);
 
       builder.Services.AddEndpointsApiExplorer();
-      builder.Services.AddSwaggerGen();
+      
+      // API versioning 
+      builder.Services.AddApiReaderAndVersioning();
+      
+      // Swagger
+      builder.Services.AddSwagger();
 
       var app = builder.Build();
 
       if (app.Environment.IsDevelopment()) {
+         //app.UseHttpLogging();
+         app.UseDeveloperExceptionPage();
+      
+         // // Keep old student/bookmarked URL working after API version migration.
+         // app.Use((context, next) => {
+         //    if (context.Request.Path.Equals("/swagger/v1/swagger.json", StringComparison.OrdinalIgnoreCase) ||
+         //        context.Request.Path.Equals("/swagger/v1/swagger.json/", StringComparison.OrdinalIgnoreCase)) {
+         //       context.Request.Path = "/swagger/v2/swagger.json";
+         //    }
+         //    return next();
+         // });
+         
+         // Avoid stale Swagger UI config/assets after URL/version changes.
+         app.Use(async (context, next) => {
+            if (context.Request.Path.StartsWithSegments("/swagger", StringComparison.OrdinalIgnoreCase)) {
+               context.Response.OnStarting(() => {
+                  context.Response.Headers.CacheControl = "no-store, no-cache, must-revalidate";
+                  context.Response.Headers.Pragma = "no-cache";
+                  context.Response.Headers.Expires = "0";
+                  return Task.CompletedTask;
+               });
+            }
+
+            await next();
+         });
+
          app.UseSwagger();
-         app.UseSwaggerUI();
-      }
+         
+         app.UseSwaggerUI(options => {
+            // Dynamisch alle API-Versionen anzeigen
+            var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
+      
+            foreach (var description in provider.ApiVersionDescriptions) {
+               options.SwaggerEndpoint(
+                  $"/swagger/{description.GroupName}/swagger.json",
+                  $"CampusLibraryApi {description.GroupName.ToUpperInvariant()}"
+               );
+            }
+      
+            options.RoutePrefix = "swagger";
+         });      }
 
       app.MapControllers();
 

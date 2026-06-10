@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using CampusLibraryApi._1_Web.Common;
 using CampusLibraryApi._2_Shared._3_Domain.Enums;
 using CampusLibraryApi._3_Core.Readers._1_Ports;
@@ -9,9 +10,15 @@ namespace CampusLibraryApi._1_Web.Controllers;
 // HTTP API controller for Reader resources.
 // Translates HTTP requests into calls to read models or use cases.
 // Contains no domain logic.
+
+[ApiVersion("1.0")]
+// [ApiVersion("1.1")]
+// [ApiVersion("1.2")]
+// [ApiVersion("2.0")]
+
+[Route("campuslibrary/v{version:apiVersion}")]
 [ApiController]
-[Route("library/v1")]
-[Produces("application/json")]
+
 public sealed class ReadersController(
    IReaderReadModel readerReadModel,
    IReaderUseCases readerUseCases
@@ -24,10 +31,11 @@ public sealed class ReadersController(
    /// <returns>A list of reader resources.</returns>
    // Query all readers through the read model.
    [HttpGet("readers", Name = nameof(GetAllAsync))]
-   [ProducesResponseType<IReadOnlyList<ReaderDto>>(StatusCodes.Status200OK)]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
+   // [Produces("application/json")]
+   // [ProducesResponseType<IReadOnlyList<ReaderDto>>(StatusCodes.Status200OK)]
+   // [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+   // [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
+   // [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    public async Task<ActionResult<IReadOnlyList<ReaderDto>>> GetAllAsync(CancellationToken ct) {
       var result = await readerReadModel.SelectAllAsync(ct);
 
@@ -52,6 +60,7 @@ public sealed class ReadersController(
    /// <returns>The requested reader resource.</returns>
    // Query one reader by id through the read model.
    [HttpGet("readers/{id:guid}", Name = nameof(GetByIdAsync))]
+   [Produces("application/json")]
    [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
@@ -83,6 +92,7 @@ public sealed class ReadersController(
    /// <returns>The requested reader resource.</returns>
    // Query one reader by email through the read model.
    [HttpGet("readers/email", Name = nameof(GetByEmailAsync))]
+   [Produces("application/json")]
    [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
@@ -117,6 +127,7 @@ public sealed class ReadersController(
    // Create a new reader through the write-side use case.
    [HttpPost("readers", Name = nameof(CreateAsync))]
    [Consumes("application/json")]
+   [Produces("application/json")]
    [ProducesResponseType<ReaderDto>(StatusCodes.Status201Created)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
@@ -157,6 +168,7 @@ public sealed class ReadersController(
    // Update an existing reader through the write-side use case.
    [HttpPut("readers/{id:guid}", Name = nameof(UpdateAsync))]
    [Consumes("application/json")]
+   [Produces("application/json")]
    [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
