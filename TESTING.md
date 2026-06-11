@@ -12,8 +12,3 @@ The current test suite contains 63 tests.
 dotnet test
 
 Test summary: total: 63, failed: 0, succeeded: 63, skipped: 0
-```
-
-## Test levels
-
-The test project is structured
