@@ -13,3 +13,8 @@ The current version contains the first functional module:
 - API versioning
 - Swagger/OpenAPI documentation
 - SQLite persistence with EF Core
+- Repository and ReadModel infrastructure
+- Use cases for create, partial update and delete
+- Controller/end-to-end tests with a real SQLite test database
+
+The test suite currently contains 63 tests covering domain, value objects, use cases, repositories, read models and controller/end-to-end scenarios.
