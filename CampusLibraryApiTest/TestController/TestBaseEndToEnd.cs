@@ -20,9 +20,10 @@ public abstract class TestBaseEndToEnd : IAsyncLifetime {
 
    // Base name for DB files (timestamp will be appended for FileUnique).
    // Override to include the test name if you want even nicer traceability.
-   protected virtual string DatabaseName => "BankingApiTest";
+   protected virtual string DatabaseName => "AppApiTest";
 
    public async ValueTask InitializeAsync() {
+      
       Factory = new TestBaseFactory(
          dbMode: DbMode,
          databaseName: DatabaseName,
