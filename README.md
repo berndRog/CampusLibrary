@@ -1,31 +1,15 @@
 # CampusLibrary
 
-Teaching project for a modular DDD-oriented ASP.NET Core Web API with a Blazor SSR client planned later.
+Teaching project for a modular DDD-oriented ASP.NET Core Web API.
+
+The project demonstrates how a small modular monolith can be structured into Web, Core, Infrastructure and Test layers while keeping the domain model independent from technical persistence details.
 
 ## Current status
 
-This initial version starts with the first API module:
+The current version contains the first functional module:
 
-- `Readers` domain and application module
-- EF Core infrastructure for `Reader`
-- ReadModel for DB-to-DTO projections
-- Repository for the write side
-- REST controller for `Reader`
-
-## Architectural rules
-
-- Write operations are implemented as **Use Cases**.
-- Read operations are implemented as **ReadModels**.
-- The domain model does not depend on EF Core.
-- Infrastructure implements application ports.
-- Controllers call either Use Cases or ReadModels.
-
-## Initial API endpoints
-
-```http
-GET  /library/v1/readers
-GET  /library/v1/readers/{id}
-POST /library/v1/readers
-```
-
-This first module intentionally starts without AuthN/AuthZ. A later step will replace manual reader creation with token-based reader provisioning.
+- `Readers` module
+- ASP.NET Core Web API
+- API versioning
+- Swagger/OpenAPI documentation
+- SQLite persistence with EF Core
