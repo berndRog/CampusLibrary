@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using AwesomeAssertions;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._3_Core.Readers._1_Ports;
@@ -12,8 +13,10 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CampusLibraryApiTest._4_WebTests;
 
 public sealed class ReadersControllerE2eT : TestBaseEndToEnd {
+   
    protected override string DatabaseName => nameof(ReadersControllerE2eT);
-
+   //protected override DbMode DbMode => DbMode.FileUnique;
+   
    private readonly string _url = "/camplib/v1";
    private readonly CancellationToken _ct = TestContext.Current.CancellationToken;
    
@@ -72,11 +75,10 @@ public sealed class ReadersControllerE2eT : TestBaseEndToEnd {
       // Act
       var response = await Client
          .GetAsync($"{_url}/readers", _ct);
-      
       var actualReaderDtos = await response.Content
          .ReadFromJsonAsync<List<ReaderDto>>(_ct);
 
-      // Assert
+      // // Assert
       response.StatusCode.Should().Be(HttpStatusCode.OK);
       actualReaderDtos.Should().NotBeNull();
       actualReaderDtos!
