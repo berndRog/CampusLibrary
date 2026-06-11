@@ -409,3 +409,6 @@ FodyWeavers.xsd
 *.db-wal
 *.db-journal
 
+# macOS Finder metadata
+.DS_Store
+**/.DS_Store
