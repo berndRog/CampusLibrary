@@ -26,18 +26,19 @@
   </ItemGroup>
   
   <ItemGroup>
-    <Folder Include="_2_BuildingBlocks\_3_Domain\Enums\" />
-    <Folder Include="_2_BuildingBlocks\_3_Domain\ValueObjects\" />
-    <Folder Include="_3_Core\" />
-  </ItemGroup>
-  
-  <ItemGroup>
     <Content Update="appsettings.Development.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Update="appsettings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\CampusLibraryApi_1_Web\CampusLibraryApi_1_Web.csproj" />
+    <ProjectReference Include="..\CampusLibraryApi_2_BuildingBlocks\CampusLibraryApi_2_BuildingBlocks.csproj" />
+    <ProjectReference Include="..\CampusLibraryApi_3_Core_Readers\CampusLibraryApi_3_Core_Readers.csproj" />
+    <ProjectReference Include="..\CampusLibraryApi_4_Infrastructure\CampusLibraryApi_4_Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

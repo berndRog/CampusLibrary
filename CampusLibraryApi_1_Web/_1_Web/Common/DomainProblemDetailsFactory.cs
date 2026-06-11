@@ -1,4 +1,5 @@
 using CampusLibraryApi._2_BuildingBlocks._3_Domain.Errors;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CampusLibraryApi._1_Web.Common;

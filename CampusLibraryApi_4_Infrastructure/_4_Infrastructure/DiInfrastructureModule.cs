@@ -5,6 +5,8 @@ using CampusLibraryApi._4_Infrastructure.Persistence.Readers;
 using CampusLibraryApi._4_Infrastructure.Persistence.ReadModels;
 using CampusLibraryApi._4_Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 namespace CampusLibraryApi._4_Infrastructure;
 
 public static class DiInfrastructureModule {
@@ -26,7 +28,7 @@ public static class DiInfrastructureModule {
 
       // Repositories
       services.AddScoped<IReaderRepository, ReaderRepositoryEf>();
-
+      
       // ReadModels
       services.AddScoped<IReaderReadModel, ReaderReadModelEf>();
 

@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
+using Microsoft.Extensions.Logging;
 [assembly: InternalsVisibleTo("CampusLibraryApiTest")]
 namespace CampusLibraryApi._4_Infrastructure.Persistence.Database;
 

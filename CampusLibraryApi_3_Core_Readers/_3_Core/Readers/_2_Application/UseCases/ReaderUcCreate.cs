@@ -7,6 +7,7 @@ using CampusLibraryApi._3_Core.Readers._2_Application.Mappings;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
+using Microsoft.Extensions.Logging;
 
 namespace CampusLibraryApi._3_Core.Readers._2_Application.UseCases;
 
