@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <RootNamespace>CampusLibraryApi</RootNamespace>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="_3_Core\Catalog\_1_Ports\" />
+    <Folder Include="_3_Core\Catalog\_2_Application\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CampusLibraryApi_2_BuildingBlocks\CampusLibraryApi_2_BuildingBlocks.csproj" />
+  </ItemGroup>
+
+</Project>
