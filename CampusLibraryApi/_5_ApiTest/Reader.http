@@ -1,4 +1,4 @@
-@baseUrl = http://localhost:5000/library/v1
+@baseUrl = https://localhost:8010/camplib/v1
 
 ### 
 # create reader 1
