@@ -14,6 +14,9 @@ namespace CampusLibraryApiTest._4_WebTests;
 public sealed class ReadersControllerE2eT : TestBaseEndToEnd {
    protected override string DatabaseName => nameof(ReadersControllerE2eT);
 
+   private readonly string _url = "/camplib/v1";
+   private readonly CancellationToken _ct = TestContext.Current.CancellationToken;
+   
    [Fact]
    public async Task GetByIdAsync_ok() {
       // Arrange
@@ -28,18 +31,16 @@ public sealed class ReadersControllerE2eT : TestBaseEndToEnd {
          expectedReaderDto = reader.ToReaderDto();
 
          repository.Add(reader);
-         await unitOfWork.SaveAllChangesAsync("Reader1 inserted", TestContext.Current.CancellationToken);
+         await unitOfWork.SaveAllChangesAsync("Reader1 inserted", _ct);
          unitOfWork.ClearChangeTracker();
       });
 
       // Act
-      var response = await Client.GetAsync(
-         $"/library/v1/readers/{expectedReaderDto.Id}",
-         TestContext.Current.CancellationToken
-      );
-      var actualReaderDto = await response.Content.ReadFromJsonAsync<ReaderDto>(
-         cancellationToken: TestContext.Current.CancellationToken
-      );
+      var response = await Client
+         .GetAsync($"{_url}/readers/{expectedReaderDto.Id}", _ct);
+      
+      var actualReaderDto = await response.Content
+         .ReadFromJsonAsync<ReaderDto>(_ct);
 
       // Assert
       response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -64,18 +65,16 @@ public sealed class ReadersControllerE2eT : TestBaseEndToEnd {
             .ToList();
 
          repository.AddRange(readers);
-         await unitOfWork.SaveAllChangesAsync("Readers inserted", TestContext.Current.CancellationToken);
+         await unitOfWork.SaveAllChangesAsync("Readers inserted", _ct);
          unitOfWork.ClearChangeTracker();
       });
 
       // Act
-      var response = await Client.GetAsync(
-         "/library/v1/readers",
-         TestContext.Current.CancellationToken
-      );
-      var actualReaderDtos = await response.Content.ReadFromJsonAsync<List<ReaderDto>>(
-         cancellationToken: TestContext.Current.CancellationToken
-      );
+      var response = await Client
+         .GetAsync($"{_url}/readers", _ct);
+      
+      var actualReaderDtos = await response.Content
+         .ReadFromJsonAsync<List<ReaderDto>>(_ct);
 
       // Assert
       response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -98,14 +97,11 @@ public sealed class ReadersControllerE2eT : TestBaseEndToEnd {
       });
 
       // Act
-      var response = await Client.PostAsJsonAsync(
-         "/library/v1/readers",
-         dto,
-         TestContext.Current.CancellationToken
-      );
-      var actualReaderDto = await response.Content.ReadFromJsonAsync<ReaderDto>(
-         cancellationToken: TestContext.Current.CancellationToken
-      );
+      var response = await Client.
+         PostAsJsonAsync($"{_url}/readers", dto, _ct);
+      
+      var actualReaderDto = await response.Content.
+         ReadFromJsonAsync<ReaderDto>(_ct);
 
       // Assert
       response.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -149,13 +145,10 @@ public sealed class ReadersControllerE2eT : TestBaseEndToEnd {
 
       // Act
       var response = await Client.PutAsJsonAsync(
-         $"/library/v1/readers/{expectedReaderDto.Id}",
-         updateDto,
-         TestContext.Current.CancellationToken
-      );
-      var actualReaderDto = await response.Content.ReadFromJsonAsync<ReaderDto>(
-         cancellationToken: TestContext.Current.CancellationToken
-      );
+         $"{_url}/readers/{expectedReaderDto.Id}", updateDto, _ct);
+      
+      var actualReaderDto = 
+         await response.Content.ReadFromJsonAsync<ReaderDto>(_ct);
 
       // Assert
       response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -182,17 +175,14 @@ public sealed class ReadersControllerE2eT : TestBaseEndToEnd {
       });
 
       // Act
-      var deleteResponse = await Client.DeleteAsync(
-         $"/library/v1/readers/{readerId}",
-         TestContext.Current.CancellationToken
-      );
-      var getResponse = await Client.GetAsync(
-         $"/library/v1/readers/{readerId}",
-         TestContext.Current.CancellationToken
-      );
+      var responseDelete = await Client
+         .DeleteAsync($"{_url}/readers/{readerId}",_ct);
+      
+      var responseGet = await Client
+         .GetAsync($"{_url}/readers/{readerId}", _ct);
 
       // Assert
-      deleteResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
-      getResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+      responseDelete.StatusCode.Should().Be(HttpStatusCode.NoContent);
+      responseGet.StatusCode.Should().Be(HttpStatusCode.NotFound);
    }
 }

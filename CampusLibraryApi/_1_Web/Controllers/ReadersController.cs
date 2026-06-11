@@ -16,7 +16,7 @@ namespace CampusLibraryApi._1_Web.Controllers;
 // [ApiVersion("1.2")]
 // [ApiVersion("2.0")]
 
-[Route("campuslibrary/v{version:apiVersion}")]
+[Route("camplib/v{version:apiVersion}")]
 [ApiController]
 
 public sealed class ReadersController(
