@@ -403,4 +403,9 @@ FodyWeavers.xsd
 **/[.]idea/
 *.sln.iml
 
+# SQLite database
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
 
