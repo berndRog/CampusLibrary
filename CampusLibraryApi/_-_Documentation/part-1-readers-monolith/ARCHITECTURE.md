@@ -1,247 +1,248 @@
-# Architecture: CampusLibrary Part 1 — Readers Monolith
+# Architecture: CampusLibrary Part 2 — Readers Modular Monolith
 
-This document describes the architecture of **Part 1** of the `CampusLibraryApi`.
+This document describes the architecture of Part 2 of the CampusLibraryApi.
 
-Part 1 implements the first domain module, `Readers`, inside a single ASP.NET Core Web API project. The application is intentionally kept as a **one-project monolith**. Inside this monolith, however, the code is already structured according to clear architectural boundaries.
+Part 2 refactors the completed Readers monolith from Part 1 into a project-based modular monolith. The functional scope stays the same: the application still contains only the Readers module. The main goal of this part is not to add new business functionality, but to introduce stronger architectural boundaries through separate projects.
+
+Part 1 already used a clean internal structure inside one project:
+
+```text
+_1_Web
+_2_BuildingBlocks
+_3_Core
+_4_Infrastructure
+```
+
+Part 2 moves these architectural areas into separate projects.
 
 This means:
 
-```text
-one deployable application
-one project
-one database
-one first domain module: Readers
-```
+* one deployable application
+* multiple projects
+* one database
+* one first domain module: Readers
+* stronger technical boundaries through project references
+* unchanged business behavior
+* existing tests remain green
 
-The goal of Part 1 is not yet to split the solution into multiple projects. That will happen in Part 2. The goal of Part 1 is to introduce the internal structure that will later make the project split understandable.
+The current test suite contains:
+
+```text
+66 tests
+0 failed
+```
 
 ## Architectural Goal
 
-The architecture of Part 1 is intended to make the following concepts visible in teaching:
+The architecture of Part 2 is intended to make the following concepts visible in teaching:
 
-* how to structure a Web API monolith internally
-* how to separate Web, BuildingBlocks, Core, and Infrastructure code
-* how to model a first domain module
-* how to distinguish write-oriented use cases from read-oriented read models
-* how to keep domain logic out of controllers
-* how to use DDD fundamentals such as Entity, Aggregate Root, Value Object, and Domain Error
-* how to use EF Core as a technical persistence mechanism
-* how to use ports to decouple Core from Infrastructure
-* how to prepare the codebase for a later modular-monolith project split
+* how to refactor a structured monolith into a modular monolith
+* how to use projects as architectural boundaries
+* how to separate Web/API, BuildingBlocks, Core module, Infrastructure and Tests
+* how to keep the domain model independent from technical persistence details
+* how to make dependency rules technically visible through project references
+* how to keep existing behavior stable during architectural refactoring
+* how to use tests as a safety net for structural changes
+* how to prepare the solution for additional future modules such as Catalog and Loans
 
-Part 1 therefore answers this question:
+Part 2 therefore answers this question:
 
-> How can a small Web API monolith already be structured in a clean, module-oriented way?
+```text
+How can a clean one-project monolith be refactored into a project-based modular monolith without changing its business behavior?
+```
 
 ## Current Project Structure
 
-Current state with the first module `Readers`:
+Current state with the first module Readers:
 
 ```text
 CampusLibraryApi
-├─ _0_Documentation
-│  └─ part-1-readers-monolith
-│     ├─ README.md
-│     ├─ ARCHITECTURE.md
-│     ├─ API.md
-│     └─ TESTING.md
+├─ Program.cs
+├─ appsettings.json
+└─ Configure
+   ├─ DiSwagger.cs
+   └─ other application-level registrations
+
+CampusLibraryApi_1_Web
+└─ Controllers
+   └─ ReadersController.cs
+
+CampusLibraryApi_2_BuildingBlocks
+├─ Result.cs
+├─ _1_Ports
+│  ├─ IClock.cs
+│  └─ IUnitOfWork.cs
+└─ _3_Domain
+   ├─ Entities
+   │  ├─ Entity.cs
+   │  └─ AggregateRoot.cs
+   └─ Errors
+      └─ Error.cs
+
+CampusLibraryApi_3_Core_Readers
+├─ _1_Ports
+│  ├─ IReaderRepository.cs
+│  ├─ IReaderReadModel.cs
+│  ├─ IReadersDbContext.cs
+│  └─ IReaderUseCases.cs
 │
-├─ _1_Web
-│  └─ Controllers
-│     └─ ReadersController.cs
+├─ _2_Application
+│  ├─ Dtos
+│  │  ├─ AddressDto.cs
+│  │  ├─ ReaderCreateDto.cs
+│  │  ├─ ReaderUpdateDto.cs
+│  │  └─ ReaderDto.cs
+│  ├─ Mappings
+│  └─ UseCases
+│     ├─ ReaderUcCreate.cs
+│     ├─ ReaderUcUpdate.cs
+│     ├─ ReaderUcDelete.cs
+│     └─ ReaderUseCases.cs
 │
-├─ _2_BuildingBlocks
-│  ├─ Result.cs
-│  ├─ _1_Ports
-│  │  ├─ IClock.cs
-│  │  └─ IUnitOfWork.cs
-│  └─ _3_Domain
-│     ├─ Entities
-│     │  ├─ Entity.cs
-│     │  └─ AggregateRoot.cs
-│     └─ Errors
-│        └─ Error.cs
-│
-├─ _3_Core
-│  └─ Readers
-│     ├─ _1_Ports
-│     │  ├─ IReaderRepository.cs
-│     │  ├─ IReaderReadModel.cs
-│     │  ├─ IReadersDbContext.cs
-│     │  └─ IReaderUseCases.cs
-│     │
-│     ├─ _2_Application
-│     │  ├─ Dtos
-│     │  │  ├─ AddressDto.cs
-│     │  │  ├─ ReaderCreateDto.cs
-│     │  │  ├─ ReaderUpdateDto.cs
-│     │  │  └─ ReaderDto.cs
-│     │  ├─ Mappings
-│     │  └─ UseCases
-│     │     ├─ ReaderUcCreate.cs
-│     │     ├─ ReaderUcUpdate.cs
-│     │     ├─ ReaderUcDelete.cs
-│     │     └─ ReaderUseCases.cs
-│     │
-│     └─ _3_Domain
-│        ├─ Entities
-│        │  └─ Reader.cs
-│        ├─ ValueObjects
-│        │  ├─ EmailVo.cs
-│        │  └─ AddressVo.cs
-│        └─ Errors
-│           └─ ReaderErrors.cs
-│
-├─ _4_Infrastructure
-│  └─ Persistence
-│     ├─ Configurations
-│     │  └─ ConfigReader.cs
-│     ├─ Database
-│     │  ├─ AppDbContext.cs
-│     │  └─ UnitOfWorkEf.cs
-│     ├─ ReadModels
-│     │  └─ ReaderReadModelEf.cs
-│     ├─ Repositories
-│     │  └─ ReaderRepositoryEf.cs
-│     └─ Seed.cs
-│
-├─ Configure
-│  ├─ DiReaders.cs
-│  ├─ DiInfrastructure.cs
-│  └─ DiSwagger.cs
-│
-└─ Program.cs
+└─ _3_Domain
+   ├─ Entities
+   │  └─ Reader.cs
+   ├─ ValueObjects
+   │  ├─ EmailVo.cs
+   │  └─ AddressVo.cs
+   └─ Errors
+      └─ ReaderErrors.cs
+
+CampusLibraryApi_4_Infrastructure
+└─ Persistence
+   ├─ Configurations
+   │  └─ ConfigReader.cs
+   ├─ Database
+   │  ├─ AppDbContext.cs
+   │  └─ UnitOfWorkEf.cs
+   ├─ ReadModels
+   │  └─ ReaderReadModelEf.cs
+   ├─ Repositories
+   │  └─ ReaderRepositoryEf.cs
+   └─ Seed.cs
+
+CampusLibraryApiTest
+└─ Tests for domain, value objects, use cases, repositories, read models and controller/end-to-end scenarios
 ```
 
-## Why This Is Still a Monolith
+## Why This Is a Modular Monolith
 
-Part 1 is a monolith because all application code lives inside one project:
+Part 2 is still a monolith because the application is deployed as one application.
+
+There is still:
+
+```text
+one deployable application
+one database
+one runtime process
+```
+
+However, it is now modular because the solution is split into separate projects with explicit dependency rules.
+
+The important difference from Part 1 is this:
+
+```text
+Part 1: architectural boundaries are represented by folders.
+Part 2: architectural boundaries are represented by projects.
+```
+
+This makes the architecture more explicit and harder to accidentally violate.
+
+## Project Responsibilities
+
+Part 2 uses the following main projects:
 
 ```text
 CampusLibraryApi
+CampusLibraryApi_1_Web
+CampusLibraryApi_2_BuildingBlocks
+CampusLibraryApi_3_Core_Readers
+CampusLibraryApi_4_Infrastructure
+CampusLibraryApiTest
 ```
 
-There are no separate projects yet for:
+Each project has a clear responsibility.
 
-```text
-CampusLibrary.Api
-CampusLibrary.Readers
-CampusLibrary.Infrastructure
-CampusLibrary.BuildingBlocks
-```
+## CampusLibraryApi
 
-That project split is intentionally postponed to Part 2.
+`CampusLibraryApi` is the executable application project.
 
-However, Part 1 already uses a structured internal layout:
+It contains the composition root of the application.
 
-```text
-_1_Web
-_2_BuildingBlocks
-_3_Core
-_4_Infrastructure
-```
+Typical responsibilities are:
 
-This makes the transition to Part 2 easier. The students first learn the architectural boundaries inside one project. Later, the same boundaries can be moved into separate projects.
+* configure the application host
+* load configuration
+* register controllers
+* register Swagger/OpenAPI
+* register API versioning
+* register modules
+* register infrastructure
+* build and run the application
 
-## The First Domain Module: Readers
+`CampusLibraryApi` wires the application together.
 
-The first implemented domain module is `Readers`.
+It may reference all other production projects because it is responsible for composing the running application.
 
-The `Readers` module manages the domain concept of a library reader. A reader is the domain representation of a person who can use the library.
+It must not contain domain logic.
 
-The module currently contains:
+## CampusLibraryApi_1_Web
 
-* `Reader` as Aggregate Root
-* `EmailVo` as Value Object
-* `AddressVo` as Value Object
-* `ReaderErrors` as domain errors
-* `ReaderCreateDto`
-* `ReaderUpdateDto`
-* `ReaderDto`
-* `ReaderUcCreate` as write use case
-* `ReaderUcUpdate` as write use case for partial updates
-* `ReaderUcDelete` as write use case
-* `ReaderUseCases` as facade for write use cases
-* `IReaderRepository` for the write side
-* `IReaderReadModel` for the read side
-* `IReadersDbContext` as restricted DbContext port
-* `ReaderRepositoryEf` as EF Core repository
-* `ReaderReadModelEf` as EF Core read model
+`CampusLibraryApi_1_Web` contains the HTTP API surface.
 
-The current HTTP API supports:
-
-```text
-GET    /camplib/v1/readers
-GET    /camplib/v1/readers/{id}
-GET    /camplib/v1/readers/email?email=...
-POST   /camplib/v1/readers
-PUT    /camplib/v1/readers/{id}
-DELETE /camplib/v1/readers/{id}
-```
-
-## Layer Overview
-
-Part 1 uses four main areas inside the single API project.
-
-```text
-_1_Web
-_2_BuildingBlocks
-_3_Core
-_4_Infrastructure
-```
-
-Each area has a different responsibility.
-
-## _1_Web
-
-The Web layer contains the HTTP controllers.
-
-In Part 1, this is mainly:
+In Part 2, this mainly includes:
 
 ```text
 ReadersController
 ```
 
-The controller is responsible for translating HTTP requests into application calls.
+The Web project is responsible for translating HTTP requests into application calls.
 
-It should not contain domain logic.
-
-Typical controller responsibilities are:
+Typical responsibilities are:
 
 * define routes
 * receive DTOs
 * call read models for GET requests
 * call use cases for write requests
-* translate `Result` errors into HTTP responses
-* return DTOs or `ProblemDetails`
+* translate Result errors into HTTP responses
+* return DTOs or ProblemDetails
 
-The controller does not decide whether an email address is valid. It does not decide whether a reader can be created. These decisions belong to value objects, aggregates, and use cases.
+The Web project does not contain business rules.
 
-## _2_BuildingBlocks
+For example, the controller does not decide whether an email address is valid. That belongs to the Readers domain model.
 
-The BuildingBlocks area contains common building blocks used by the application.
-It contains concepts such as:
+## CampusLibraryApi_2_BuildingBlocks
 
-* `Result`
-* `Error`
-* `Entity`
-* `AggregateRoot`
-* `IClock`
-* `IUnitOfWork`
+`CampusLibraryApi_2_BuildingBlocks` contains reusable architectural building blocks.
 
-These are not part of one specific domain module. They are reusable building blocks for the whole API.
+Typical contents are:
 
-## _3_Core
+* Result
+* Error
+* Entity
+* AggregateRoot
+* IClock
+* IUnitOfWork
 
-The Core area contains the application’s domain-oriented code.
+These types are not specific to Readers.
 
-In Part 1, the Core contains one domain module:
+They are reusable concepts for all current and future modules.
+
+The important rule is:
 
 ```text
-Readers
+BuildingBlocks must not depend on a concrete business module.
 ```
 
-Each Core module follows the same internal structure:
+BuildingBlocks are general architectural elements. They are not the place for reader-specific, catalog-specific or loan-specific business logic.
+
+## CampusLibraryApi_3_Core_Readers
+
+`CampusLibraryApi_3_Core_Readers` is the first business module.
+
+It contains the reader-specific domain model, application use cases, DTOs, mappings and ports.
+
+The Readers module is structured internally into:
 
 ```text
 _1_Ports
@@ -249,18 +250,24 @@ _2_Application
 _3_Domain
 ```
 
-This structure is already used in Part 1 even though there is only one module. The reason is didactic: students learn the shape once and can then apply it to additional modules.
+This structure remains the same as in Part 1, but it now lives in its own project.
 
-## _3_Core/Readers/_3_Domain
+The important rule is:
 
-The Domain layer contains the domain model.
+```text
+The Readers core module does not depend on Web or Infrastructure.
+```
 
-For the Readers module, this includes:
+This keeps the business module independent from HTTP, EF Core, SQLite and other technical details.
 
-* `Reader`
-* `EmailVo`
-* `AddressVo`
-* `ReaderErrors`
+## Readers Domain
+
+The domain part of the Readers module contains:
+
+* Reader
+* EmailVo
+* AddressVo
+* ReaderErrors
 
 The Domain layer contains business rules and domain validation.
 
@@ -273,16 +280,7 @@ It does not know:
 * database details
 * dependency injection
 
-The Domain layer should be understandable without knowing how the data is stored or how HTTP requests are received.
-
-Example:
-
-```text
-_3_Core/Readers/_3_Domain/Entities/Reader.cs
-_3_Core/Readers/_3_Domain/ValueObjects/EmailVo.cs
-_3_Core/Readers/_3_Domain/ValueObjects/AddressVo.cs
-_3_Core/Readers/_3_Domain/Errors/ReaderErrors.cs
-```
+The domain model should be understandable without knowing how the data is stored or how HTTP requests are received.
 
 ## Reader as Aggregate Root
 
@@ -292,13 +290,13 @@ It owns the consistency rules for reader profile data.
 
 The aggregate is created through a factory method:
 
-```text
+```csharp
 Reader.Create(...)
 ```
 
 It is changed through domain methods, for example:
 
-```text
+```csharp
 Reader.UpdateProfile(...)
 ```
 
@@ -306,28 +304,28 @@ This avoids uncontrolled changes through public setters.
 
 The didactic rule is:
 
-> Domain state should be changed through explicit domain methods, not by setting properties from the outside.
+```text
+Domain state should be changed through explicit domain methods, not by setting properties from the outside.
+```
 
 ## Value Objects
 
 The Readers module currently uses two Value Objects:
 
-```text
-EmailVo
-AddressVo
-```
+* EmailVo
+* AddressVo
 
 Value Objects encapsulate validation and normalization rules.
 
 For example, `EmailVo` is responsible for checking and normalizing an email address.
 
-The goal is to avoid spreading validation logic across controllers, use cases, and repositories.
+The goal is to avoid spreading validation logic across controllers, use cases and repositories.
 
 ## Domain Errors
 
 Domain errors are represented explicitly.
 
-Example:
+Examples:
 
 ```text
 ReaderErrors.InvalidEmail
@@ -339,9 +337,9 @@ Expected domain failures are returned through `Result`, not thrown as exceptions
 
 This makes success and failure paths visible in the code and easy to test.
 
-## _3_Core/Readers/_2_Application
+## Readers Application Layer
 
-The Application layer coordinates use cases.
+The application part of the Readers module coordinates use cases.
 
 It contains:
 
@@ -352,14 +350,12 @@ It contains:
 
 Examples:
 
-```text
-ReaderUcCreate
-ReaderUcUpdate
-ReaderUcDelete
-ReaderUseCases
-```
+* ReaderUcCreate
+* ReaderUcUpdate
+* ReaderUcDelete
+* ReaderUseCases
 
-Use cases are responsible for the workflow. They coordinate several steps, but they should not contain detailed domain rules if those rules belong in the Domain layer.
+Use cases are responsible for workflows.
 
 Typical responsibilities of a use case are:
 
@@ -368,25 +364,25 @@ Typical responsibilities of a use case are:
 * create value objects
 * check uniqueness rules through repositories
 * call domain methods
-* save changes through `IUnitOfWork`
+* save changes through IUnitOfWork
 * return DTOs
 
-## _3_Core/Readers/_1_Ports
+Use cases should not contain detailed domain rules if those rules belong in the domain model.
 
-Ports are interfaces required by the Core.
+## Readers Ports
+
+Ports are interfaces required by the Readers core module.
 
 The Readers module currently defines:
 
-```text
-IReaderRepository
-IReaderReadModel
-IReadersDbContext
-IReaderUseCases
-```
+* IReaderRepository
+* IReaderReadModel
+* IReadersDbContext
+* IReaderUseCases
 
-Ports allow the Core to depend on abstractions instead of concrete infrastructure.
+Ports allow the Core module to depend on abstractions instead of concrete infrastructure.
 
-The Core can say:
+The Core module can say:
 
 ```text
 I need a reader repository.
@@ -400,9 +396,150 @@ This repository is implemented with EF Core and SQLite.
 
 That knowledge belongs to Infrastructure.
 
+## CampusLibraryApi_4_Infrastructure
+
+`CampusLibraryApi_4_Infrastructure` contains technical implementations.
+
+This includes:
+
+* EF Core configurations
+* AppDbContext
+* repositories
+* read models
+* UnitOfWorkEf
+* seed data
+* later security or external system implementations
+
+The Infrastructure project may know EF Core.
+
+The Core module must not know EF Core.
+
+The dependency direction is essential:
+
+```text
+Core defines ports.
+Infrastructure implements ports.
+```
+
+## Repository Implementation
+
+The repository implementation belongs to Infrastructure.
+
+Example:
+
+```text
+ReaderRepositoryEf
+```
+
+It implements:
+
+```text
+IReaderRepository
+```
+
+The repository is used by write use cases.
+
+It works with aggregates and supports operations such as:
+
+* add reader
+* find reader by id
+* find reader by email
+* check subject uniqueness
+* remove reader
+
+## Read Model Implementation
+
+The read model implementation also belongs to Infrastructure.
+
+Example:
+
+```text
+ReaderReadModelEf
+```
+
+It implements:
+
+```text
+IReaderReadModel
+```
+
+The read model is used by GET endpoints.
+
+It returns DTOs directly and should not contain domain behavior.
+
+Read models typically use:
+
+```csharp
+.AsNoTracking()
+.Select(...)
+```
+
+The read side does not load the aggregate to return a list of DTOs. It projects database data directly into DTOs.
+
+This keeps read operations simple and efficient.
+
+## DbContext Access
+
+There is one shared technical database and one shared EF Core DbContext.
+
+To restrict module access, the Readers module defines its own DbContext port:
+
+```csharp
+public interface IReadersDbContext {
+   DbSet<Reader> Readers { get; }
+   Task<int> SaveChangesAsync(CancellationToken ct);
+}
+```
+
+`AppDbContext` implements this interface.
+
+This allows the Readers module to depend only on the part of the DbContext it needs.
+
+The didactic idea is:
+
+```text
+Even with one physical DbContext, modules can define their own logical view of the database.
+```
+
+## Dependency Rules
+
+The most important project dependency rules are:
+
+```text
+BuildingBlocks does not depend on any business module.
+
+Readers depends on BuildingBlocks.
+
+Infrastructure depends on BuildingBlocks and Readers.
+
+Web depends on Readers and BuildingBlocks.
+
+The executable API project wires all projects together.
+
+Tests may reference all projects that are required for testing.
+```
+
+A simplified dependency direction is:
+
+```text
+CampusLibraryApi_2_BuildingBlocks
+        ↑
+        │
+CampusLibraryApi_3_Core_Readers
+        ↑
+        │
+CampusLibraryApi_4_Infrastructure
+```
+
+The Web/API side calls into the Readers module through ports and use cases.
+
+The Infrastructure side implements outbound ports defined by the Readers module.
+
+The Readers module itself remains independent from Web and Infrastructure.
+
 ## Use Cases and Read Models
 
-Part 1 intentionally separates write access and read access.
+Part 2 keeps the same write/read separation as Part 1.
 
 ```text
 Use Case  = write-oriented application workflow
@@ -486,13 +623,6 @@ Controller
 → DTO
 ```
 
-Read models typically use:
-
-```csharp
-.AsNoTracking()
-.Select(...)
-```
-
 Example:
 
 ```text
@@ -504,9 +634,7 @@ GET /camplib/v1/readers
 → ReaderDto
 ```
 
-The read side does not load the aggregate to return a list of DTOs. It projects database data directly into DTOs.
-
-This keeps read operations simple and efficient.
+The read side does not load the aggregate. It projects database data directly into DTOs.
 
 ## Partial Updates
 
@@ -540,11 +668,11 @@ null          → no change
 "Meier"      → valid change
 ```
 
-So `null` does not mean "invalid" in this DTO. It means "no change".
+So null does not mean "invalid" in this DTO. It means "no change".
 
 ## Create DTO and Optional Id
 
-The `ReaderCreateDto` contains an optional `Id`:
+The `ReaderCreateDto` contains an optional Id:
 
 ```csharp
 public sealed record ReaderCreateDto(
@@ -561,130 +689,32 @@ public sealed record ReaderCreateDto(
 
 It may be omitted in normal API usage. In that case, the application generates a new id.
 
-It may be provided for teaching purposes, seed data, or tests.
+It may be provided for teaching purposes, seed data or tests.
 
 Therefore, `Id` is both technically and conceptually optional.
 
 This is different from the required domain data:
 
-```text
-Firstname
-Lastname
-Email
-Address
-Subject
-```
+* Firstname
+* Lastname
+* Email
+* Address
+* Subject
 
 Those fields are required for creating a valid reader.
 
-## _4_Infrastructure
+## Visibility and internal
 
-The Infrastructure area contains technical implementations.
+Concrete infrastructure classes should be internal where possible.
 
-This includes:
+Typical internal classes are:
 
-* EF Core configurations
-* `AppDbContext`
-* repositories
-* read models
-* `UnitOfWorkEf`
-* seed data
-* later security implementations
+* ReaderRepositoryEf
+* ReaderReadModelEf
+* ConfigReader
+* UnitOfWorkEf
 
-The Infrastructure layer may know EF Core.
-
-The Core must not know EF Core.
-
-This dependency direction is essential:
-
-```text
-Core defines ports.
-Infrastructure implements ports.
-```
-
-## Repository Implementation
-
-The repository implementation belongs to Infrastructure.
-
-Example:
-
-```text
-ReaderRepositoryEf
-```
-
-It implements:
-
-```text
-IReaderRepository
-```
-
-The repository is used by write use cases.
-
-It works with aggregates and supports operations such as:
-
-* add reader
-* find reader by id
-* find reader by email
-* check subject uniqueness
-* remove reader
-
-## Read Model Implementation
-
-The read model implementation also belongs to Infrastructure.
-
-Example:
-
-```text
-ReaderReadModelEf
-```
-
-It implements:
-
-```text
-IReaderReadModel
-```
-
-The read model is used by GET endpoints.
-
-It returns DTOs directly and should not contain domain behavior.
-
-## DbContext Access
-
-There is one shared technical database and one shared EF Core DbContext.
-
-In Part 1, this is still inside one project.
-
-To restrict module access, the Readers module defines its own DbContext port:
-
-```csharp
-public interface IReadersDbContext {
-   DbSet<Reader> Readers { get; }
-   Task<int> SaveChangesAsync(CancellationToken ct);
-}
-```
-
-`AppDbContext` implements this interface.
-
-This allows the Readers module to depend only on the part of the DbContext it needs.
-
-The didactic idea is:
-
-> Even with one physical DbContext, modules can define their own logical view of the database.
-
-## Visibility and `internal`
-
-Concrete infrastructure classes should be `internal` where possible.
-
-Typical internal classes:
-
-```text
-ReaderRepositoryEf
-ReaderReadModelEf
-ConfigReader
-UnitOfWorkEf
-```
-
-Only the required ports, DTOs, use cases, and DI extension methods remain publicly visible.
+Only the required ports, DTOs, use cases and DI extension methods remain publicly visible.
 
 This keeps the public surface small and makes module boundaries clearer.
 
@@ -692,7 +722,7 @@ This keeps the public surface small and makes module boundaries clearer.
 
 Dependency Injection connects ports to implementations.
 
-Example:
+Examples:
 
 ```text
 IReaderRepository → ReaderRepositoryEf
@@ -703,20 +733,20 @@ IUnitOfWork       → UnitOfWorkEf
 
 The concrete implementation remains in Infrastructure.
 
-`Program.cs` should only know high-level registrations, for example:
+The executable API project should only know high-level registrations, for example:
 
 ```csharp
 builder.Services.AddReadersModule();
 builder.Services.AddInfrastructureModule(builder.Configuration);
 ```
 
-The goal is to keep `Program.cs` readable and free of detailed implementation registrations.
+The goal is to keep the startup code readable and free of detailed implementation registrations.
 
 ## Program.cs
 
-Part 1 uses a normal `Program` class, not top-level statements.
+`Program.cs` is part of the executable API project.
 
-The purpose of `Program.cs` is to configure and start the application.
+Its purpose is to configure and start the application.
 
 Typical responsibilities are:
 
@@ -755,46 +785,80 @@ Use cases write.
 Read models read.
 ```
 
+## Current HTTP API
+
+The current HTTP API supports:
+
+```text
+GET    /camplib/v1/readers
+GET    /camplib/v1/readers/{id}
+GET    /camplib/v1/readers/email?email=...
+POST   /camplib/v1/readers
+PUT    /camplib/v1/readers/{id}
+DELETE /camplib/v1/readers/{id}
+```
+
 ## Testing Architecture
 
-Part 1 includes tests for several levels.
+Part 2 keeps the existing test strategy from Part 1.
 
 Typical test groups are:
 
-```text
-Domain tests
-Use case tests with mocks
-Use case integration tests
-Repository integration tests
-Read model integration tests
-Controller / end-to-end tests
-```
+* Domain tests
+* Value Object tests
+* Use case tests
+* Use case integration tests
+* Repository integration tests
+* Read model integration tests
+* Controller / end-to-end tests
 
 The current test suite verifies:
 
+* Reader domain behavior
+* Email and address validation
+* Create use case
+* Update use case
+* Delete use case
+* Repository behavior
+* Read model projections
+* HTTP controller behavior
+
+The latest known test status for Part 2 is:
+
 ```text
-Reader domain behavior
-Email and address validation
-Create use case
-Update use case
-Delete use case
-Repository behavior
-Read model projections
-HTTP controller behavior
+66 tests
+0 failed
 ```
 
-The latest known test status for Part 1 is:
+The tests are especially important in Part 2 because the main change is structural.
+
+The intended result is:
 
 ```text
-63 tests
-0 failed
+The architecture changes.
+The business behavior stays the same.
+```
+
+## Version
+
+Part 2 is represented by the following branch and tag:
+
+```text
+Branch: part-2/readers-modular-monolith
+Tag:    v2-readers-modular-monolith
+```
+
+Part 1 remains available as:
+
+```text
+Tag: v1-readers-monolith
 ```
 
 ## Planned Evolution
 
-Part 1 is the foundation.
+Part 2 is the modular foundation for the next teaching steps.
 
-The planned teaching steps are:
+The planned evolution is:
 
 ```text
 Part 1: Readers, one-project monolith
@@ -804,104 +868,81 @@ Part 4: Readers + Catalog + Loans
 Part 5: AuthN + AuthZ
 ```
 
-## Transition to Part 2
+Part 3 will add a second business module.
 
-Part 2 will split the current one-project structure into several projects.
+That step is important because the architecture will then show more clearly why modular boundaries matter. With only Readers, the modular structure is already visible. With Readers and Catalog, the separation between modules becomes more concrete.
 
-A possible project structure for Part 2 is:
+## Rules for Extending Part 2
 
-```text
-CampusLibrary.Api
-CampusLibrary.BuildingBlocks
-CampusLibrary.Readers
-CampusLibrary.Infrastructure
-CampusLibrary.ApiTest
-```
+New business modules should follow the same structure as Readers.
 
-In that step, `_2_Shared` should likely be renamed to `BuildingBlocks`.
-
-Reason:
-
-* `_2_Shared` currently contains common building blocks inside the API project.
-* Later, there may be a real shared library for cross-application concerns such as logging.
-* That future shared library should not be confused with domain/application building blocks.
-
-A later cross-application logging project could be named:
+A new core module should have its own project, for example:
 
 ```text
-Campus.Observability
+CampusLibraryApi_3_Core_Catalog
 ```
 
-or:
+Its internal structure should follow the same pattern:
 
 ```text
-Campus.Logging
+_1_Ports
+_2_Application
+_3_Domain
 ```
 
-## Rules for Extending Part 1
+Infrastructure implements the ports of the core modules.
 
-Even though Part 1 is still a monolith, new code should follow the same rules.
-
-### Core
-
-A new domain module receives its own Core area:
+The important rule remains:
 
 ```text
-_3_Core/<ModuleName>
-├─ _1_Ports
-├─ _2_Application
-└─ _3_Domain
+Core modules define ports.
+Infrastructure implements ports.
+Core modules do not depend on Infrastructure.
 ```
 
-### Infrastructure
-
-Infrastructure implements the ports of the Core module.
-
-Currently, Infrastructure is grouped technically:
-
-```text
-Configurations
-Database
-Repositories
-ReadModels
-```
-
-For larger modules, it can later be grouped more explicitly by module.
-
-The important rule is:
-
-> Infrastructure implements the ports of the Core. Core does not depend on Infrastructure.
-
-### Web
-
-Controllers are placed in:
-
-```text
-_1_Web/Controllers
-```
+Web controllers are placed in the Web project.
 
 Controllers contain no domain logic. They translate HTTP requests into calls to use cases or read models.
 
 ## Architecture Rules
 
-1. The application is one project in Part 1.
-2. The internal structure already follows architectural boundaries.
-3. Web translates HTTP and contains no domain logic.
-4. Core contains the domain and application logic.
-5. Domain does not know Web, Infrastructure, EF Core, or Swagger.
-6. Use cases write domain state.
-7. Read models read data directly as DTO projections.
-8. Repositories are used on the write side.
-9. Read models are used on the read side.
-10. Infrastructure implements Core ports.
-11. EF Core configuration belongs to Infrastructure.
-12. `Program.cs` wires modules together but contains no domain logic.
-13. Additional modules should follow the same structure as `Readers`.
-14. AuthN/AuthZ will be added later without changing the basic structure.
+The application is one deployable application.
+
+The solution is split into multiple projects.
+
+Project boundaries represent architectural boundaries.
+
+Web translates HTTP and contains no domain logic.
+
+BuildingBlocks contains reusable architectural base types.
+
+Core modules contain domain and application logic.
+
+Domain does not know Web, Infrastructure, EF Core or Swagger.
+
+Use cases write domain state.
+
+Read models read data directly as DTO projections.
+
+Repositories are used on the write side.
+
+Read models are used on the read side.
+
+Infrastructure implements Core ports.
+
+EF Core configuration belongs to Infrastructure.
+
+Program.cs wires modules together but contains no domain logic.
+
+Additional modules should follow the same structure as Readers.
+
+AuthN/AuthZ will be added later without changing the basic structure.
 
 ## Didactic Rule of Thumb
 
-> Use cases protect domain rules on the write side. Read models provide simple DTOs on the read side.
+Use cases protect domain rules on the write side.
+
+Read models provide simple DTOs on the read side.
 
 Or shorter:
 
@@ -910,9 +951,16 @@ Use cases write.
 Read models read.
 ```
 
-For Part 1, another rule is important:
+For Part 2, another rule is important:
 
-> First learn the boundaries inside one project. Then move the boundaries into separate projects.
-
+```text
+First learn the boundaries inside one project.
+Then move the boundaries into separate projects.
 ```
+
+Part 2 demonstrates the second step:
+
+```text
+Folders become projects.
+Conventions become technical boundaries.
 ```

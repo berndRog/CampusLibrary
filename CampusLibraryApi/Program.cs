@@ -8,11 +8,19 @@ public class Program {
 
    public static async Task Main(string[] args) {
    
+      //---- Configure DI Container (IServiceCollection) ----
       var builder = WebApplication.CreateBuilder(args);
+      
+      // Access Http-Request in Infrastructure
+      builder.Services.AddHttpContextAccessor();
+      
+      // Access Http-Request in Infrastructure
+      builder.Services.AddHttpContextAccessor();
 
+      // Controllers
       builder.Services.AddControllers();
+      // Modules
       builder.Services.AddReadersModule();
-
       builder.Services.AddInfrastructureModule(builder.Configuration);
 
       builder.Services.AddEndpointsApiExplorer();
@@ -66,8 +74,12 @@ public class Program {
             }
       
             options.RoutePrefix = "swagger";
-         });      }
+         });
+         
+      }
 
+      //app.UseHttpsRedirection();
+      
       app.MapControllers();
 
       await app.RunAsync();

@@ -4,12 +4,24 @@ This document describes the testing strategy used in the `CampusLibrary` project
 
 The goal is not only to verify correctness, but also to make the different test levels visible for teaching purposes. The project therefore separates domain tests, application use case tests, infrastructure integration tests, and controller/end-to-end tests.
 
+In Part 2, the application has been refactored from a one-project monolith into a project-based modular monolith. The functional scope is still the same: the application currently contains the Readers module only. The tests verify that this structural refactoring did not change the business behavior.
+
 ## Overview
 
 The current test project is:
 
 ```text
 CampusLibraryApiTest
+```
+
+The production code is split across several projects:
+
+```text
+CampusLibraryApi
+CampusLibraryApi_1_Web
+CampusLibraryApi_2_BuildingBlocks
+CampusLibraryApi_3_Core_Readers
+CampusLibraryApi_4_Infrastructure
 ```
 
 The tests cover the following areas:
@@ -25,7 +37,7 @@ Controller/end-to-end tests with WebApplicationFactory
 At the current project state, all tests pass:
 
 ```text
-Test summary: total: 63, failed: 0, succeeded: 63, skipped: 0
+Test summary: total: 66, failed: 0, succeeded: 66, skipped: 0
 ```
 
 Run all tests with:
@@ -64,7 +76,14 @@ The domain layer does not use EF Core, ASP.NET Core, repositories, controllers, 
 
 The main goal is to verify that aggregates and value objects protect their own invariants.
 
-## 2. Application Use Case Tests with Mocks
+In the modular monolith structure, these tests mainly verify code from:
+
+```text
+CampusLibraryApi_3_Core_Readers
+CampusLibraryApi_2_BuildingBlocks
+```
+
+### 2. Application Use Case Tests with Mocks
 
 Application use case tests verify the orchestration logic of use cases.
 
@@ -76,7 +95,7 @@ ReaderUcUpdate
 ReaderUcDelete
 ```
 
-These tests use mocks for ports such as:
+These tests use mocks or test doubles for ports such as:
 
 ```text
 IReaderRepository
@@ -98,7 +117,9 @@ return DTOs or errors
 
 For example, `ReaderUcUpdate` checks whether a new email address is already used by another reader before updating the aggregate.
 
-## 3. Application Integration Tests
+These tests are still mostly independent from EF Core and HTTP. They focus on application logic inside the Readers core module.
+
+### 3. Application Integration Tests
 
 Application integration tests use real infrastructure parts where useful.
 
@@ -115,7 +136,17 @@ This is useful because some bugs only appear when EF Core, the repository, and t
 
 These tests are slower than pure domain tests, but they give more confidence that application and persistence work together.
 
-## 4. Infrastructure Tests
+In Part 2, these tests are especially important because the use cases live in the Readers module, while the repository and UnitOfWork implementations live in the Infrastructure project.
+
+The intended dependency direction is:
+
+```text
+Core defines ports.
+Infrastructure implements ports.
+Tests verify that both work together correctly.
+```
+
+### 4. Infrastructure Tests
 
 Infrastructure tests verify the persistence adapters.
 
@@ -142,7 +173,20 @@ ReadModel  -> DTO-oriented query access
 
 Infrastructure tests help verify that entities, value objects, conversions, and queries work correctly with the database.
 
-## 5. Controller / End-to-End Tests
+In the project-based structure, these tests mainly verify code from:
+
+```text
+CampusLibraryApi_4_Infrastructure
+```
+
+together with domain types and ports from:
+
+```text
+CampusLibraryApi_3_Core_Readers
+CampusLibraryApi_2_BuildingBlocks
+```
+
+### 5. Controller / End-to-End Tests
 
 Controller tests use:
 
@@ -173,12 +217,24 @@ The current Reader controller tests cover:
 ```text
 GET    /camplib/v1/readers
 GET    /camplib/v1/readers/{id}
+GET    /camplib/v1/readers/email?email=...
 POST   /camplib/v1/readers
 PUT    /camplib/v1/readers/{id}
 DELETE /camplib/v1/readers/{id}
 ```
 
 These tests are closest to real API usage.
+
+In Part 2, controller/end-to-end tests also verify that the separated projects are wired correctly by the executable API project.
+
+They therefore check not only controller behavior, but also the composition of:
+
+```text
+Web
+Readers module
+Infrastructure
+BuildingBlocks
+```
 
 ## Test Database
 
@@ -265,6 +321,13 @@ null       -> no change
 
 This distinction is important for partial update semantics.
 
+The tests should therefore cover both cases:
+
+```text
+field omitted or null -> no change
+field provided but invalid -> validation error
+```
+
 ## Why Different Test Types?
 
 Each test type answers a different question.
@@ -288,6 +351,30 @@ Does the API behave correctly from the outside?
 
 Together, these tests form a teaching-oriented test strategy.
 
+## Why the Tests Matter in Part 2
+
+Part 2 is mainly an architectural refactoring.
+
+The application was moved from a one-project monolith into a project-based modular monolith.
+
+The expected result is:
+
+```text
+The structure changes.
+The business behavior stays the same.
+```
+
+The test suite is the safety net for this refactoring.
+
+If all tests remain green after the project split, this gives confidence that the refactoring did not accidentally change the behavior of the Readers module.
+
+The current result is:
+
+```text
+66 tests
+0 failed
+```
+
 ## Recommended Workflow
 
 During development:
@@ -308,6 +395,21 @@ Swagger is available in development mode at:
 https://localhost:8010/swagger
 ```
 
+## Version
+
+The current version belongs to Part 2:
+
+```text
+Branch: part-2/readers-modular-monolith
+Tag:    v2-readers-modular-monolith
+```
+
+Part 1 remains available as:
+
+```text
+Tag: v1-readers-monolith
+```
+
 ## Didactic Goals
 
 The test suite is intended to help students understand:
@@ -321,6 +423,26 @@ controller testing through HTTP
 test data reuse through seed objects
 why fake clocks are useful
 how partial updates should be tested
+how tests protect architectural refactorings
+how a modular monolith can still be tested end-to-end
 ```
 
 The tests are therefore not only a safety net, but also part of the learning material.
+
+## Didactic Rule of Thumb
+
+Each test level has its own purpose:
+
+```text
+Domain tests protect business rules.
+Use case tests protect application workflows.
+Infrastructure tests protect persistence behavior.
+Controller tests protect the HTTP API.
+End-to-end tests protect the full composition.
+```
+
+For Part 2, the most important teaching point is:
+
+```text
+A modular refactoring is successful when the structure changes but the tests still prove the same behavior.
+```
