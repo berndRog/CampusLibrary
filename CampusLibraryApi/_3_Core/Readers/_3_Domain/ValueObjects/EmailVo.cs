@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Net.Mail;
-using CampusLibraryApi._2_Shared;
+using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
 namespace CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
 

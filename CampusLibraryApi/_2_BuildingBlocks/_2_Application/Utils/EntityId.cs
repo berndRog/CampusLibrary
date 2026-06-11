@@ -1,5 +1,5 @@
-using CampusLibraryApi._2_Shared._3_Domain.Errors;
-namespace CampusLibraryApi._2_Shared._2_Application.Utils;
+using CampusLibraryApi._2_BuildingBlocks._3_Domain.Errors;
+namespace CampusLibraryApi._2_BuildingBlocks._2_Application.Utils;
 
 
 public static class EntityId {

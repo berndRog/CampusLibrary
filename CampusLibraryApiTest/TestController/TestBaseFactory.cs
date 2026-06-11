@@ -1,6 +1,6 @@
 using System.Data.Common;
 using CampusLibraryApi;
-using CampusLibraryApi._2_Shared._1_Ports;
+using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._4_Infrastructure.Persistence.Database;
 using CampusLibraryApiTest.TestInfrastructure;
 using Microsoft.AspNetCore.Authentication;

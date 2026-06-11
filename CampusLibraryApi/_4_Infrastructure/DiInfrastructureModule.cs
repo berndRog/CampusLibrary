@@ -1,4 +1,4 @@
-using CampusLibraryApi._2_Shared._1_Ports;
+using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._3_Core.Readers._1_Ports;
 using CampusLibraryApi._4_Infrastructure.Persistence.Database;
 using CampusLibraryApi._4_Infrastructure.Persistence.Readers;

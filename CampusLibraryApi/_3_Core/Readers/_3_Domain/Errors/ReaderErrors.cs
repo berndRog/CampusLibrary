@@ -1,6 +1,5 @@
-using CampusLibraryApi._2_Shared._3_Domain.Enums;
-using CampusLibraryApi._2_Shared._3_Domain.Errors;
-
+using CampusLibraryApi._2_BuildingBlocks._3_Domain.Enums;
+using CampusLibraryApi._2_BuildingBlocks._3_Domain.Errors;
 namespace CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
 
 public static class ReaderErrors {

@@ -1,6 +1,6 @@
 using Asp.Versioning;
 using CampusLibraryApi._1_Web.Common;
-using CampusLibraryApi._2_Shared._3_Domain.Enums;
+using CampusLibraryApi._2_BuildingBlocks._3_Domain.Enums;
 using CampusLibraryApi._3_Core.Readers._1_Ports;
 using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
 using Microsoft.AspNetCore.Mvc;

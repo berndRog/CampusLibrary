@@ -1,5 +1,5 @@
 using System.Runtime.CompilerServices;
-using CampusLibraryApi._2_Shared;
+using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._3_Core.Readers._1_Ports;
 using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Readers._2_Application.Mappings;

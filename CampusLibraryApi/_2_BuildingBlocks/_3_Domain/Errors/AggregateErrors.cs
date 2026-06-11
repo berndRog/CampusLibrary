@@ -1,5 +1,5 @@
-using CampusLibraryApi._2_Shared._3_Domain.Enums;
-namespace CampusLibraryApi._2_Shared._3_Domain.Errors;
+using CampusLibraryApi._2_BuildingBlocks._3_Domain.Enums;
+namespace CampusLibraryApi._2_BuildingBlocks._3_Domain.Errors;
 
 public static class AggregateErrors {
 

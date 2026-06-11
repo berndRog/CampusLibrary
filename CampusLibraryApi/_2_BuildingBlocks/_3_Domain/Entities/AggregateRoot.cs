@@ -1,6 +1,5 @@
-using CampusLibraryApi._2_Shared._3_Domain.Errors;
-
-namespace CampusLibraryApi._2_Shared._3_Domain.Entities;
+using CampusLibraryApi._2_BuildingBlocks._3_Domain.Errors;
+namespace CampusLibraryApi._2_BuildingBlocks._3_Domain.Entities;
 
 // Base class for all aggregate roots in the domain model.
 // Responsibilities:

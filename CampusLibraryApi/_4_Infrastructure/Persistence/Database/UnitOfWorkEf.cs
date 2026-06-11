@@ -1,5 +1,5 @@
 using System.Runtime.CompilerServices;
-using CampusLibraryApi._2_Shared._1_Ports;
+using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 [assembly: InternalsVisibleTo("CampusLibraryApiTest")]
 namespace CampusLibraryApi._4_Infrastructure.Persistence.Database;
 

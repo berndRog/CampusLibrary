@@ -1,4 +1,4 @@
-namespace CampusLibraryApi._2_Shared._3_Domain.Entities;
+namespace CampusLibraryApi._2_BuildingBlocks._3_Domain.Entities;
 
 // Base class for all domain entities.
 // Identity semantics:

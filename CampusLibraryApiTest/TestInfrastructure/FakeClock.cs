@@ -1,4 +1,4 @@
-using CampusLibraryApi._2_Shared._1_Ports;
+using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 namespace CampusLibraryApiTest.TestInfrastructure;
 
 public sealed class FakeClock : IClock {
