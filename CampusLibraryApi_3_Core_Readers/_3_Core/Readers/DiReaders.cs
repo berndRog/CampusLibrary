@@ -1,7 +1,7 @@
 using CampusLibraryApi._3_Core.Readers._1_Ports;
 using CampusLibraryApi._3_Core.Readers._2_Application.UseCases;
 using Microsoft.Extensions.DependencyInjection;
-namespace CampusLibraryApi.Configure;
+namespace CampusLibraryApi._3_Core.Readers;
 
 public static class DiReaders {
 

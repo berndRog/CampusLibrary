@@ -1,6 +1,6 @@
 using CampusLibraryApi._3_Core.Readers._1_Ports;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
-using CampusLibraryApi._4_Infrastructure.Persistence.Configurations;
+using CampusLibraryApi._4_Infrastructure.Persistence.Readers;
 using Microsoft.EntityFrameworkCore;
 namespace CampusLibraryApi._4_Infrastructure.Persistence.Database;
 

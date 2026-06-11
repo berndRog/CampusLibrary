@@ -1,4 +1,5 @@
 using Asp.Versioning.ApiExplorer;
+using CampusLibraryApi._3_Core.Readers;
 using CampusLibraryApi._4_Infrastructure;
 using CampusLibraryApi.Configure;
 
