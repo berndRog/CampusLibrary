@@ -6,36 +6,50 @@ namespace CampusLibraryApi._3_Core.Catalog._3_Domain.Entities;
 
 public sealed class BookItem : Entity {
    
+   //--- properties ------------------------------------------------------------
+   // Inherited from Entity / AggregateRoot:
+   // public Guid Id { get; protected set; }
    public Guid BookId { get; private set; }
    public string InventoryNumber { get; private set; } = string.Empty;
    public BookItemStatus Status { get; private set; }
-
+   
+   //--- constructors ----------------------------------------------------------
+   // Required by EF Core.
    private BookItem() {
-      // Required by EF Core.
    }
-
+   // Domain ctor
    internal BookItem(
       Guid id,
       Guid bookId,
       string inventoryNumber
    ) {
+      Id = id;
       BookId = bookId;
       InventoryNumber = inventoryNumber;
       Status = BookItemStatus.Available;
    }
 
+   //--- factory methods -------------------------------------------------------
+   // Creates a new BookItem object
+   // Validation errors are returned as Result failures.
    internal static Result<BookItem> Create(
       Guid id,
       Guid bookId,
       string inventoryNumber
    ) {
+      inventoryNumber = inventoryNumber.Trim();
+      
+      if (id == Guid.Empty)
+         return Result<BookItem>.Failure(CatalogErrors.BookItemIdRequired);
+      if(bookId == Guid.Empty)
+         return Result<BookItem>.Failure(CatalogErrors.BookIdRequired);
       if (string.IsNullOrWhiteSpace(inventoryNumber))
          return Result<BookItem>.Failure(CatalogErrors.BookItemInventoryNumberIsRequired);
 
       var bookItem = new BookItem(
          id,
          bookId,
-         inventoryNumber.Trim()
+         inventoryNumber
       );
 
       return Result<BookItem>.Success(bookItem);

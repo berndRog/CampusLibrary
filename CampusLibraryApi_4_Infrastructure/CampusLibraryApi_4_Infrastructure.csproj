@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CampusLibraryApi_3_Core_Catalog\CampusLibraryApi_3_Core_Catalog.csproj" />
     <ProjectReference Include="..\CampusLibraryApi_3_Core_Readers\CampusLibraryApi_3_Core_Readers.csproj" />
   </ItemGroup>
 

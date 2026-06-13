@@ -1,15 +1,16 @@
-using System.Globalization;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._2_BuildingBlocks._2_Application.Utils;
+using CampusLibraryApi._3_Core.Catalog._3_Domain.Entities;
+using CampusLibraryApi._3_Core.Catalog._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
+
 namespace CampusLibraryApi._4_Infrastructure.Persistence;
 
 public sealed class Seed(
    IClock clock
 ) {
-
    #region -------------- Test Addresses (Value Objects) -------------------------------------
    public AddressVo Address1Vo
       => AddressVo.Create("Hauptstr. 23", "29556", "Suderburg", "DE").GetValueOrThrow();
@@ -33,22 +34,21 @@ public sealed class Seed(
       => AddressVo.Create("Am Markt 14", "04109", "Leipzig", "DE").GetValueOrThrow();
    #endregion
 
-
    #region -------------- Test Readers (Entities) ------------------------------------------
-   private const string Reader1Id = "10000000-0000-0000-0000-000000000000";
-   private const string Reader2Id = "20000000-0000-0000-0000-000000000000";
-   private const string Reader3Id = "30000000-0000-0000-0000-000000000000";
-   private const string Reader4Id = "40000000-0000-0000-0000-000000000000";
-   private const string Reader5Id = "50000000-0000-0000-0000-000000000000";
-   private const string Reader6Id = "60000000-0000-0000-0000-000000000000";
+   private const string Reader1Id = "00000001-0000-0000-0000-000000000000";
+   private const string Reader2Id = "00000002-0000-0000-0000-000000000000";
+   private const string Reader3Id = "00000003-0000-0000-0000-000000000000";
+   private const string Reader4Id = "00000004-0000-0000-0000-000000000000";
+   private const string Reader5Id = "00000005-0000-0000-0000-000000000000";
+   private const string Reader6Id = "00000006-0000-0000-0000-000000000000";
 
-   private const string _ReaderRegister = "70000000-0000-0000-0000-000000000000";
+   private const string ReaderRegisterId = "00000007-0000-0000-0000-000000000000";
 
    public Reader Reader1() => CreateReader(
       id: Reader1Id,
       firstname: "Erika",
       lastname: "Mustermann",
-      email: "erika.mustermann@t-online.de",
+      email: "[erika.mustermann@t-online.de](mailto:erika.mustermann@t-online.de)",
       addressVo: Address1Vo,
       subject: "a00090ad-d9df-486a-8757-4a649e26a54e"
    );
@@ -57,7 +57,7 @@ public sealed class Seed(
       id: Reader2Id,
       firstname: "Max",
       lastname: "Mustermann",
-      email: "max.mustermann@gmail.com",
+      email: "[max.mustermann@gmail.com](mailto:max.mustermann@gmail.com)",
       addressVo: Address2Vo,
       subject: "b0000640-161e-4228-9729-d6b142C2dfad"
    );
@@ -66,7 +66,7 @@ public sealed class Seed(
       id: Reader3Id,
       firstname: "Arno",
       lastname: "Arndt",
-      email: "a.arndt@t-online.com",
+      email: "[a.arndt@t-online.com](mailto:a.arndt@t-online.com)",
       addressVo: Address3Vo,
       subject: "c0004e61-ba7a-4d2a-977f-766b42bb79a9"
    );
@@ -75,7 +75,7 @@ public sealed class Seed(
       id: Reader4Id,
       firstname: "Benno",
       lastname: "Bauer",
-      email: "b.bauer@gmail.com",
+      email: "[b.bauer@gmail.com](mailto:b.bauer@gmail.com)",
       addressVo: Address4Vo,
       subject: "d0024ab-43c5-4c64-872d-6ca05f66756b"
    );
@@ -84,7 +84,7 @@ public sealed class Seed(
       id: Reader5Id,
       firstname: "Christine",
       lastname: "Conrad",
-      email: "c.conrad@gmx.de",
+      email: "[c.conrad@gmx.de](mailto:c.conrad@gmx.de)",
       addressVo: Address5Vo,
       subject: "e00050fb-a381-4e3f-a44b-81ffa7610b72"
    );
@@ -93,16 +93,16 @@ public sealed class Seed(
       id: Reader6Id,
       firstname: "Dana",
       lastname: "Deppe",
-      email: "d.deppe@icloud.com",
+      email: "[d.deppe@icloud.com](mailto:d.deppe@icloud.com)",
       addressVo: Address6Vo,
       subject: "f00060A1-1381-efab-1440-71fc17630172"
    );
 
    public Reader ReaderRegister() => CreateReader(
-      id: _ReaderRegister,
+      id: ReaderRegisterId,
       firstname: "Edgar",
       lastname: "Engel",
-      email: "e.engel@freenet.de",
+      email: "[e.engel@freenet.de](mailto:e.engel@freenet.de)",
       addressVo: AddressRegVo,
       subject: "70000000-0007-0000-0000-000000000000"
    );
@@ -112,640 +112,117 @@ public sealed class Seed(
    ];
    #endregion
 
-   /*
-   #region -------------- Test Iban (Value Objects) ------------------------------------------
-   public const string Iban1 = "DE10 1000 0000 0000 0000 42";
-   public const string Iban2 = "DE10 2000 0000 0000 0000 04";
-   public const string Iban3 = "DE20 1000 0000 0000 0000 56";
-   public const string Iban4 = "DE30 1000 0000 0000 0000 70";
-   public const string Iban5 = "DE40 1000 0000 0000 0000 84";
-   public const string Iban6 = "DE50 1000 0000 0000 0000 01";
-   public const string Iban7 = "DE50 2000 0000 0000 0000 60";
-   public const string Iban8 = "DE60 1000 0000 0000 0000 15";
-   #endregion
+   #region -------------- Test Authors (Aggregates) ------------------------------------------
+   public const string Author1Id = "a0000001-0000-0000-0000-000000000000";
+   public const string Author2Id = "a0000002-0000-0000-0000-000000000000";
+   public const string Author3Id = "a0000003-0000-0000-0000-000000000000";
+   public const string Author4Id = "a0000004-0000-0000-0000-000000000000";
+   public const string Author5Id = "a0000005-0000-0000-0000-000000000000";
 
-   #region -------------- Test Accounts (Entities) -------------------------------------------
-   private const string Account1Id = "01000000-0000-0000-0000-000000000000";
-   private const string Account2Id = "02000000-0000-0000-0000-000000000000";
-   private const string Account3Id = "03000000-0000-0000-0000-000000000000";
-   private const string Account4Id = "04000000-0000-0000-0000-000000000000";
-   private const string Account5Id = "05000000-0000-0000-0000-000000000000";
-   private const string Account6Id = "06000000-0000-0000-0000-000000000000";
-   private const string Account7Id = "07000000-0000-0000-0000-000000000000";
-   private const string Account8Id = "08000000-0000-0000-0000-000000000000";
-
-   public Account Account1() => CreateAccount(
-      id: Account1Id,
-      customerId: Guid.Parse(Customer1Id),
-      iban: Iban1,
-      balance: 2100.0m,
-      createdByEmployeeId: Guid.Parse(Employee2Id)
+   public Author Author1() => CreateAuthor(
+      id: Author1Id,
+      firstname: "Robert C.",
+      lastname: "Martin"
    );
 
-   public Account Account2() => CreateAccount(
-      id: Account2Id,
-      customerId: Guid.Parse(Customer1Id),
-      iban: Iban2,
-      balance: 2000.0m,
-      createdByEmployeeId: Guid.Parse(Employee2Id)
+   public Author Author2() => CreateAuthor(
+      id: Author2Id,
+      firstname: "Eric",
+      lastname: "Evans"
    );
 
-   public Account Account3() => CreateAccount(
-      id: Account3Id,
-      customerId: Guid.Parse(Customer2Id),
-      iban: Iban3,
-      balance: 3000.0m,
-      createdByEmployeeId: Guid.Parse(Employee2Id)
+   public Author Author3() => CreateAuthor(
+      id: Author3Id,
+      firstname: "Martin",
+      lastname: "Fowler"
    );
 
-   public Account Account4() => CreateAccount(
-      id: Account4Id,
-      customerId: Guid.Parse(Customer3Id),
-      iban: Iban4,
-      balance: 2500.0m,
-      createdByEmployeeId: Guid.Parse(Employee2Id)
+   public Author Author4() => CreateAuthor(
+      id: Author4Id,
+      firstname: "Erich",
+      lastname: "Gamma"
    );
 
-   public Account Account5() => CreateAccount(
-      id: Account5Id,
-      customerId: Guid.Parse(Customer4Id),
-      iban: Iban5,
-      balance: 1900.0m,
-      createdByEmployeeId: Guid.Parse(Employee2Id)
+   public Author Author5() => CreateAuthor(
+      id: Author5Id,
+      firstname: "Kent",
+      lastname: "Beck"
    );
 
-   public Account Account6() => CreateAccount(
-      id: Account6Id,
-      customerId: Guid.Parse(Customer5Id),
-      iban: Iban6,
-      balance: 3500.0m,
-      createdByEmployeeId: Guid.Parse(Employee2Id)
-   );
-
-   public Account Account7() => CreateAccount(
-      id: Account7Id,
-      customerId: Guid.Parse(Customer5Id),
-      iban: Iban7,
-      balance: 3100.0m,
-      createdByEmployeeId: Guid.Parse(Employee2Id)
-   );
-
-   public Account Account8() => CreateAccount(
-      id: Account8Id,
-      customerId: Guid.Parse(Customer6Id),
-      iban: Iban8,
-      balance: 4300.0m,
-      createdByEmployeeId: Guid.Parse(Employee2Id)
-   );
-
-   public IReadOnlyList<Account> Accounts => [
-      Account1(), Account2(), Account3(), Account4(),
-      Account5(), Account6(), Account7(), Account8()
+   public IReadOnlyList<Author> Authors => [
+      Author1(), Author2(), Author3(), Author4(), Author5()
    ];
    #endregion
 
-   #region -------------- Test Beneficiaries (Entities) --------------------------------------
-   private const string Beneficiary1Id = "00100000-0000-0000-0000-000000000000";
-   private const string Beneficiary2Id = "00200000-0000-0000-0000-000000000000";
-   private const string Beneficiary3Id = "00300000-0000-0000-0000-000000000000";
-   private const string Beneficiary4Id = "00400000-0000-0000-0000-000000000000";
-   private const string Beneficiary5Id = "00500000-0000-0000-0000-000000000000";
-   private const string Beneficiary6Id = "00600000-0000-0000-0000-000000000000";
-   private const string Beneficiary7Id = "00700000-0000-0000-0000-000000000000";
-   private const string Beneficiary8Id = "00800000-0000-0000-0000-000000000000";
-   private const string Beneficiary9Id = "00900000-0000-0000-0000-000000000000";
-   private const string Beneficiary10Id = "01000000-0000-0000-0000-000000000000";
-   private const string Beneficiary11Id = "01100000-0000-0000-0000-000000000000";
+   #region -------------- Test Books (Aggregates) ------------------------------------------
+   public const string Book1Id = "b0000001-0000-0000-0000-000000000000";
+   public const string Book2Id = "b0000002-0000-0000-0000-000000000000";
+   public const string Book3Id = "b0000003-0000-0000-0000-000000000000";
+   public const string Book4Id = "b0000004-0000-0000-0000-000000000000";
 
-   public Beneficiary Beneficiary1() => CreateBeneficiary(
-      id: Beneficiary1Id,
-      accountId: Guid.Parse(Account1Id),
-      name: Customer5().DisplayName,
-      iban: Iban6
+   public const string BookItem1Id = "be000001-0000-0000-0000-000000000000";
+   public const string BookItem2Id = "be000002-0000-0000-0000-000000000000";
+   public const string BookItem3Id = "be000003-0000-0000-0000-000000000000";
+   public const string BookItem4Id = "be000004-0000-0000-0000-000000000000";
+   public const string BookItem5Id = "be000005-0000-0000-0000-000000000000";
+   public const string BookItem6Id = "be000006-0000-0000-0000-000000000000";
+
+   public Book Book1() => CreateBook(
+      id: Book1Id,
+      title: "Clean Code",
+      subtitle: "A Handbook of Agile Software Craftsmanship",
+      isbn: "9780132350884"
    );
 
-   public Beneficiary Beneficiary2() => CreateBeneficiary(
-      id: Beneficiary2Id,
-      accountId: Guid.Parse(Account1Id),
-      name: Customer5().DisplayName,
-      iban: Iban7
+   public Book Book2() => CreateBook(
+      id: Book2Id,
+      title: "Domain-Driven Design",
+      subtitle: "Tackling Complexity in the Heart of Software",
+      isbn: "9780321125217"
    );
 
-   public Beneficiary Beneficiary3() => CreateBeneficiary(
-      id: Beneficiary3Id,
-      accountId: Guid.Parse(Account2Id),
-      name: Customer3().DisplayName,
-      iban: Iban4
+   public Book Book3() => CreateBook(
+      id: Book3Id,
+      title: "Refactoring",
+      subtitle: "Improving the Design of Existing Code",
+      isbn: "9780201485677"
    );
 
-   public Beneficiary Beneficiary4() => CreateBeneficiary(
-      id: Beneficiary4Id,
-      accountId: Guid.Parse(Account2Id),
-      name: Customer4().DisplayName,
-      iban: Iban5
+   public Book Book4() => CreateBook(
+      id: Book4Id,
+      title: "Design Patterns",
+      subtitle: "Elements of Reusable Object-Oriented Software",
+      isbn: "9780201633610"
    );
 
-   public Beneficiary Beneficiary5() => CreateBeneficiary(
-      id: Beneficiary5Id,
-      accountId: Guid.Empty,
-      name: Customer3().DisplayName,
-      iban: Iban4
-   );
-
-   public Beneficiary Beneficiary6() => CreateBeneficiary(
-      id: Beneficiary6Id,
-      accountId: Guid.Empty,
-      name: Customer4().DisplayName,
-      iban: Iban5
-   );
-
-   public Beneficiary Beneficiary7() => CreateBeneficiary(
-      id: Beneficiary7Id,
-      accountId: Guid.Empty,
-      name: Customer6().DisplayName,
-      iban: Iban8
-   );
-
-   public Beneficiary Beneficiary8() => CreateBeneficiary(
-      id: Beneficiary8Id,
-      accountId: Guid.Empty,
-      name: Customer2().DisplayName,
-      iban: Iban3
-   );
-
-   public Beneficiary Beneficiary9() => CreateBeneficiary(
-      id: Beneficiary9Id,
-      accountId: Guid.Empty,
-      name: Customer6().DisplayName,
-      iban: Iban6
-   );
-
-   public Beneficiary Beneficiary10() => CreateBeneficiary(
-      id: Beneficiary10Id,
-      accountId: Guid.Empty,
-      name: Customer1().DisplayName,
-      iban: Iban1
-   );
-
-   public Beneficiary Beneficiary11() => CreateBeneficiary(
-      id: Beneficiary11Id,
-      accountId: Guid.Empty,
-      name: Customer1().DisplayName,
-      iban: Iban2
-   );
-
-   private readonly List<Beneficiary> _beneficiaries = [];
-   public IReadOnlyList<Beneficiary> Beneficiaries => _beneficiaries.AsReadOnly();
-   #endregion
-
-   #region -------------- Test Transactions (Entities) ---------------------------------------
-   public const string Transaction1DId = "0001d000-0000-0000-0000-000000000000";
-   public const string Transaction1CId = "0001c000-0000-0000-0000-000000000000";
-   public const string Transaction2DId = "0002d000-0000-0000-0000-000000000000";
-   public const string Transaction2CId = "0002c000-0000-0000-0000-000000000000";
-   public const string Transaction3DId = "0003d000-0000-0000-0000-000000000000";
-   public const string Transaction3CId = "0003c000-0000-0000-0000-000000000000";
-   public const string Transaction4DId = "0004d000-0000-0000-0000-000000000000";
-   public const string Transaction4CId = "0004c000-0000-0000-0000-000000000000";
-   public const string Transaction5DId = "0005d000-0000-0000-0000-000000000000";
-   public const string Transaction5CId = "0005c000-0000-0000-0000-000000000000";
-   public const string Transaction6DId = "0006d000-0000-0000-0000-000000000000";
-   public const string Transaction6CId = "0006c000-0000-0000-0000-000000000000";
-   public const string Transaction7DId = "0007d000-0000-0000-0000-000000000000";
-   public const string Transaction7CId = "0007c000-0000-0000-0000-000000000000";
-   public const string Transaction8DId = "0008d000-0000-0000-0000-000000000000";
-   public const string Transaction8CId = "0008c000-0000-0000-0000-000000000000";
-   public const string Transaction9DId = "0009d000-0000-0000-0000-000000000000";
-   public const string Transaction9CId = "0009c000-0000-0000-0000-000000000000";
-   public const string Transaction10DId = "0010d000-0000-0000-0000-000000000000";
-   public const string Transaction10CId = "0010c000-0000-0000-0000-000000000000";
-   public const string Transaction11DId = "0011d000-0000-0000-0000-000000000000";
-   public const string Transaction11CId = "0011c000-0000-0000-0000-000000000000";
-
-   public Transaction Transaction1D() => CreateDebitTransaction(
-      id: Transaction1DId,
-      accountId: Guid.Parse(Account1Id), // DebitAccountId
-      creditName: Beneficiary1().Name, // Credit Customer DisplayName
-      creditIbanVo: Beneficiary1().IbanVo, // Credit Account Iban
-      purpose: "Erika1 an Chris1",
-      amount: 345.0m,
-      balance: Account1().BalanceVo.Amount
-   );
-
-   public Transaction Transaction1C() => CreateCreditTransaction(
-      id: Transaction1CId,
-      accountId: Guid.Parse(Account6Id), // CreditAccountId
-      debitName: Customer1().DisplayName, // Debit Customer Displayname
-      debitIbanVo: Account1().IbanVo, // Debit Account Iban
-      purpose: "Erika1 an Chris1",
-      amount: 345.0m,
-      balance: Account6().BalanceVo.Amount
-   );
-
-   public Transaction Transaction2D() => CreateDebitTransaction(
-      id: Transaction2DId,
-      accountId: Guid.Parse(Account1Id),
-      creditName: Beneficiary2().Name,
-      creditIbanVo: Beneficiary2().IbanVo,
-      purpose: "Erika1 an Chris2",
-      amount: 231.0m,
-      balance: Account1().BalanceVo.Amount
-   );
-
-   public Transaction Transaction2C() => CreateCreditTransaction(
-      id: Transaction2CId,
-      accountId: Guid.Parse(Account7Id),
-      debitName: Customer1().DisplayName,
-      debitIbanVo: Account1().IbanVo,
-      purpose: "Erika1 an Chris2",
-      amount: 231.0m,
-      balance: Account7().BalanceVo.Amount
-   );
-
-   private List<Transaction> _transactions = [];
-   public IReadOnlyList<Transaction> Transactions => _transactions.AsReadOnly();
-   #endregion
-
-   #region -------------- Test Transfers (Entities) ------------------------------------------
-   public const string Transfer1Id = "00010000-0000-0000-0000-000000000000";
-   public const string Transfer2Id = "00020000-0000-0000-0000-000000000000";
-   public const string Transfer3Id = "00030000-0000-0000-0000-000000000000";
-   public const string Transfer4Id = "00040000-0000-0000-0000-000000000000";
-   public const string Transfer5Id = "00050000-0000-0000-0000-000000000000";
-   public const string Transfer6Id = "00060000-0000-0000-0000-000000000000";
-   public const string Transfer7Id = "00070000-0000-0000-0000-000000000000";
-   public const string Transfer8Id = "00080000-0000-0000-0000-000000000000";
-   public const string Transfer9Id = "00090000-0000-0000-0000-000000000000";
-   public const string Transfer10Id = "00100000-0000-0000-0000-000000000000";
-   public const string Transfer11Id = "00110000-0000-0000-0000-000000000000";
-
-   public Transfer Transfer1() => CreateTransfer(
-      id: Transfer1Id,
-      debitAccountId: Guid.Parse(Account1Id),
-      creditAccountIban: Iban6,
-      amount: 345.0m,
-      purpose: "Erika an Chris1",
-      bookedAtString: "2025-01-01T00:00:00Z",
-      debitTransactionId: Guid.Parse(Transaction1DId),
-      creditTransactionId: Guid.Parse(Transaction1CId)
-   );
-
-   public Transfer Transfer2() => CreateTransfer(
-      id: Transfer2Id,
-      debitAccountId: Guid.Parse(Account1Id),
-      creditAccountIban: Iban7,
-      amount: 231.0m,
-      purpose: "Erika an Chris2",
-      bookedAtString: "2023-02-01T00:00:00Z",
-      debitTransactionId: Guid.Parse(Transaction2DId),
-      creditTransactionId: Guid.Parse(Transaction2CId)
-   );
-
-   private readonly List<Transfer> _transfers = [];
-   public IReadOnlyList<Transfer> Transfers => _transfers.AsReadOnly();
-   #endregion
-
-   #region methods
-   public List<Account> AddBeneficiariesToAccounts(List<Account> accounts) {
-      // Account 1 -> Beneficary 1 + 2 
-      AddBeneficaryToAccount(
-         account: accounts[0],
-         beneficiary: Beneficiary1(),
-         createdAt: clock.UtcNow
-      );
-      AddBeneficaryToAccount(
-         account: accounts[0],
-         beneficiary: Beneficiary2(),
-         createdAt: clock.UtcNow
-      );
-      // Account 1 -> Beneficary 3 + 4
-      AddBeneficaryToAccount(
-         account: accounts[1],
-         beneficiary: Beneficiary3(),
-         createdAt: clock.UtcNow
-      );
-      AddBeneficaryToAccount(
-         account: accounts[1],
-         beneficiary: Beneficiary4(),
-         createdAt: clock.UtcNow
-      );
-      // Account 3 -> Beneficary 5 + 6 + 7
-      AddBeneficaryToAccount(
-         account: accounts[2],
-         beneficiary: Beneficiary5(),
-         createdAt: clock.UtcNow
-      );
-      AddBeneficaryToAccount(
-         account: accounts[2],
-         beneficiary: Beneficiary6(),
-         createdAt: clock.UtcNow
-      );
-      AddBeneficaryToAccount(
-         account: accounts[2],
-         beneficiary: Beneficiary7(),
-         createdAt: clock.UtcNow
-      );
-      // Account 4 -> Beneficary 8 + 9 
-      AddBeneficaryToAccount(
-         account: accounts[3],
-         beneficiary: Beneficiary8(),
-         createdAt: clock.UtcNow
-      );
-      AddBeneficaryToAccount(
-         account: accounts[3],
-         beneficiary: Beneficiary9(),
-         createdAt: clock.UtcNow
-      );
-      // Account 5 -> Beneficary 10 + 11 
-      AddBeneficaryToAccount(
-         account: accounts[4],
-         beneficiary: Beneficiary10(),
-         createdAt: clock.UtcNow
-      );
-      AddBeneficaryToAccount(
-         account: accounts[4],
-         beneficiary: Beneficiary11(),
-         createdAt: clock.UtcNow
-      );
-
-      return accounts;
+   // Convenience property for simple tests.
+   // For EF seeding prefer BooksWithAuthors(authors), so the same Author instances
+   // are used for Authors and for the Book.Authors navigation.
+   public IReadOnlyList<Book> Books {
+      get {
+         var authors = Authors;
+         return BooksWithAuthors(authors);
+      }
    }
 
-   private void AddBeneficaryToAccount(
-      Account account,
-      Beneficiary beneficiary,
-      DateTime createdAt
+   // Use this method when Authors and Books are added to the same DbContext.
+   // This avoids creating duplicate Author instances with the same keys.
+   public IReadOnlyList<Book> BooksWithAuthors(
+      IReadOnlyList<Author> authors
    ) {
-      account.AddBeneficiary(beneficiary, createdAt);
-      _beneficiaries.Add(beneficiary);
-   }
-
-   public (List<Account>, List<Transfer>) AddBeneficiariesAndTransactionsAndTransfersToAccounts(
-      List<Account> accounts,
-      List<Transfer> transfers
-   ) {
-      accounts = AddBeneficiariesToAccounts(accounts);
-      var bookedAt = clock.UtcNow;
-
-      BookMoney( // Transfer 1: Account 1 --> Account 7
-         purpose: "Erika 1 an Chris1",
-         amountVo: MoneyVo.Create(345.0m, Currency.EUR).GetValueOrThrow(),
-         debitName: Customer1().DisplayName,
-         debitAccount: accounts[0],
-         creditName: Beneficiary1().Name,
-         creditAccount: accounts[5],
-         bookedAtString: "2025-01-01T00:00:00Z",
-         transactionDebitId: Transaction1DId,
-         transactionCreditId: Transaction1CId,
-         transferId: Transfer1Id,
-         accounts,
-         transfers
+      var books = new List<Book> {
+         Book1(), Book2(), Book3(), Book4()
+      };
+      AddAuthorsAndItemsToBooks(
+         books: books,
+         authors: authors
       );
 
-      BookMoney( // Transfer 2: Account 1 --> Account 7
-         purpose: "Erika 1 an Chris2",
-         amountVo: MoneyVo.Create(231.0m, Currency.EUR).GetValueOrThrow(),
-         debitName: Customer1().DisplayName,
-         debitAccount: accounts[0],
-         creditName: Beneficiary2().Name,
-         creditAccount: accounts[7],
-         bookedAtString: "2025-02-01T00:00:00Z",
-         transactionDebitId: Transaction2DId,
-         transactionCreditId: Transaction2CId,
-         transferId: Transfer2Id,
-         accounts,
-         transfers
-      );
-
-      // Erika 2 an ...
-      BookMoney( // Transfer 3: Account 2 --> Account 4
-         purpose: "Erika 2 an Arne",
-         amountVo: MoneyVo.Create(289.0m, Currency.EUR).GetValueOrThrow(),
-         debitName: Customer1().DisplayName,
-         debitAccount: accounts[1],
-         creditName: Beneficiary3().Name,
-         creditAccount: accounts[3],
-         bookedAtString: "2025-03-01T00:00:00Z",
-         transactionDebitId: Transaction3DId,
-         transactionCreditId: Transaction3CId,
-         transferId: Transfer3Id,
-         accounts,
-         transfers
-      );
-
-      BookMoney( // Transfer 4: Account 2 --> Account 5
-         purpose: "Erika 2 an Benno",
-         amountVo: MoneyVo.Create(125.0m, Currency.EUR).GetValueOrThrow(),
-         debitName: Customer1().DisplayName,
-         debitAccount: accounts[1],
-         creditName: Beneficiary4().Name,
-         creditAccount: accounts[4],
-         bookedAtString: "2025-04-1T00:00:00Z",
-         transactionDebitId: Transaction4DId,
-         transactionCreditId: Transaction4CId,
-         transferId: Transfer4Id,
-         accounts,
-         transfers
-      );
-
-      // Max ... 
-      BookMoney( // Transfer 5: Account 3 --> Account 4
-         purpose: "Max an Arne",
-         amountVo: MoneyVo.Create(167.0m, Currency.EUR).GetValueOrThrow(),
-         debitName: Customer2().DisplayName,
-         debitAccount: accounts[2],
-         creditName: Beneficiary5().Name,
-         creditAccount: accounts[3],
-         bookedAtString: "2025-05-01T00:00:00Z",
-         transactionDebitId: Transaction5DId,
-         transactionCreditId: Transaction5CId,
-         transferId: Transfer5Id,
-         accounts,
-         transfers
-      );
-
-      BookMoney( // Transfer 6: Account 3 --> Account 5
-         purpose: "Max an Benno",
-         amountVo: MoneyVo.Create(167.0m, Currency.EUR).GetValueOrThrow(),
-         debitName: Customer2().DisplayName,
-         debitAccount: accounts[2],
-         creditName: Beneficiary6().Name,
-         creditAccount: accounts[4],
-         bookedAtString: "2025-06-01T00:00:00Z",
-         transactionDebitId: Transaction6DId,
-         transactionCreditId: Transaction6CId,
-         transferId: Transfer6Id,
-         accounts,
-         transfers
-      );
-
-      BookMoney( // Transfer 7: Account 3 --> Account 5
-         purpose: "Max an Dana",
-         amountVo: MoneyVo.Create(312.0m, Currency.EUR).GetValueOrThrow(),
-         debitName: Customer2().DisplayName,
-         debitAccount: accounts[2],
-         creditName: Beneficiary7().Name,
-         creditAccount: accounts[4],
-         bookedAtString: "2025-07-01T00:00:00Z",
-         transactionDebitId: Transaction7DId,
-         transactionCreditId: Transaction7CId,
-         transferId: Transfer7Id,
-         accounts,
-         transfers
-      );
-
-      // Arne ... 
-      BookMoney( // Transfer 8: Account 4 --> Account 3
-         purpose: "Arne an Max",
-         amountVo: MoneyVo.Create(278.0m, Currency.EUR).GetValueOrThrow(),
-         debitName: Customer3().DisplayName,
-         debitAccount: accounts[3],
-         creditName: Beneficiary8().Name,
-         creditAccount: accounts[2],
-         bookedAtString: "2025-08-01T00:00:00Z",
-         transactionDebitId: Transaction8DId,
-         transactionCreditId: Transaction8CId,
-         transferId: Transfer8Id,
-         accounts,
-         transfers
-      );
-
-      BookMoney( // Transfer 9: Account 4 --> Account 6
-         purpose: "Arne an Chris 2",
-         amountVo: MoneyVo.Create(356.0m, Currency.EUR).GetValueOrThrow(),
-         debitName: Customer3().DisplayName,
-         debitAccount: accounts[3],
-         creditName: Beneficiary9().Name,
-         creditAccount: accounts[5],
-         bookedAtString: "2025-09-01T00:00:00Z",
-         transactionDebitId: Transaction9DId,
-         transactionCreditId: Transaction9CId,
-         transferId: Transfer9Id,
-         accounts,
-         transfers
-      );
-
-      // Benno ... 
-      BookMoney( // Transfer 10: Account 5 --> Account 1
-         purpose: "Benno an Erika 1",
-         amountVo: MoneyVo.Create(412.0m, Currency.EUR).GetValueOrThrow(),
-         debitName: Customer4().DisplayName,
-         debitAccount: accounts[4],
-         creditName: Beneficiary10().Name,
-         creditAccount: accounts[0],
-         bookedAtString: "2025-10-01T00:00:00Z",
-         transactionDebitId: Transaction10DId,
-         transactionCreditId: Transaction10CId,
-         transferId: Transfer10Id,
-         accounts,
-         transfers
-      );
-
-      BookMoney( // Transfer 11: Account 5 --> Account 2
-         purpose: "Benno an Erika 2",
-         amountVo: MoneyVo.Create(89.0m, Currency.EUR).GetValueOrThrow(),
-         debitName: Customer4().DisplayName,
-         debitAccount: accounts[4],
-         creditName: Beneficiary11().Name,
-         creditAccount: accounts[1],
-         bookedAtString: "2025-11-01T00:00:00Z",
-         transactionDebitId: Transaction11DId,
-         transactionCreditId: Transaction11CId,
-         transferId: Transfer11Id,
-         accounts,
-         transfers
-      );
-
-      return (accounts, transfers);
-   }
-
-   private void BookMoney(
-      string purpose,
-      MoneyVo amountVo,
-      string debitName,
-      Account debitAccount,
-      string creditName,
-      Account creditAccount,
-      string bookedAtString,
-      string transactionDebitId,
-      string transactionCreditId,
-      string transferId,
-      List<Account> accounts,
-      List<Transfer> transfers
-   ) {
-      var bookedAt = bookedAtString is not null
-         ? DateTime.Parse(bookedAtString, null, DateTimeStyles.AdjustToUniversal)
-         : clock.UtcNow;
-
-      var transactionDebit = debitAccount.PostDebit(
-         creditName: creditName,
-         creditIbanVo: creditAccount.IbanVo,
-         amountVo: amountVo,
-         purpose: purpose,
-         bookedAt: bookedAt,
-         id: transactionDebitId
-      ).GetValueOrThrow();
-
-      var transactionCredit = creditAccount.PostCredit(
-         debitName: debitName,
-         debitIbanVo: debitAccount.IbanVo,
-         amountVo: amountVo,
-         purpose: purpose,
-         bookedAt: bookedAt,
-         id: transactionCreditId
-      ).GetValueOrThrow();
-
-      var transfer = Transfer.CreateBooked(
-         debitAccountId: debitAccount.Id,
-         creditIbanVo: creditAccount.IbanVo,
-         amountVo: amountVo,
-         purpose: purpose,
-         debitTransactionId: transactionDebit.Id,
-         creditTransactionId: transactionCredit.Id,
-         bookedAt: bookedAt,
-         id: transferId
-      ).GetValueOrThrow();
-      //debitAccount.AddTransfer(transfer, bookedAt).GetValueOrThrow();
-
-      transfers.Add(transfer);
+      return books;
    }
    #endregion
 
-   // ---------- Helper ----------
-   private Employee CreateEmployee(
-      string id,
-      string firstname,
-      string lastname,
-      string email,
-      string phone,
-      string subject,
-      string personnelNumber,
-      AdminRights adminRights
-   ) {
-      var resultEmail = EmailVo.Create(email);
-      if (resultEmail.IsFailure)
-         throw new Exception($"Invalid email in test seed: {email}");
-      var emailVo = resultEmail.Value;
-
-      var resultPhone = PhoneVo.Create(phone);
-      if (resultPhone.IsFailure)
-         throw new Exception($"Invalid phone number in test seed: {phone}");
-      var phoneVo = resultPhone.Value;
-
-      var result = Employee.Create(
-         firstname: firstname,
-         lastname: lastname,
-         emailVo: emailVo,
-         phoneVo: phoneVo,
-         subject: subject,
-         personnelNumber: personnelNumber,
-         adminRights: adminRights,
-         createdAt: clock.UtcNow,
-         id: id
-      );
-      return result.Value;
-   }
-*/
+   #region -------------- Helper Methods ----------------------------------------------------
    private Reader CreateReader(
       string id,
       string firstname,
@@ -754,18 +231,24 @@ public sealed class Seed(
       AddressVo addressVo,
       string subject
    ) {
+      // Create and validate the email value object.
       var resultEmail = EmailVo.Create(email);
       if (resultEmail.IsFailure)
          throw new Exception($"Invalid email in Seed: {email}");
       var emailVo = resultEmail.Value;
 
-      var resultId = EntityId.Resolve(id, ReaderErrors.InvalidId);
+      // Resolve the stable seed id.
+      var resultId = EntityId.Resolve(
+         id,
+         ReaderErrors.InvalidId
+      );
+
       if (resultId.IsFailure)
-         throw new Exception($"Invalid id in Seed: {id}");
-      var readerId = resultId.Value;
-      
+         throw new Exception($"Invalid reader id in Seed: {id}");
+
+      // Create the Reader aggregate through its factory method.
       var result = Reader.Create(
-         id: readerId,
+         id: resultId.Value,
          firstname: firstname,
          lastname: lastname,
          subject: subject,
@@ -774,139 +257,252 @@ public sealed class Seed(
          createdAt: clock.UtcNow
       );
 
+      if (result.IsFailure)
+         throw new Exception($"Invalid reader in Seed: {firstname} {lastname}");
+
       return result.Value;
    }
-/*
-   private Account CreateAccount(
-      Guid customerId,
+
+   private Author CreateAuthor(
       string id,
-      string iban,
-      decimal balance,
-      Guid createdByEmployeeId
+      string firstname,
+      string lastname
    ) {
-      var resultIbanVo = IbanVo.Create(iban);
-      if (resultIbanVo.IsFailure)
-         throw new Exception($"Invalid iban in test seed: {iban}");
-      var ibanVo = resultIbanVo.Value;
-
-      var resultBalanceVo = MoneyVo.Create(balance, Currency.EUR);
-      if (resultBalanceVo.IsFailure)
-         throw new Exception($"Invalid money in test seed: {resultBalanceVo}");
-      var balanceVo = resultBalanceVo.Value;
-
-      var result = Account.Create(
-         ibanVo: ibanVo,
-         balanceVo: balanceVo,
-         customerId: customerId,
-         createdAt: clock.UtcNow,
-         createdByEmployeeId: createdByEmployeeId,
-         id: id
+      // Resolve the stable seed id.
+      var resultId = EntityId.Resolve(
+         id,
+         CatalogErrors.InvalidAuthorId
       );
+      if (resultId.IsFailure)
+         throw new Exception($"Invalid author id in Seed: {id}");
+
+      // Create the Author aggregate through its factory method.
+      var result = Author.Create(
+         id: resultId.Value,
+         firstname: firstname,
+         lastname: lastname,
+         createdAt: clock.UtcNow
+      );
+
+      if (result.IsFailure)
+         throw new Exception($"Invalid author in Seed: {firstname} {lastname}");
+
       return result.Value;
    }
 
-   private Beneficiary CreateBeneficiary(
+   private Book CreateBook(
       string id,
-      Guid accountId,
-      string name,
-      string iban
+      string title,
+      string? subtitle,
+      string isbn
    ) {
-      var resultIban = IbanVo.Create(iban);
-      if (resultIban.IsFailure)
-         throw new Exception($"Invalid iban in test seed: {iban}");
-      var ibanVo = resultIban.Value;
-
-      var result = Beneficiary.Create(
-         accountId: accountId,
-         name: name,
-         ibanVo: ibanVo,
-         id: id
+      // Resolve the stable seed id.
+      var resultId = EntityId.Resolve(
+         id,
+         CatalogErrors.InvalidBookId
       );
+      if (resultId.IsFailure)
+         throw new Exception($"Invalid book id in Seed: {id}");
+
+      // Create the Book aggregate through its factory method.
+      var result = Book.Create(
+         id: resultId.Value,
+         title: title,
+         subtitle: subtitle,
+         isbn: isbn,
+         createdAt: clock.UtcNow
+      );
+
+      if (result.IsFailure)
+         throw new Exception($"Invalid book in Seed: {title}");
+
       return result.Value;
    }
 
-   private Transfer CreateTransfer(
-      string id,
-      Guid debitAccountId,
-      string creditAccountIban,
-      string purpose,
-      decimal amount,
-      Guid debitTransactionId,
-      Guid creditTransactionId,
-      string? bookedAtString
+   private void AddAuthorsAndItemsToBooks(
+      List<Book> books,
+      IReadOnlyList<Author> authors
    ) {
-      var bookedAt = bookedAtString is not null
-         ? DateTime.Parse(bookedAtString, null, DateTimeStyles.AdjustToUniversal)
-         : clock.UtcNow;
-
-      var creditAccountIbanVo = IbanVo.Create(creditAccountIban).GetValueOrThrow();
-      var amountVo = MoneyVo.Create(amount, Currency.EUR).GetValueOrThrow();
-
-      var result = Transfer.CreateBooked(
-         debitAccountId: debitAccountId,
-         creditIbanVo: creditAccountIbanVo,
-         purpose: purpose,
-         amountVo: amountVo,
-         debitTransactionId: debitTransactionId,
-         creditTransactionId: creditTransactionId,
-         bookedAt: bookedAt,
-         id: id
+      // Book 1: Clean Code -> Robert C. Martin
+      AddAuthorToBook(
+         book: books[0],
+         authors: authors,
+         authorId: Author1Id
       );
-      return result.Value;
+
+      AddBookItemToBook(
+         book: books[0],
+         bookItemId: BookItem1Id,
+         inventoryNumber: "CL-BOOK-0001"
+      );
+
+      AddBookItemToBook(
+         book: books[0],
+         bookItemId: BookItem2Id,
+         inventoryNumber: "CL-BOOK-0002"
+      );
+
+      // Book 2: Domain-Driven Design -> Eric Evans
+      AddAuthorToBook(
+         book: books[1],
+         authors: authors,
+         authorId: Author2Id
+      );
+
+      AddBookItemToBook(
+         book: books[1],
+         bookItemId: BookItem3Id,
+         inventoryNumber: "CL-BOOK-0003"
+      );
+
+      // Book 3: Refactoring -> Martin Fowler, Kent Beck
+      AddAuthorToBook(
+         book: books[2],
+         authors: authors,
+         authorId: Author3Id
+      );
+
+      AddAuthorToBook(
+         book: books[2],
+         authors: authors,
+         authorId: Author5Id
+      );
+
+      AddBookItemToBook(
+         book: books[2],
+         bookItemId: BookItem4Id,
+         inventoryNumber: "CL-BOOK-0004"
+      );
+
+      // Book 4: Design Patterns -> Erich Gamma, Martin Fowler
+      AddAuthorToBook(
+         book: books[3],
+         authors: authors,
+         authorId: Author4Id
+      );
+
+      AddAuthorToBook(
+         book: books[3],
+         authors: authors,
+         authorId: Author3Id
+      );
+
+      AddBookItemToBook(
+         book: books[3],
+         bookItemId: BookItem5Id,
+         inventoryNumber: "CL-BOOK-0005"
+      );
+
+      AddBookItemToBook(
+         book: books[3],
+         bookItemId: BookItem6Id,
+         inventoryNumber: "CL-BOOK-0006"
+      );
    }
 
-   private Transaction CreateDebitTransaction(
-      string id,
-      Guid accountId,
-      string creditName,
-      IbanVo creditIbanVo,
-      string purpose,
-      decimal amount,
-      decimal balance
+   private void AddAuthorToBook(
+      Book book,
+      IReadOnlyList<Author> authors,
+      string authorId
    ) {
-      var amountVo = MoneyVo.Create(amount, Currency.EUR).GetValueOrThrow();
-      var balanceVo = MoneyVo.Create(balance, Currency.EUR).GetValueOrThrow();
-
-      var balanceAfterVo = balanceVo - amountVo;
-
-      var result = Transaction.CreateDebit(
-         debitAccountId: accountId,
-         creditName: creditName,
-         creditIbanVo: creditIbanVo,
-         purpose: purpose,
-         amountVo: amountVo,
-         balanceAfterVo: balanceAfterVo,
-         bookedAt: clock.UtcNow,
-         id: id
+      // Resolve the id of the assigned Author.
+      var resultAuthorId = EntityId.Resolve(
+         authorId,
+         CatalogErrors.InvalidAuthorId
       );
-      return result.Value;
+      if (resultAuthorId.IsFailure)
+         throw new Exception($"Invalid author id in Seed: {authorId}");
+
+      var author = authors.SingleOrDefault(a => a.Id == resultAuthorId.Value);
+
+      if (author is null)
+         throw new Exception($"Author not found in Seed: {authorId}");
+
+      // The Book aggregate controls the author assignment.
+      // EF Core maps the m:n relationship to a join table behind the scenes.
+      var result = book.AssignAuthor(
+         author: author,
+         updatedAt: clock.UtcNow.Add(TimeSpan.FromHours(6))
+      );
+
+      if (result.IsFailure)
+         throw new Exception(
+            $"Invalid author assignment in Seed: Book={book.Id}, Author={authorId}"
+         );
    }
 
-   private Transaction CreateCreditTransaction(
-      string id,
-      Guid accountId,
-      string debitName,
-      IbanVo debitIbanVo,
-      string purpose,
-      decimal amount,
-      decimal balance
+   private void AddBookItemToBook(
+      Book book,
+      string bookItemId,
+      string inventoryNumber
    ) {
-      var amountVo = MoneyVo.Create(amount, Currency.EUR).GetValueOrThrow();
-      var balanceVo = MoneyVo.Create(balance, Currency.EUR).GetValueOrThrow();
-
-      var balanceAfterVo = balanceVo + amountVo;
-
-      var result = Transaction.CreateCredit(
-         creditAccountId: accountId,
-         debitName: debitName,
-         debitIbanVo: debitIbanVo,
-         purpose: purpose,
-         amountVo: amountVo,
-         balanceAfterVo: balanceAfterVo,
-         bookedAt: clock.UtcNow,
-         id: id
+      // Resolve the id of the BookItem entity.
+      var resultBookItemId = EntityId.Resolve(
+         bookItemId,
+         CatalogErrors.InvalidBookItemId
       );
-      return result.Value;
+      if (resultBookItemId.IsFailure)
+         throw new Exception($"Invalid book item id in Seed: {bookItemId}");
+
+      // The Book aggregate controls its BookItems.
+      var result = book.AddBookItem(
+         bookItemId: resultBookItemId.Value,
+         inventoryNumber: inventoryNumber,
+         updatedAt: clock.UtcNow.Add(TimeSpan.FromHours(6))
+      );
+
+      if (result.IsFailure)
+         throw new Exception($"Invalid book item in Seed: {inventoryNumber}");
    }
-   */
+   #endregion
 }
+
+/*
+Lernziele und Didaktik
+----------------------
+
+Diese Seed-Klasse stellt stabile Testdaten für das CampusLibrary-Projekt
+bereit. In Teil 1 und Teil 2 wurden nur Reader-Daten benötigt. In Teil 3
+wird mit Catalog ein zweites Fachmodul ergänzt.
+
+Die Reader-Daten bleiben unverändert. Dadurch kann geprüft werden, dass das
+neue Catalog-Modul keine bestehenden Tests oder bestehende Funktionalität
+beschädigt.
+
+Für Catalog werden Authors und Books getrennt erzeugt. Damit wird sichtbar,
+dass Author ein eigenständiges fachliches Objekt ist, während Book das zentrale
+Aggregate im Catalog-Modul bildet.
+
+Die Beziehung Book -> BookItem zeigt eine 1:n-Beziehung. Ein Book beschreibt
+das bibliografische Werk, während BookItem ein konkretes Exemplar dieses Buchs
+repräsentiert.
+
+Die Beziehung Book <-> Author zeigt eine m:n-Beziehung. Da diese Zuordnung
+aktuell keine eigene fachliche Bedeutung und keine eigenen Attribute besitzt,
+wird keine eigene Domain-Klasse BookAuthor modelliert. Stattdessen enthält
+Book direkt eine Liste von Authors. EF Core bildet daraus später eine
+Join-Tabelle.
+
+BookItems werden nicht direkt erzeugt, sondern über AddBookItem am
+Book-Aggregate hinzugefügt. Dadurch bleibt die fachliche Konsistenzgrenze des
+Aggregates auch bei Testdaten erhalten.
+
+Authors werden ebenfalls nicht über eine BookAuthor-Klasse verbunden. Die
+Methode AssignAuthor am Book-Aggregate stellt sicher, dass derselbe Author
+nicht mehrfach demselben Book zugeordnet wird.
+
+Didaktisch wichtig ist die Unterscheidung zwischen einer reinen technischen
+m:n-Verbindung und einem fachlichen Vorgang. Book-Author ist hier nur eine
+Zuordnung. Ein späterer Loan zwischen Reader und BookItem wäre dagegen ein
+eigener fachlicher Vorgang mit Ausleihdatum, Rückgabefrist, Rückgabedatum und
+Status.
+
+Die Methode BooksWithAuthors(authors) ist beim EF-Seeding hilfreich, weil sie
+dieselben Author-Instanzen verwendet, die auch separat in den DbContext
+eingefügt werden können. Dadurch entstehen keine doppelten Author-Objekte mit
+derselben Id im ChangeTracker.
+
+Didaktisch wichtig ist die Trennung zwischen Seed-Daten und Fachlogik:
+Der Seed erzeugt Beispieldaten. Die Regeln bleiben aber im Domänenmodell,
+also in Book, Author, BookItem und IsbnVo.
+*/

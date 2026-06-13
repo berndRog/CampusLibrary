@@ -1,4 +1,5 @@
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
+using CampusLibraryApi._3_Core.Catalog._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
 using CampusLibraryApi._4_Infrastructure.Persistence;
@@ -39,110 +40,42 @@ public sealed class TestSeed {
       Reader1(), Reader2(), Reader3(), Reader4(), Reader5(), Reader6()
    ];
    #endregion
-/*
-   #region -------------- Test Iban (Value Objects) ------------------------------------------
-   public string Iban1 => Seed.Iban1;
-   public string Iban2 => Seed.Iban2;
-   public string Iban3 => Seed.Iban3;
-   public string Iban4 => Seed.Iban4;
-   public string Iban5 => Seed.Iban5;
-   public string Iban6 => Seed.Iban6;
-   public string Iban7 => Seed.Iban7;
-   public string Iban8 => Seed.Iban8;
-   #endregion
 
-   #region -------------- Test Accounts ------------------------------------------------------
-   public Account Account1() => _seed.Account1();
-   public Account Account2() => _seed.Account2();
-   public Account Account3() => _seed.Account3();
-   public Account Account4() => _seed.Account4();
-   public Account Account5() => _seed.Account5();
-   public Account Account6() => _seed.Account6();
-   public Account Account7() => _seed.Account7();
-   public Account Account8() => _seed.Account8();
+   #region -------------- Test Authors (Entities) ------------------------------------------
+   public string Author1Id => Seed.Author1Id;
+   public string Author2Id => Seed.Author1Id;
+   public string Author3Id => Seed.Author1Id;
+   public string Author4Id => Seed.Author1Id;
+   public string Author5Id => Seed.Author1Id;
 
-   public IReadOnlyList<Account> Accounts => new List<Account> {
-      Account1(), Account2(), Account3(), Account4(),
-      Account5(), Account6(), Account7(), Account8()
-   };
-   #endregion
-
-   #region -------------- Test Beneficiaries -------------------------------------------------
-   public Beneficiary Beneficiary1() => _seed.Beneficiary1();
-   public Beneficiary Beneficiary2() => _seed.Beneficiary2();
-   public Beneficiary Beneficiary3() => _seed.Beneficiary3();
-   public Beneficiary Beneficiary4() => _seed.Beneficiary4();
-   public Beneficiary Beneficiary5() => _seed.Beneficiary5();
-   public Beneficiary Beneficiary6() => _seed.Beneficiary6();
-   public Beneficiary Beneficiary7() => _seed.Beneficiary7();
-   public Beneficiary Beneficiary8() => _seed.Beneficiary8();
-   public Beneficiary Beneficiary9() => _seed.Beneficiary9();
-   public Beneficiary Beneficiary10() => _seed.Beneficiary10();
-   public Beneficiary Beneficiary11() => _seed.Beneficiary11();
-   public IReadOnlyList<Beneficiary> Beneficiaries => new List<Beneficiary>{
-      Beneficiary1(), Beneficiary2(), Beneficiary3(), Beneficiary4(),
-      Beneficiary5(), Beneficiary6(), Beneficiary7(), Beneficiary8(),
-      Beneficiary9(), Beneficiary10(), Beneficiary11()
-   };
-   #endregion
-
-   #region -------------- Test Transactions ---------------------------------------------------
-   public string Transaction1dId => Seed.Transaction1DId;
-   public string Transaction1cId => Seed.Transaction1CId;
-   public string Transaction2dId => Seed.Transaction2DId;
-   public string Transaction2cId => Seed.Transaction2CId;
-   public string Transaction3dId => Seed.Transaction3DId;
-   public string Transaction3cId => Seed.Transaction3CId;
-   public string Transaction4dId => Seed.Transaction4DId;
-   public string Transaction4cId => Seed.Transaction4CId;
-   public string Transaction5dId => Seed.Transaction5DId;
-   public string Transaction5cId => Seed.Transaction5CId;
-   public string Transaction6dId => Seed.Transaction6DId;
-   public string Transaction6cId => Seed.Transaction6CId;
-   public string Transaction7dId => Seed.Transaction7DId;
-   public string Transaction7cId => Seed.Transaction7CId;
-   public string Transaction8dId => Seed.Transaction8DId;
-   public string Transaction8cId => Seed.Transaction8CId;
-   public string Transaction9dId => Seed.Transaction9DId;
-   public string Transaction9cId => Seed.Transaction9CId;
-   public string Transaction10dId => Seed.Transaction10DId;
-   public string Transaction10cId => Seed.Transaction10CId;
-   public string Transaction11dId => Seed.Transaction11DId;
-   public string Transaction11cId => Seed.Transaction11CId;
-
-   public Transaction Transaction1d() => _seed.Transaction1D();
-   public Transaction Transaction1c() => _seed.Transaction1C();
-   public Transaction Transaction2d() => _seed.Transaction2D();
-   public Transaction Transaction2c() => _seed.Transaction2C();
-   public IReadOnlyList<Transaction> Transaction => _seed.Transactions;
-   #endregion
-
-   #region -------------- Test Transfers -----------------------------------------------------
-   public string Transfer1Id => Seed.Transfer1Id;
-   public string Transfer2Id => Seed.Transfer2Id;
-   public string Transfer3Id => Seed.Transfer3Id;
-   public string Transfer4Id => Seed.Transfer4Id;
-   public string Transfer5Id => Seed.Transfer5Id;
-   public string Transfer6Id => Seed.Transfer6Id;
-   public string Transfer7Id => Seed.Transfer7Id;
-   public string Transfer8Id => Seed.Transfer8Id;
-   public string Transfer9Id => Seed.Transfer9Id;
-   public string Transfer10Id => Seed.Transfer10Id;
-   public string Transfer11Id => Seed.Transfer11Id;
-
-   public Transfer Transfer1() => _seed.Transfer1();
-   public Transfer Transfer2() => _seed.Transfer2();
-
-   public IReadOnlyList<Transfer> Transfers => _seed.Transfers;
-   #endregion
-
-   public List<Account> AddBeneficiariesToAccounts(List<Account> accounts)
-      => _seed.AddBeneficiariesToAccounts(accounts);
-
-   public (List<Account>, List<Transfer>) AddBeneficiariesAndTransactionsAndTransfersToAccounts(
-      List<Account> accounts,
-      List<Transfer> transfers
-   ) => _seed.AddBeneficiariesAndTransactionsAndTransfersToAccounts(accounts, transfers);
+   public Author Author1() => _seed.Author1();
+   public Author Author2() => _seed.Author2();
+   public Author Author3() => _seed.Author3();
+   public Author Author4() => _seed.Author4();
+   public Author Author5() => _seed.Author5();
    
-   */
+   public IReadOnlyList<Author> Authors => [
+      Author1(), Author2(), Author3(), Author4(), Author5()
+   ];
+   #endregion
+   
+   #region -------------- Test Books (Entities) ------------------------------------------
+   public string Book1Id => Seed.Book1Id;
+   public string Book2Id => Seed.Book2Id;
+   public string Book3Id => Seed.Book3Id;
+   public string Book4Id => Seed.Book4Id;
+   
+   public Book Book1() => _seed.Book1();
+   public Book Book2() => _seed.Book2();
+   public Book Book3() => _seed.Book3();
+   public Book Book4() => _seed.Book4();
+   #endregion
+   
+   public string BookItem1Id => Seed.BookItem1Id;
+   public string BookItem2Id => Seed.BookItem2Id;
+   public string BookItem3Id => Seed.BookItem3Id;
+   public string BookItem4Id => Seed.BookItem4Id;
+   public string BookItem5Id => Seed.BookItem5Id;
+   public string BookItem6Id => Seed.BookItem6Id;
+
 }

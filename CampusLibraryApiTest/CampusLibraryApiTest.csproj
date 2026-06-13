@@ -42,6 +42,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CampusLibraryApi\CampusLibraryApi.csproj" />
+    <ProjectReference Include="..\CampusLibraryApi_3_Core_Catalog\CampusLibraryApi_3_Core_Catalog.csproj" />
   </ItemGroup>
 
 </Project>

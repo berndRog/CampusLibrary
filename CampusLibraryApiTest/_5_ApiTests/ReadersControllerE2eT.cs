@@ -15,7 +15,7 @@ namespace CampusLibraryApiTest._4_WebTests;
 public sealed class ReadersControllerE2eT : TestBaseEndToEnd {
    
    protected override string DatabaseName => nameof(ReadersControllerE2eT);
-   //protected override DbMode DbMode => DbMode.FileUnique;
+   protected override DbMode DbMode => DbMode.InMemory;
    
    private readonly string _url = "/camplib/v1";
    private readonly CancellationToken _ct = TestContext.Current.CancellationToken;
