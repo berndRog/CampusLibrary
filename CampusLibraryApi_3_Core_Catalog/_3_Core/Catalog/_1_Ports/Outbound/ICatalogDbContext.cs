@@ -8,6 +8,7 @@ public interface ICatalogDbContext {
    // Query access to Author and Book aggregates.
    IQueryable<Author> Authors { get; }
    IQueryable<Book> Books { get; }
+   IQueryable<BookItem> BookItems { get; }
 
    // Add a new author or bokk to the persistence context.
    void Add(Author author);
@@ -17,8 +18,6 @@ public interface ICatalogDbContext {
    void AddRange(IEnumerable<Author> authors);
    void AddRange(IEnumerable<Book> books);
    
-   // Remove a book from the persistence context
-   void Remove(Book bookAlt);
 }
 
 /*

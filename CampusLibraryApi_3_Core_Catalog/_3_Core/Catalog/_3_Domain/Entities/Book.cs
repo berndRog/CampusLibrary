@@ -18,6 +18,7 @@ public sealed class Book : AggregateRoot {
    public string Title { get; private set; } = string.Empty;
    public string? Subtitle { get; private set; }
    public IsbnVo IsbnVo { get; private set; } = null!;
+   public bool IsActive { get; private set; } = true;
 
    // Book -> BookItem [1] : [0,n]
    // A BookItem represents one physical copy of this book.
@@ -149,6 +150,22 @@ public sealed class Book : AggregateRoot {
          return Result.Failure(resultUpdated.Error);
 
       return Result.Success();
+   }
+   
+   // Deactivate the Book
+   public Result Deactivate(
+       DateTime updatedAt
+    ) {
+       if (!IsActive)
+          return Result.Success();
+
+       IsActive = false;
+       
+       var resultUpdated = Touch(updatedAt);
+       if (resultUpdated.IsFailure)
+          return Result.Failure(resultUpdated.Error);
+
+       return Result.Success();
    }
 }
 

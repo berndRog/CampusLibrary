@@ -6,13 +6,15 @@ using CampusLibraryApi._3_Core.Catalog._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Catalog._2_Application.Mappings;
 using CampusLibraryApi._3_Core.Catalog._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Catalog._3_Domain.Errors;
+using Microsoft.Extensions.Logging;
 
 namespace CampusLibraryApi._3_Core.Catalog._2_Application.UseCases;
 
 public sealed class BookUcCreate(
    IBookRepository bookRepository,
    IUnitOfWork unitOfWork,
-   IClock clock
+   IClock clock,
+   ILogger<BookUcCreate> logger
 ) {
 
    public async Task<Result<BookDto>> ExecuteAsync(
@@ -35,24 +37,21 @@ public sealed class BookUcCreate(
          isbn: dto.Isbn ?? string.Empty,
          createdAt: clock.UtcNow
       );
-
       if (bookResult.IsFailure)
          return Result<BookDto>.Failure(bookResult.Error);
-
       var book = bookResult.Value;
 
       // ISBN uniqueness requires persistence knowledge and belongs to the use case.
-      var exists = await bookRepository.ExistsByIsbnAsync(
-         book.IsbnVo.Value,
-         ct
-      );
-
+      var exists = await bookRepository.ExistsByIsbnAsync(book.IsbnVo.Value, ct);
       if (exists)
          return Result<BookDto>.Failure(CatalogErrors.BookAlreadyExists);
 
+      // Add to repository
       bookRepository.Add(book);
       
+      // save all changes to database
       var rows = await unitOfWork.SaveAllChangesAsync("BookUcCreate",ct);
+      logger.LogDebug("BookUcCreate {BookId} done, rows {Rows}", book.Id, rows);
 
       return Result<BookDto>.Success(book.ToBookDto());
    }

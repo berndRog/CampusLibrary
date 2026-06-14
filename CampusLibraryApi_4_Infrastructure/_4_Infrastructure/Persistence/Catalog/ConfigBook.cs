@@ -32,46 +32,45 @@ internal sealed class ConfigBook(
          .UsePropertyAccessMode(PropertyAccessMode.Field);
 
       // Book <-> Author [m:n]
-      // There is no BookAuthor domain class.
-      // EF Core creates and manages the join table "BookAuthors".
+      // Book.Authors is the domain-facing navigation.
+      // BookAuthorJoin is an infrastructure join type for the table "BookAuthors"
+      // and makes the composite key BookId + AuthorId explicit.
       builder.HasMany(b => b.Authors)
          .WithMany()
-         .UsingEntity<Dictionary<string, object>>(
-            "BookAuthors",
-
-            // Author side of the join table
+         .UsingEntity<BookAuthorJoin>(
             right => right
-               .HasOne<Author>()
+               .HasOne(ba => ba.Author)
                .WithMany()
-               .HasForeignKey("AuthorId")
+               .HasForeignKey(ba => ba.AuthorId)
                .OnDelete(DeleteBehavior.Restrict),
-
-            // Book side of the join table
             left => left
-               .HasOne<Book>()
+               .HasOne(ba => ba.Book)
                .WithMany()
-               .HasForeignKey("BookId")
+               .HasForeignKey(ba => ba.BookId)
                .OnDelete(DeleteBehavior.Cascade),
-
-            // Join table configuration
             join => {
                join.ToTable("BookAuthors");
 
-               join.HasKey("BookId", "AuthorId");
+               join.HasKey(ba => new {
+                  ba.BookId,
+                  ba.AuthorId
+               });
 
-               join.Property<Guid>("BookId")
-                  .HasColumnName("BookId").HasColumnOrder(0)
+               join.Property(ba => ba.BookId)
+                  .HasColumnName("BookId")
+                  .HasColumnOrder(0)
                   .IsRequired();
 
-               join.Property<Guid>("AuthorId")
-                  .HasColumnName("AuthorId").HasColumnOrder(1)
+               join.Property(ba => ba.AuthorId)
+                  .HasColumnName("AuthorId")
+                  .HasColumnOrder(1)
                   .IsRequired();
             }
          );
 
       builder.Navigation(b => b.Authors)
          .UsePropertyAccessMode(PropertyAccessMode.Field);
-
+      
       // Properties
       builder.Property(b => b.Title)
          .HasMaxLength(200)

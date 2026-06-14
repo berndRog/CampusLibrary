@@ -17,4 +17,5 @@ public interface IAuthorRepository {
 
    void Add(Author author);
    void AddRange(IEnumerable<Author> authors);
+
 }

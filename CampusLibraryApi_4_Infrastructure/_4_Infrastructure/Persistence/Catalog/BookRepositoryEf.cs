@@ -27,13 +27,17 @@ internal sealed class BookRepositoryEf(
       return await dbContext.Books
          .AnyAsync(b => b.IsbnVo == isbnVo, ct);
    }
+   
+   public async Task<bool> ExistsBookItemByInventoryNumberAsync(
+      string inventoryNumber,
+      CancellationToken ct = default
+   ) =>
+      await dbContext.BookItems
+         .AnyAsync(bi => bi.InventoryNumber == inventoryNumber, ct);
 
    public void Add(Book book)
       => dbContext.Add(book);
 
    public void AddRange(IEnumerable<Book> books)
       => dbContext.AddRange(books);
-
-   public void Remove(Book book)
-      => dbContext.Remove(book);
 }

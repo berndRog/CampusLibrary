@@ -5,47 +5,77 @@ using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Catalog._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Catalog._2_Application.Mappings;
 using CampusLibraryApi._3_Core.Catalog._3_Domain.Errors;
+using Microsoft.Extensions.Logging;
 
 namespace CampusLibraryApi._3_Core.Catalog._2_Application.UseCases;
 
 public sealed class BookUcAddBookItem(
    IBookRepository bookRepository,
    IUnitOfWork unitOfWork,
-   IClock clock
+   IClock clock,
+   ILogger<BookUcAddBookItem> logger
 ) {
 
    public async Task<Result<BookItemDto>> ExecuteAsync(
       Guid bookId,
-      BookItemAddDto dto,
+      BookItemAddDto? dto,
       CancellationToken ct = default
    ) {
-      if(bookId == Guid.Empty)
+      if (bookId == Guid.Empty)
          return Result<BookItemDto>.Failure(CatalogErrors.InvalidBookId);
+
       if (dto is null)
          return Result<BookItemDto>.Failure(CatalogErrors.BookItemAddDtoRequired);
 
-      // load book by id
+      // Load the Book aggregate including its existing BookItems.
       var book = await bookRepository.FindByIdAsync(bookId, ct);
       if (book is null)
          return Result<BookItemDto>.Failure(CatalogErrors.BookNotFound);
 
-      // Resolve or generate the book item id.
-      var resultId = EntityId.Resolve(dto.Id, CatalogErrors.InvalidBookItemId);
+      // Resolve or generate the BookItem id.
+      var resultId = EntityId.Resolve(
+         dto.Id,
+         CatalogErrors.InvalidBookItemId
+      );
+
       if (resultId.IsFailure)
          return Result<BookItemDto>.Failure(resultId.Error);
-      var id = resultId.Value;
-      
+
+      var inventoryNumber = dto.InventoryNumber ?? string.Empty;
+      var normalizedInventoryNumber = inventoryNumber.Trim();
+
+      // Library-wide uniqueness requires persistence knowledge.
+      // The aggregate can only protect consistency inside one loaded Book.
+      if (!string.IsNullOrWhiteSpace(normalizedInventoryNumber)) {
+         var exists = await bookRepository.ExistsBookItemByInventoryNumberAsync(
+            normalizedInventoryNumber,
+            ct
+         );
+
+         if (exists)
+            return Result<BookItemDto>.Failure(CatalogErrors.BookItemAlreadyExists);
+      }
+
       // The Book aggregate controls the BookItem creation.
       var resultBookItem = book.AddBookItem(
-         bookItemId: id,
-         inventoryNumber: dto.InventoryNumber,
+         bookItemId: resultId.Value,
+         inventoryNumber: inventoryNumber,
          updatedAt: clock.UtcNow
       );
+
       if (resultBookItem.IsFailure)
          return Result<BookItemDto>.Failure(resultBookItem.Error);
+
       var bookItem = resultBookItem.Value;
 
-      var rows = await unitOfWork.SaveAllChangesAsync("BookUcAddBookItem",ct);
+      // Save all changes to the database:
+      // added BookItem + updated Book.UpdatedAt.
+      var rows = await unitOfWork.SaveAllChangesAsync(
+         "BookUcAddBookItem", ct);
+
+      logger.LogDebug(
+         "BookUcAddBookItem completed for book item {BookItemId}. Saved rows: {Rows}.",
+         bookItem.Id, rows);
 
       return Result<BookItemDto>.Success(bookItem.ToBookItemDto());
    }

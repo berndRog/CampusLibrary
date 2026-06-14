@@ -13,6 +13,7 @@ internal sealed class CatalogDbContextEf(
    
    public IQueryable<Author> Authors => db.Set<Author>().AsQueryable();
    public IQueryable<Book> Books => db.Set<Book>().AsQueryable();
+   public IQueryable<BookItem> BookItems => db.Set<BookItem>().AsQueryable();
    
    public void Add(Author author) => db.Set<Author>().Add(author);
    public void Add(Book book) => db.Set<Book>().Add(book);
@@ -22,6 +23,6 @@ internal sealed class CatalogDbContextEf(
    public void AddRange(IEnumerable<Book> books)
       => db.Set<Book>().AddRange(books);
    
-   //public void Remove(Author author) => db.Set<Author>().Remove(author);
+   public void Remove(Author author) => db.Set<Author>().Remove(author);
    public void Remove(Book book) => db.Set<Book>().Remove(book);
 }

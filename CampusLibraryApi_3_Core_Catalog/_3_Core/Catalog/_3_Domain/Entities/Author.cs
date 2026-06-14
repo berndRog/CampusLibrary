@@ -17,8 +17,8 @@ public sealed class Author : AggregateRoot {
    public string Firstname { get; private set; } = string.Empty;
    public string Lastname { get; private set; } = string.Empty;
    public string DisplayName => $"{Firstname} {Lastname}".Trim();
-
-
+   public bool IsActive { get; private set; } = true;
+   
    //--- constructors ----------------------------------------------------------
    private Author() {
       // Required by EF Core.
@@ -86,6 +86,22 @@ public sealed class Author : AggregateRoot {
 
       Firstname = firstname.Trim();
       Lastname = lastname.Trim();
+
+      return Result.Success();
+   }
+
+   // Deactivate the author
+   public Result Deactivate(
+      DateTime updatedAt
+   ) {
+      if (!IsActive)
+         return Result.Success();
+
+      IsActive = false;
+      
+      var resultUpdated = Touch(updatedAt);
+      if (resultUpdated.IsFailure)
+         return Result.Failure(resultUpdated.Error);
 
       return Result.Success();
    }

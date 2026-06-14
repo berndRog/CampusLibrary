@@ -14,8 +14,12 @@ public interface IBookRepository {
       CancellationToken ct = default
    );
 
+   Task<bool> ExistsBookItemByInventoryNumberAsync(
+      string inventoryNumber,
+      CancellationToken ct = default
+   );
+   
    void Add(Book bookAlt);
    void AddRange(IEnumerable<Book> books);
-
-   void Remove(Book book);
+   
 }

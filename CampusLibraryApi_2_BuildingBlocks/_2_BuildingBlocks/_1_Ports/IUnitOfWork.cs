@@ -6,7 +6,7 @@ public interface IUnitOfWork {
    // Returns the number of affected rows/entities
    Task<int> SaveAllChangesAsync(
       string? text = null,
-      CancellationToken ctToken = default
+      CancellationToken ct = default
    );
 
    // Clears the ORM change tracker
