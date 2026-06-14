@@ -46,6 +46,10 @@ internal sealed class ConfigAuthor(
          .HasColumnName("UpdatedAt").HasColumnOrder(4)
          .IsRequired();
 
+      builder.Property(a => a.IsActive)
+         .HasColumnName("IsActive")
+         .HasColumnOrder(6).IsRequired();
+      
       // Simple teaching duplicate rule.
       builder.HasIndex(a => new { a.Firstname, a.Lastname })
          .IsUnique();

@@ -18,15 +18,16 @@ public sealed class BookUcAddBookItem(
 
    public async Task<Result<BookItemDto>> ExecuteAsync(
       Guid bookId,
-      BookItemAddDto? dto,
+      BookItemAddDto? bookItemAddDto,
       CancellationToken ct = default
    ) {
       if (bookId == Guid.Empty)
          return Result<BookItemDto>.Failure(CatalogErrors.InvalidBookId);
 
-      if (dto is null)
+      if (bookItemAddDto is null)
          return Result<BookItemDto>.Failure(CatalogErrors.BookItemAddDtoRequired);
-
+      var dto = bookItemAddDto!;
+      
       // Load the Book aggregate including its existing BookItems.
       var book = await bookRepository.FindByIdAsync(bookId, ct);
       if (book is null)

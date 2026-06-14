@@ -105,5 +105,9 @@ internal sealed class ConfigBook(
          .HasConversion(utcDtConv)
          .HasColumnName("UpdatedAt").HasColumnOrder(5)
          .IsRequired();
+      
+      builder.Property(a => a.IsActive)
+         .HasColumnName("IsActive")
+         .HasColumnOrder(6).IsRequired();
    }
 }

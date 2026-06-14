@@ -48,7 +48,7 @@ public sealed class Seed(
       id: Reader1Id,
       firstname: "Erika",
       lastname: "Mustermann",
-      email: "[erika.mustermann@t-online.de](mailto:erika.mustermann@t-online.de)",
+      email: "erika.mustermann@t-online.de",
       addressVo: Address1Vo,
       subject: "a00090ad-d9df-486a-8757-4a649e26a54e"
    );
@@ -57,7 +57,7 @@ public sealed class Seed(
       id: Reader2Id,
       firstname: "Max",
       lastname: "Mustermann",
-      email: "[max.mustermann@gmail.com](mailto:max.mustermann@gmail.com)",
+      email: "max.mustermann@gmail.com",
       addressVo: Address2Vo,
       subject: "b0000640-161e-4228-9729-d6b142C2dfad"
    );
@@ -66,7 +66,7 @@ public sealed class Seed(
       id: Reader3Id,
       firstname: "Arno",
       lastname: "Arndt",
-      email: "[a.arndt@t-online.com](mailto:a.arndt@t-online.com)",
+      email: "a.arndt@t-online.de",
       addressVo: Address3Vo,
       subject: "c0004e61-ba7a-4d2a-977f-766b42bb79a9"
    );
@@ -75,7 +75,7 @@ public sealed class Seed(
       id: Reader4Id,
       firstname: "Benno",
       lastname: "Bauer",
-      email: "[b.bauer@gmail.com](mailto:b.bauer@gmail.com)",
+      email: "b.bauer@gmail.com",
       addressVo: Address4Vo,
       subject: "d0024ab-43c5-4c64-872d-6ca05f66756b"
    );
@@ -84,7 +84,7 @@ public sealed class Seed(
       id: Reader5Id,
       firstname: "Christine",
       lastname: "Conrad",
-      email: "[c.conrad@gmx.de](mailto:c.conrad@gmx.de)",
+      email: "c.conrad@gmx.de",
       addressVo: Address5Vo,
       subject: "e00050fb-a381-4e3f-a44b-81ffa7610b72"
    );
@@ -93,7 +93,7 @@ public sealed class Seed(
       id: Reader6Id,
       firstname: "Dana",
       lastname: "Deppe",
-      email: "[d.deppe@icloud.com](mailto:d.deppe@icloud.com)",
+      email: "d.deppe@icloud.com",
       addressVo: Address6Vo,
       subject: "f00060A1-1381-efab-1440-71fc17630172"
    );
@@ -102,7 +102,7 @@ public sealed class Seed(
       id: ReaderRegisterId,
       firstname: "Edgar",
       lastname: "Engel",
-      email: "[e.engel@freenet.de](mailto:e.engel@freenet.de)",
+      email: "e.engel@freenet.de",
       addressVo: AddressRegVo,
       subject: "70000000-0007-0000-0000-000000000000"
    );
@@ -221,7 +221,8 @@ public sealed class Seed(
       return books;
    }
    #endregion
-
+   
+   
    #region -------------- Helper Methods ----------------------------------------------------
    private Reader CreateReader(
       string id,

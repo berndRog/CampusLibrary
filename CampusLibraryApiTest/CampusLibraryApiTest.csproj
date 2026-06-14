@@ -37,10 +37,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="_2_ApplicationTests\UseCases_Integration\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\CampusLibraryApi\CampusLibraryApi.csproj" />
     <ProjectReference Include="..\CampusLibraryApi_3_Core_Catalog\CampusLibraryApi_3_Core_Catalog.csproj" />
   </ItemGroup>

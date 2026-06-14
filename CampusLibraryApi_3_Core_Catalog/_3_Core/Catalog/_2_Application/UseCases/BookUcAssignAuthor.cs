@@ -17,7 +17,7 @@ public sealed class BookUcAssignAuthor(
 ) {
    public async Task<Result<BookDto>> ExecuteAsync(
       Guid bookId,
-      BookAssignAuthorDto? dto,
+      BookAssignAuthorDto? bookAssignAuthorDto,
       CancellationToken ct = default
    ) {
       // The book id is required for this use case.
@@ -25,9 +25,10 @@ public sealed class BookUcAssignAuthor(
          return Result<BookDto>.Failure(CatalogErrors.InvalidBookId);
       
       // The dto is required.
-      if (dto is null)
+      if (bookAssignAuthorDto is null)
          return Result<BookDto>.Failure(CatalogErrors.BookAssignAuthorDtoRequired);
-
+      var dto = bookAssignAuthorDto;
+      
       // The author id is required.
       if (dto.AuthorId == Guid.Empty)
          return Result<BookDto>.Failure(CatalogErrors.InvalidAuthorId);

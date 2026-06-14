@@ -17,11 +17,12 @@ public sealed class AuthorUcCreate(
    ILogger<AuthorUcCreate> logger
 ) {
    public async Task<Result<AuthorDto>> ExecuteAsync(
-      AuthorCreateDto? dto,
+      AuthorCreateDto? authorCreateDto,
       CancellationToken ct = default
    ) {
-      if (dto is null)
+      if (authorCreateDto is null)
          return Result<AuthorDto>.Failure(CatalogErrors.AuthorCreateDtoRequired);
+      var dto = authorCreateDto;
       
       // Resolve the optional external id into a domain id.
       var resultId = EntityId.Resolve(

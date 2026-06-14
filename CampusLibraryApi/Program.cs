@@ -1,4 +1,5 @@
 using Asp.Versioning.ApiExplorer;
+using CampusLibraryApi._3_Core;
 using CampusLibraryApi._3_Core.Readers;
 using CampusLibraryApi._4_Infrastructure;
 using CampusLibraryApi.Configure;
@@ -22,6 +23,7 @@ public class Program {
       builder.Services.AddControllers();
       // Modules
       builder.Services.AddReadersModule();
+      builder.Services.AddCatalogModule();
       builder.Services.AddInfrastructureModule(builder.Configuration);
 
       builder.Services.AddEndpointsApiExplorer();

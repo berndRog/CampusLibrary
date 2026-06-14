@@ -1,8 +1,11 @@
 using System.Data.Common;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
+using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
+using CampusLibraryApi._3_Core.Catalog._2_Application.UseCases;
 using CampusLibraryApi._3_Core.Readers._1_Ports;
 using CampusLibraryApi._3_Core.Readers._2_Application.UseCases;
 using CampusLibraryApi._4_Infrastructure.Persistence;
+using CampusLibraryApi._4_Infrastructure.Persistence.Catalog;
 using CampusLibraryApi._4_Infrastructure.Persistence.Database;
 using CampusLibraryApi._4_Infrastructure.Persistence.Readers;
 using Microsoft.EntityFrameworkCore;
@@ -28,9 +31,20 @@ public static class DiTestModules {
 
       // BC Db Contexts
       services.AddScoped<IReaderDbContext, ReaderDbContextEf>();
-     
-      // Contracts
-      // services.AddScoped<ICustomerContract, CustomerContractEf>();
+      services.AddScoped<ICatalogDbContext, CatalogDbContextEf>();
+
+      // Adapters
+
+      // Repositories
+      services.AddScoped<IReaderRepository, ReaderRepositoryEf>();
+      services.AddScoped<IBookRepository, BookRepositoryEf>();
+      services.AddScoped<IAuthorRepository, AuthorRepositoryEf>();
+      
+      // ReadModels
+      services.AddScoped<IReaderReadModel, ReaderReadModelEf>();
+      services.AddScoped<IBookReadModel, BookReadModelEf>();
+      services.AddScoped<IAuthorReadModel, AuthorReadModelEf>();
+
       
       // Readmodels
       services.AddScoped<IReaderReadModel, ReaderReadModelEf>();
@@ -43,6 +57,16 @@ public static class DiTestModules {
       services.AddScoped<ReaderUcCreate>();
       services.AddScoped<ReaderUcUpdate>();
       services.AddScoped<ReaderUcDelete>();
+      
+      services.AddScoped<AuthorUcCreate>();
+      services.AddScoped<AuthorUcDeactivate>();
+      services.AddScoped<IAuthorUseCases, AuthorUseCases>();
+
+      services.AddScoped<BookUcCreate>();
+      services.AddScoped<BookUcAddBookItem>();
+      services.AddScoped<BookUcAssignAuthor>();
+      services.AddScoped<BookUcDeactivate>();
+      services.AddScoped<IBookUseCases, BookUseCases>();
       
       // Unit of Work
       services.AddScoped<IUnitOfWork, UnitOfWorkEf>();

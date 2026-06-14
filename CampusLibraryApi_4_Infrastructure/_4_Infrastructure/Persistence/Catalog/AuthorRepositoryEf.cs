@@ -6,6 +6,7 @@ namespace CampusLibraryApi._4_Infrastructure.Persistence.Catalog;
 internal sealed class AuthorRepositoryEf(
    ICatalogDbContext dbContext
 ) : IAuthorRepository {
+   
    public async Task<Author?> FindByIdAsync(
       Guid id,
       CancellationToken ct = default

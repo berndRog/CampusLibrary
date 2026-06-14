@@ -18,12 +18,13 @@ public sealed class BookUcCreate(
 ) {
 
    public async Task<Result<BookDto>> ExecuteAsync(
-      BookCreateDto dto,
+      BookCreateDto? bookCreateDto,
       CancellationToken ct = default
    ) {
-      if (dto is null)
+      if (bookCreateDto is null)
          return Result<BookDto>.Failure(CatalogErrors.BookCreateDtoRequired);
-
+      var dto = bookCreateDto!;
+      
       // Resolve the optional external id into a domain id.
       var idResult = EntityId.Resolve(dto.Id, CatalogErrors.InvalidBookId);
       if (idResult.IsFailure)
@@ -32,9 +33,9 @@ public sealed class BookUcCreate(
       // Create the aggregate first, so ISBN validation and title trimming are applied.
       var bookResult = Book.Create(
          id: idResult.Value,
-         title: dto.Title ?? string.Empty,
+         title: dto.Title,
          subtitle: dto.Subtitle,
-         isbn: dto.Isbn ?? string.Empty,
+         isbn: dto.Isbn,
          createdAt: clock.UtcNow
       );
       if (bookResult.IsFailure)

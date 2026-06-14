@@ -13,7 +13,7 @@ internal sealed class BookAuthorJoin {
    public Book Book { get; private set; } = null!;
    public Author Author { get; private set; } = null!;
 
+   // Required by EF Core.
    private BookAuthorJoin() {
-      // Required by EF Core.
    }
 }

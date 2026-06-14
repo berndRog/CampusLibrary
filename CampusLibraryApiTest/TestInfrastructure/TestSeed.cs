@@ -77,5 +77,9 @@ public sealed class TestSeed {
    public string BookItem4Id => Seed.BookItem4Id;
    public string BookItem5Id => Seed.BookItem5Id;
    public string BookItem6Id => Seed.BookItem6Id;
+   
+   public IReadOnlyList<Book> BooksWithAuthors(
+      IReadOnlyList<Author> authors
+   ) => _seed.BooksWithAuthors(authors);
 
 }

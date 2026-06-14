@@ -82,7 +82,7 @@ public sealed class ReaderReadModelIntT : TestBaseIntegration {
       // Arrange
       var readers = seed.Readers;
       repository.AddRange(readers);
-      await unitOfWork.SaveAllChangesAsync("Customers inserted", ct);
+      await unitOfWork.SaveAllChangesAsync("Readers inserted", ct);
       unitOfWork.ClearChangeTracker();
       
       var expCustomerDtos = readers

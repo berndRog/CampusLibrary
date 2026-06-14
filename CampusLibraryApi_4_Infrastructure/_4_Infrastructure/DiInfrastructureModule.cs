@@ -1,5 +1,7 @@
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
+using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Readers._1_Ports;
+using CampusLibraryApi._4_Infrastructure.Persistence.Catalog;
 using CampusLibraryApi._4_Infrastructure.Persistence.Database;
 using CampusLibraryApi._4_Infrastructure.Persistence.Readers;
 using Microsoft.EntityFrameworkCore;
@@ -21,14 +23,19 @@ public static class DiInfrastructureModule {
 
       // BC Db Contexts
       services.AddScoped<IReaderDbContext, ReaderDbContextEf>();
+      services.AddScoped<ICatalogDbContext, CatalogDbContextEf>();
 
       // Adapters
 
       // Repositories
       services.AddScoped<IReaderRepository, ReaderRepositoryEf>();
+      services.AddScoped<IBookRepository, BookRepositoryEf>();
+      services.AddScoped<IAuthorRepository, AuthorRepositoryEf>();
       
       // ReadModels
       services.AddScoped<IReaderReadModel, ReaderReadModelEf>();
+      services.AddScoped<IBookReadModel, BookReadModelEf>();
+      services.AddScoped<IAuthorReadModel, AuthorReadModelEf>();
 
       // Unit of Work
       services.AddScoped<IUnitOfWork, UnitOfWorkEf>();
