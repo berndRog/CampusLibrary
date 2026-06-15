@@ -13,7 +13,7 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
 
    public ReaderUseCasesIntT() {
       DbName = nameof(ReaderUseCasesIntT);
-      DbMode = DbMode.FileUnique;
+      DbMode = DbMode.InMemory;
       SensitiveDataLogging = true;
    }
 

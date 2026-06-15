@@ -20,10 +20,10 @@ public sealed class Author : AggregateRoot {
    public bool IsActive { get; private set; } = true;
    
    //--- constructors ----------------------------------------------------------
+   // Required by EF Core.
    private Author() {
-      // Required by EF Core.
    }
-
+   // Domain ctor
    private Author(
       Guid id,
       string firstname,
@@ -33,7 +33,7 @@ public sealed class Author : AggregateRoot {
       Firstname = firstname;
       Lastname = lastname;
    }
-
+   
    //--- factory methods -------------------------------------------------------
    // Creates a new Author aggregate and initializes its UTC timestamps.
    // Validation errors are returned as Result failures.
@@ -43,20 +43,28 @@ public sealed class Author : AggregateRoot {
       string lastname,
       DateTime createdAt
    ) {
+      firstname = firstname.Trim();
+      lastname = lastname.Trim();
+      
       // The id is resolved outside the domain entity, e.g. in a use case.
       if (id == Guid.Empty)
          return Result<Author>.Failure(CatalogErrors.AuthorIdRequired);
 
-      // An author needs at least one name part.
-      if (string.IsNullOrWhiteSpace(firstname) &&
-          string.IsNullOrWhiteSpace(lastname))
-         return Result<Author>.Failure(CatalogErrors.AuthorNameIsRequired);
-
+      if (string.IsNullOrWhiteSpace(firstname))
+         return Result<Author>.Failure(CatalogErrors.FirstnameIsRequired);
+      if (firstname.Length is < 2 or > 80)
+         return Result<Author>.Failure(CatalogErrors.InvalidFirstname);
+   
+      if (string.IsNullOrWhiteSpace(lastname))
+         return Result<Author>.Failure(CatalogErrors.LastnameIsRequired);
+      if (lastname.Length is < 2 or > 80)
+         return Result<Author>.Failure(CatalogErrors.InvalidLastname);
+      
       // Create the aggregate with normalized string values.
       var author = new Author(
-         id,
-         firstname.Trim(),
-         lastname.Trim()
+         id: id,
+         firstname: firstname,
+         lastname: lastname
       );
 
       // Initialize CreatedAt and UpdatedAt using the inherited lifecycle method.
@@ -68,28 +76,6 @@ public sealed class Author : AggregateRoot {
    }
 
    //--- domain methods --------------------------------------------------------
-   // Changes the author's name and updates the modification timestamp.
-   public Result Rename(
-      string firstname,
-      string lastname,
-      DateTime updatedAt
-   ) {
-      // An author needs at least one name part.
-      if (string.IsNullOrWhiteSpace(firstname) &&
-          string.IsNullOrWhiteSpace(lastname))
-         return Result.Failure(CatalogErrors.AuthorNameIsRequired);
-
-      // Validate and update the modification timestamp before changing state.
-      var resultTouched = Touch(updatedAt);
-      if (resultTouched.IsFailure)
-         return Result.Failure(resultTouched.Error);
-
-      Firstname = firstname.Trim();
-      Lastname = lastname.Trim();
-
-      return Result.Success();
-   }
-
    // Deactivate the author
    public Result Deactivate(
       DateTime updatedAt

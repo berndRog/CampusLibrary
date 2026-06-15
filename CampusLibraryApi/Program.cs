@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Asp.Versioning.ApiExplorer;
 using CampusLibraryApi._3_Core;
 using CampusLibraryApi._3_Core.Readers;
@@ -20,7 +21,14 @@ public class Program {
       builder.Services.AddHttpContextAccessor();
 
       // Controllers
-      builder.Services.AddControllers();
+      builder.Services.AddControllers()
+         // enums as string in JSON API
+         .AddJsonOptions(options => {
+            options.JsonSerializerOptions.Converters.Add(
+               new JsonStringEnumConverter()
+            );
+         });
+      
       // Modules
       builder.Services.AddReadersModule();
       builder.Services.AddCatalogModule();

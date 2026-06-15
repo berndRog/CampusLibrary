@@ -160,13 +160,6 @@ public sealed class Seed(
    public const string Book3Id = "b0000003-0000-0000-0000-000000000000";
    public const string Book4Id = "b0000004-0000-0000-0000-000000000000";
 
-   public const string BookItem1Id = "be000001-0000-0000-0000-000000000000";
-   public const string BookItem2Id = "be000002-0000-0000-0000-000000000000";
-   public const string BookItem3Id = "be000003-0000-0000-0000-000000000000";
-   public const string BookItem4Id = "be000004-0000-0000-0000-000000000000";
-   public const string BookItem5Id = "be000005-0000-0000-0000-000000000000";
-   public const string BookItem6Id = "be000006-0000-0000-0000-000000000000";
-
    public Book Book1() => CreateBook(
       id: Book1Id,
       title: "Clean Code",
@@ -220,6 +213,23 @@ public sealed class Seed(
 
       return books;
    }
+   #endregion
+   
+
+
+   #region -------------- Test Bookitems  ---------------------------------------------------
+   public const string BookItem1Id = "be000001-0000-0000-0000-000000000000";
+   public const string BookItem2Id = "be000002-0000-0000-0000-000000000000";
+   public const string BookItem3Id = "be000003-0000-0000-0000-000000000000";
+   public const string BookItem4Id = "be000004-0000-0000-0000-000000000000";
+   public const string BookItem5Id = "be000005-0000-0000-0000-000000000000";
+   public const string BookItem6Id = "be000006-0000-0000-0000-000000000000";
+   #endregion
+   
+   #region -------------- Test Bookitems  ---------------------------------------------------
+   public const string BookAuthor1Id = "ba000001-0000-0000-0000-000000000000";
+   public const string BookAuthor2Id = "ba000002-0000-0000-0000-000000000000";
+   public const string BookAuthor3Id = "ba000003-0000-0000-0000-000000000000";
    #endregion
    
    

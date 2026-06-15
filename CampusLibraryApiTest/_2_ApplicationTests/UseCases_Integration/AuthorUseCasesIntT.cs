@@ -12,7 +12,7 @@ namespace CampusLibraryApiTest._2_ApplicationTests.UseCases_Integration;
 public sealed class AuthorUseCasesIntT : TestBaseIntegration {
    public AuthorUseCasesIntT() {
       DbName = nameof(AuthorUseCasesIntT);
-      DbMode = DbMode.FileUnique;
+      DbMode = DbMode.InMemory;
       SensitiveDataLogging = true;
    }
 

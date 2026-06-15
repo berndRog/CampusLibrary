@@ -5,5 +5,6 @@ public sealed record BookDto(
    string Title,
    string? Subtitle,
    string Isbn,
-   int BookItemCount
+   int BookItemCount,
+   bool IsActive
 );

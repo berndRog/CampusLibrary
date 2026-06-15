@@ -36,8 +36,8 @@ public sealed class AuthorUcCreate(
       // Create the aggregate first, so validation and trimming are applied.
       var resultAuthor = Author.Create(
          id: resultId.Value,
-         firstname: dto.Firstname ?? string.Empty,
-         lastname: dto.Lastname ?? string.Empty,
+         firstname: dto.Firstname,
+         lastname: dto.Lastname,
          createdAt: clock.UtcNow
       );
 

@@ -10,13 +10,13 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CampusLibraryApiTest._2_ApplicationTests.UseCases_Integration;
 
 public sealed class BookUseCasesIntT : TestBaseIntegration {
-   private const string BookItem1Id = "be000101-0000-0000-0000-000000000000";
-   private const string BookItem2Id = "be000102-0000-0000-0000-000000000000";
+   //private const string BookItem1Id = "be000101-0000-0000-0000-000000000000";
+   //private const string BookItem2Id = "be000102-0000-0000-0000-000000000000";
    private const string BookItem3Id = "be000103-0000-0000-0000-000000000000";
 
    public BookUseCasesIntT() {
       DbName = nameof(BookUseCasesIntT);
-      DbMode = DbMode.FileUnique;
+      DbMode = DbMode.InMemory;
       SensitiveDataLogging = true;
    }
 
@@ -120,19 +120,13 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
    
       // Arrange
       var book1 = seed.Book1();
-
       repository.Add(book1);
-
-      await unitOfWork.SaveAllChangesAsync(
-         "Book1 inserted",
-         ct
-      );
-
+      await unitOfWork.SaveAllChangesAsync("Book1 inserted", ct);
       unitOfWork.ClearChangeTracker();
 
       var dto = new BookItemAddDto(
          InventoryNumber: "CL-UC-BOOK-0001",
-         Id: BookItem1Id
+         Id: seed.BookItem1Id
       );
 
       // Act
@@ -141,9 +135,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
          dto: dto,
          ct: ct
       );
-
       resultAddBookItem.IsSuccess.Should().BeTrue();
-
       unitOfWork.ClearChangeTracker();
 
       // Assert
@@ -179,24 +171,19 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       var book2 = seed.Book2();
 
       var resultExistingBookItem = book1.AddBookItem(
-         bookItemId: Guid.Parse(BookItem1Id),
+         bookItemId: Guid.Parse(seed.BookItem1Id),
          inventoryNumber: "CL-UC-BOOK-0001",
          updatedAt: book1.CreatedAt.AddDays(1)
       );
-
       resultExistingBookItem.IsSuccess.Should().BeTrue();
+      
       repository.AddRange([book1, book2]);
-
-      await unitOfWork.SaveAllChangesAsync(
-         "Book1 and Book2 inserted",
-         ct
-      );
-
+      await unitOfWork.SaveAllChangesAsync("Book1 and Book2 inserted", ct);
       unitOfWork.ClearChangeTracker();
 
       var dto = new BookItemAddDto(
          InventoryNumber: "CL-UC-BOOK-0001",
-         Id: BookItem2Id
+         Id: seed.BookItem2Id
       );
 
       // Act
@@ -217,13 +204,14 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var useCases = scope.ServiceProvider.GetRequiredService<IBookUseCases>();
+      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
        
       // Arrange
       var unknownBookId = Guid.Parse("99000000-0000-0000-0000-000000000000");
 
       var dto = new BookItemAddDto(
          InventoryNumber: "CL-UC-BOOK-0001",
-         Id: BookItem1Id
+         Id: seed.BookItem1Id
       );
 
       // Act
@@ -265,11 +253,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       );
       unitOfWork.ClearChangeTracker();
 
-      var dto = new BookAssignAuthorDto(
-         BookId: book1.Id,
-         AuthorId: author1.Id,
-         null
-      );
+      var dto = new BookAssignAuthorDto(author1.Id);
 
       // Act
       var resultAssignAuthor = await useCases.AssignAuthorAsync(
@@ -312,28 +296,16 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       var book1 = seed.Book1();
       var author1 = seed.Author1();
 
-      var resultAssigned = book1.AssignAuthor(
-         author: author1,
-         updatedAt: book1.CreatedAt.AddDays(1)
-      );
-
+      var resultAssigned = book1.AssignAuthor(author1, book1.CreatedAt.AddDays(1));
       resultAssigned.IsSuccess.Should().BeTrue();
 
       authorRepository.Add(author1);
       bookRepository.Add(book1);
 
-      await unitOfWork.SaveAllChangesAsync(
-         "Book1 with Author1 inserted",
-         ct
-      );
-
+      await unitOfWork.SaveAllChangesAsync("Book1 with Author1 inserted", ct);
       unitOfWork.ClearChangeTracker();
 
-      var dto = new BookAssignAuthorDto(
-         BookId: book1.Id,
-         AuthorId: author1.Id,
-         null
-      );
+      var dto = new BookAssignAuthorDto(author1.Id);
 
       // Act
       var resultAssignAuthor = await useCases.AssignAuthorAsync(
@@ -362,19 +334,10 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       var unknownAuthorId = Guid.Parse("99000000-0000-0000-0000-000000000000");
 
       bookRepository.Add(book1);
-
-      await unitOfWork.SaveAllChangesAsync(
-         "Book1 inserted",
-         ct
-      );
-
+      await unitOfWork.SaveAllChangesAsync("Book1 inserted", ct);
       unitOfWork.ClearChangeTracker();
-
-      var dto = new BookAssignAuthorDto(
-         BookId: book1.Id,
-         AuthorId: unknownAuthorId,
-         null
-      );
+      
+      var dto = new BookAssignAuthorDto(unknownAuthorId);
 
       // Act
       var resultAssignAuthor = await useCases.AssignAuthorAsync(
@@ -398,11 +361,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       // Arrange
       var unknownBookId = Guid.Parse("99000000-0000-0000-0000-000000000000");
 
-      var dto = new BookAssignAuthorDto(
-         BookId: unknownBookId,
-         AuthorId: Guid.Parse("a0000001-0000-0000-0000-000000000000"),
-         null
-      );
+      var dto = new BookAssignAuthorDto(AuthorId: Guid.Parse("a0000001-0000-0000-0000-000000000000"));
 
       // Act
       var resultAssignAuthor = await useCases.AssignAuthorAsync(

@@ -116,20 +116,13 @@ public static class CatalogErrors {
          "The author was not found."
       );
 
-   public static readonly DomainError AuthorNameIsRequired =
-      new(
-         WebErrorStatus.BadRequest,
-         "Catalog: Author Name Required",
-         "An author name must be provided."
-      );
-
    public static readonly DomainError FirstnameIsRequired =
       new(
          WebErrorStatus.BadRequest,
          "Catalog: Author Firstname Required",
          "A first name must be provided."
       );
-
+   
    public static readonly DomainError InvalidFirstname =
       new(
          WebErrorStatus.BadRequest,

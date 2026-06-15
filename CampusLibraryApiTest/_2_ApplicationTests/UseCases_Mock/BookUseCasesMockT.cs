@@ -1,0 +1,631 @@
+using AwesomeAssertions;
+using CampusLibraryApi._2_BuildingBlocks._1_Ports;
+using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
+using CampusLibraryApi._3_Core.Catalog._2_Application.Dtos;
+using CampusLibraryApi._3_Core.Catalog._2_Application.UseCases;
+using CampusLibraryApi._3_Core.Catalog._3_Domain.Entities;
+using CampusLibraryApi._3_Core.Catalog._3_Domain.Errors;
+using CampusLibraryApiTest.TestInfrastructure;
+using Microsoft.Extensions.Logging;
+using Moq;
+namespace CampusLibraryApiTest._2_ApplicationTests.UseCases_Mock;
+
+public sealed class BookUseCasesMockT {
+   private static readonly DateTime CreatedAt =
+      new(2025, 01, 01, 00, 00, 00, DateTimeKind.Utc);
+
+   #region BookUcCreate
+   [Fact]
+   public async Task CreateAsync_ok() {
+      // Arrange
+      var ct = TestContext.Current.CancellationToken;
+      var seed = new TestSeed();
+      var book1 = seed.Book1();
+
+      var dto = new BookCreateDto(
+         Title: book1.Title,
+         Subtitle: book1.Subtitle,
+         Isbn: book1.IsbnVo.Value,
+         Id: book1.Id.ToString()
+      );
+
+      var repository = new Mock<IBookRepository>();
+      repository
+         .Setup(r => r.ExistsByIsbnAsync(dto.Isbn, ct))
+         .ReturnsAsync(false);
+
+      var unitOfWork = new Mock<IUnitOfWork>();
+      unitOfWork
+         .Setup(u => u.SaveAllChangesAsync("BookUcCreate", ct))
+         .ReturnsAsync(1);
+
+      var sut = new BookUcCreate(
+         bookRepository: repository.Object,
+         unitOfWork: unitOfWork.Object,
+         clock: new FakeClock(CreatedAt),
+         logger: Mock.Of<ILogger<BookUcCreate>>()
+      );
+
+      // Act
+      var resultCreate = await sut.ExecuteAsync(
+         bookCreateDto: dto,
+         ct: ct
+      );
+
+      // Assert
+      resultCreate.IsSuccess.Should().BeTrue();
+
+      var actualDto = resultCreate.Value;
+      actualDto.Id.Should().Be(book1.Id);
+      actualDto.Title.Should().Be(book1.Title);
+      actualDto.Subtitle.Should().Be(book1.Subtitle);
+      actualDto.Isbn.Should().Be(book1.IsbnVo.Value);
+
+      repository.Verify(
+         r => r.Add(It.Is<Book>(book =>
+            book.Id == book1.Id &&
+            book.Title == book1.Title &&
+            book.IsbnVo.Value == book1.IsbnVo.Value &&
+            book.IsActive)),
+         Times.Once
+      );
+
+      unitOfWork.Verify(
+         u => u.SaveAllChangesAsync("BookUcCreate", ct),
+         Times.Once
+      );
+   }
+
+   [Fact]
+   public async Task CreateAsync_duplicate_isbn_fails() {
+      // Arrange
+      var ct = TestContext.Current.CancellationToken;
+      var seed = new TestSeed();
+      var book1 = seed.Book1();
+
+      var dto = new BookCreateDto(
+         Title: book1.Title,
+         Subtitle: book1.Subtitle,
+         Isbn: book1.IsbnVo.Value,
+         Id: book1.Id.ToString()
+      );
+
+      var repository = new Mock<IBookRepository>();
+      repository
+         .Setup(r => r.ExistsByIsbnAsync(dto.Isbn, ct))
+         .ReturnsAsync(true);
+
+      var unitOfWork = new Mock<IUnitOfWork>();
+      var sut = new BookUcCreate(
+         bookRepository: repository.Object,
+         unitOfWork: unitOfWork.Object,
+         clock: new FakeClock(CreatedAt),
+         logger: Mock.Of<ILogger<BookUcCreate>>()
+      );
+
+      // Act
+      var resultCreate = await sut.ExecuteAsync(
+         bookCreateDto: dto,
+         ct: ct
+      );
+
+      // Assert
+      resultCreate.IsFailure.Should().BeTrue();
+      resultCreate.Error.Should().Be(CatalogErrors.BookAlreadyExists);
+
+      repository.Verify(
+         r => r.Add(It.IsAny<Book>()),
+         Times.Never
+      );
+
+      unitOfWork.Verify(
+         u => u.SaveAllChangesAsync(
+            It.IsAny<string?>(),
+            It.IsAny<CancellationToken>()
+         ),
+         Times.Never
+      );
+   }
+
+   [Fact]
+   public async Task CreateAsync_invalid_id_fails() {
+      // Arrange
+      var ct = TestContext.Current.CancellationToken;
+      var seed = new TestSeed();
+      var book1 = seed.Book1();
+
+      var dto = new BookCreateDto(
+         Title: book1.Title,
+         Subtitle: book1.Subtitle,
+         Isbn: book1.IsbnVo.Value,
+         Id: "not-a-guid"
+      );
+
+      var repository = new Mock<IBookRepository>();
+      var unitOfWork = new Mock<IUnitOfWork>();
+
+      var sut = new BookUcCreate(
+         bookRepository: repository.Object,
+         unitOfWork: unitOfWork.Object,
+         clock: new FakeClock(CreatedAt),
+         logger: Mock.Of<ILogger<BookUcCreate>>()
+      );
+
+      // Act
+      var resultCreate = await sut.ExecuteAsync(
+         bookCreateDto: dto,
+         ct: ct
+      );
+
+      // Assert
+      resultCreate.IsFailure.Should().BeTrue();
+      resultCreate.Error.Should().Be(CatalogErrors.InvalidBookId);
+
+      repository.Verify(
+         r => r.ExistsByIsbnAsync(
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()
+         ),
+         Times.Never
+      );
+
+      repository.Verify(
+         r => r.Add(It.IsAny<Book>()),
+         Times.Never
+      );
+
+      unitOfWork.Verify(
+         u => u.SaveAllChangesAsync(
+            It.IsAny<string?>(),
+            It.IsAny<CancellationToken>()
+         ),
+         Times.Never
+      );
+   }
+   #endregion
+
+   #region BookUcAddBookItem
+   [Fact]
+   public async Task AddBookItemAsync_ok() {
+      // Arrange
+      var ct = TestContext.Current.CancellationToken;
+      var seed = new TestSeed();
+      var book1 = seed.Book1();
+
+      var dto = new BookItemAddDto(
+         InventoryNumber: "CL-MOCK-BOOK-0001",
+         Id: seed.BookItem1Id
+      );
+
+      var repository = new Mock<IBookRepository>();
+      repository
+         .Setup(r => r.FindByIdAsync(book1.Id, ct))
+         .ReturnsAsync(book1);
+      repository
+         .Setup(r => r.ExistsBookItemByInventoryNumberAsync(dto.InventoryNumber, ct))
+         .ReturnsAsync(false);
+
+      var unitOfWork = new Mock<IUnitOfWork>();
+
+      unitOfWork
+         .Setup(u => u.SaveAllChangesAsync("BookUcAddBookItem", ct))
+         .ReturnsAsync(1);
+
+      var sut = new BookUcAddBookItem(
+         bookRepository: repository.Object,
+         unitOfWork: unitOfWork.Object,
+         clock: new FakeClock(CreatedAt.AddDays(1)),
+         logger: Mock.Of<ILogger<BookUcAddBookItem>>()
+      );
+
+      // Act
+      var resultAddBookItem = await sut.ExecuteAsync(
+         bookId: book1.Id,
+         bookItemAddDto: dto,
+         ct: ct
+      );
+
+      // Assert
+      resultAddBookItem.IsSuccess.Should().BeTrue();
+
+      book1.BookItems
+         .Should()
+         .ContainSingle(bi => bi.InventoryNumber == dto.InventoryNumber);
+
+      book1.UpdatedAt.Should().Be(CreatedAt.AddDays(1));
+
+      unitOfWork.Verify(
+         u => u.SaveAllChangesAsync(
+            "BookUcAddBookItem",
+            ct
+         ),
+         Times.Once
+      );
+   }
+
+   [Fact]
+   public async Task AddBookItemAsync_duplicate_inventory_number_fails() {
+      // Arrange
+      var ct = TestContext.Current.CancellationToken;
+      var seed = new TestSeed();
+      var book1 = seed.Book1();
+      var dto = new BookItemAddDto(
+         InventoryNumber: "CL-MOCK-BOOK-0001",
+         Id: seed.BookItem1Id
+      );
+
+      var repository = new Mock<IBookRepository>();
+      repository
+         .Setup(r => r.FindByIdAsync(book1.Id, ct))
+         .ReturnsAsync(book1);
+      repository
+         .Setup(r => r.ExistsBookItemByInventoryNumberAsync(dto.InventoryNumber, ct))
+         .ReturnsAsync(true);
+
+      var unitOfWork = new Mock<IUnitOfWork>();
+
+      var sut = new BookUcAddBookItem(
+         bookRepository: repository.Object,
+         unitOfWork: unitOfWork.Object,
+         clock: new FakeClock(CreatedAt),
+         logger: Mock.Of<ILogger<BookUcAddBookItem>>()
+      );
+
+      // Act
+      var resultAddBookItem = await sut.ExecuteAsync(
+         bookId: book1.Id,
+         bookItemAddDto: dto,
+         ct: ct
+      );
+
+      // Assert
+      resultAddBookItem.IsFailure.Should().BeTrue();
+      resultAddBookItem.Error.Should().Be(CatalogErrors.BookItemAlreadyExists);
+
+      book1.BookItems.Should().BeEmpty();
+
+      unitOfWork.Verify(
+         u => u.SaveAllChangesAsync(
+            It.IsAny<string?>(),
+            It.IsAny<CancellationToken>()
+         ),
+         Times.Never
+      );
+   }
+
+   [Fact]
+   public async Task AddBookItemAsync_book_not_found_fails() {
+      // Arrange
+      var ct = TestContext.Current.CancellationToken;
+      var seed = new TestSeed();
+      var book1 = seed.Book1();
+
+      var dto = new BookItemAddDto(
+         InventoryNumber: "CL-MOCK-BOOK-0001",
+         Id: seed.BookItem1Id
+      );
+
+      var repository = new Mock<IBookRepository>();
+      repository
+         .Setup(r => r.FindByIdAsync(book1.Id, ct))
+         .ReturnsAsync((Book?)null);
+
+      var unitOfWork = new Mock<IUnitOfWork>();
+
+      var sut = new BookUcAddBookItem(
+         bookRepository: repository.Object,
+         unitOfWork: unitOfWork.Object,
+         clock: new FakeClock(CreatedAt),
+         logger: Mock.Of<ILogger<BookUcAddBookItem>>()
+      );
+
+      // Act
+      var resultAddBookItem = await sut.ExecuteAsync(
+         bookId: book1.Id,
+         bookItemAddDto: dto,
+         ct: ct
+      );
+
+      // Assert
+      resultAddBookItem.IsFailure.Should().BeTrue();
+      resultAddBookItem.Error.Should().Be(CatalogErrors.BookNotFound);
+
+      repository.Verify(
+         r => r.ExistsBookItemByInventoryNumberAsync(
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()
+         ),
+         Times.Never
+      );
+
+      unitOfWork.Verify(
+         u => u.SaveAllChangesAsync(
+            It.IsAny<string?>(),
+            It.IsAny<CancellationToken>()
+         ),
+         Times.Never
+      );
+   }
+   #endregion
+
+   #region BookUcAssignAuthor
+   [Fact]
+   public async Task AssignAuthorAsync_ok() {
+      // Arrange
+      var ct = TestContext.Current.CancellationToken;
+      var seed = new TestSeed();
+      var book1 = seed.Book1();
+      var author1 = seed.Author1();
+      var dto = new BookAssignAuthorDto(author1.Id);
+
+      var bookRepository = new Mock<IBookRepository>();
+      bookRepository
+         .Setup(r => r.FindByIdAsync(book1.Id, ct))
+         .ReturnsAsync(book1);
+
+      var authorRepository = new Mock<IAuthorRepository>();
+      authorRepository
+         .Setup(r => r.FindByIdAsync(author1.Id, ct))
+         .ReturnsAsync(author1);
+
+      var unitOfWork = new Mock<IUnitOfWork>();
+      unitOfWork
+         .Setup(u => u.SaveAllChangesAsync("BookUcAssignAuthor", ct))
+         .ReturnsAsync(1);
+
+      var sut = new BookUcAssignAuthor(
+         bookRepository: bookRepository.Object,
+         authorRepository: authorRepository.Object,
+         unitOfWork: unitOfWork.Object,
+         clock: new FakeClock(CreatedAt.AddDays(1)),
+         logger: Mock.Of<ILogger<BookUcAssignAuthor>>()
+      );
+
+      // Act
+      var resultAssign = await sut.ExecuteAsync(
+         bookId: book1.Id,
+         bookAssignAuthorDto: dto,
+         ct: ct
+      );
+
+      // Assert
+      resultAssign.IsSuccess.Should().BeTrue();
+
+      book1.Authors
+         .Should()
+         .ContainSingle(author => author.Id == author1.Id);
+
+      book1.UpdatedAt.Should().Be(CreatedAt.AddDays(1));
+
+      unitOfWork.Verify(
+         u => u.SaveAllChangesAsync("BookUcAssignAuthor", ct),
+         Times.Once
+      );
+   }
+
+   [Fact]
+   public async Task AssignAuthorAsync_duplicate_author_fails() {
+      // Arrange
+      var ct = TestContext.Current.CancellationToken;
+      var seed = new TestSeed();
+      var book1 = seed.Book1();
+      var author1 = seed.Author1();
+
+      var resultAssigned = book1.AssignAuthor(
+         author: author1,
+         updatedAt: CreatedAt.AddDays(1)
+      );
+      resultAssigned.IsSuccess.Should().BeTrue();
+
+      var dto = new BookAssignAuthorDto(author1.Id);
+
+      var bookRepository = new Mock<IBookRepository>();
+      bookRepository
+         .Setup(r => r.FindByIdAsync(book1.Id, ct))
+         .ReturnsAsync(book1);
+
+      var authorRepository = new Mock<IAuthorRepository>();
+      authorRepository
+         .Setup(r => r.FindByIdAsync(author1.Id, ct))
+         .ReturnsAsync(author1);
+
+      var unitOfWork = new Mock<IUnitOfWork>();
+
+      var sut = new BookUcAssignAuthor(
+         bookRepository: bookRepository.Object,
+         authorRepository: authorRepository.Object,
+         unitOfWork: unitOfWork.Object,
+         clock: new FakeClock(CreatedAt.AddDays(2)),
+         logger: Mock.Of<ILogger<BookUcAssignAuthor>>()
+      );
+
+      // Act
+      var resultAssign = await sut.ExecuteAsync(
+         bookId: book1.Id,
+         bookAssignAuthorDto: dto,
+         ct: ct
+      );
+
+      // Assert
+      resultAssign.IsFailure.Should().BeTrue();
+      resultAssign.Error.Should().Be(CatalogErrors.AuthorAlreadyAssigned);
+
+      unitOfWork.Verify(
+         u => u.SaveAllChangesAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+         Times.Never
+      );
+   }
+
+   [Fact]
+   public async Task AssignAuthorAsync_author_not_found_fails() {
+      // Arrange
+      var ct = TestContext.Current.CancellationToken;
+      var seed = new TestSeed();
+      var book1 = seed.Book1();
+      var author1 = seed.Author1();
+
+      var dto = new BookAssignAuthorDto(author1.Id);
+
+      var bookRepository = new Mock<IBookRepository>();
+      bookRepository
+         .Setup(r => r.FindByIdAsync(book1.Id, ct))
+         .ReturnsAsync(book1);
+
+      var authorRepository = new Mock<IAuthorRepository>();
+      authorRepository
+         .Setup(r => r.FindByIdAsync(author1.Id, ct))
+         .ReturnsAsync((Author?)null);
+
+      var unitOfWork = new Mock<IUnitOfWork>();
+
+      var sut = new BookUcAssignAuthor(
+         bookRepository: bookRepository.Object,
+         authorRepository: authorRepository.Object,
+         unitOfWork: unitOfWork.Object,
+         clock: new FakeClock(CreatedAt),
+         logger: Mock.Of<ILogger<BookUcAssignAuthor>>()
+      );
+
+      // Act
+      var resultAssign = await sut.ExecuteAsync(
+         bookId: book1.Id,
+         bookAssignAuthorDto: dto,
+         ct: ct
+      );
+
+      // Assert
+      resultAssign.IsFailure.Should().BeTrue();
+      resultAssign.Error.Should().Be(CatalogErrors.AuthorNotFound);
+
+      unitOfWork.Verify(
+         u => u.SaveAllChangesAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+         Times.Never
+      );
+   }
+   #endregion
+
+   #region BookUcDeactivate
+   [Fact]
+   public async Task DeactivateAsync_ok() {
+      // Arrange
+      var ct = TestContext.Current.CancellationToken;
+      var seed = new TestSeed();
+      var book1 = seed.Book1();
+
+      var repository = new Mock<IBookRepository>();
+      repository
+         .Setup(r => r.FindByIdAsync(book1.Id, ct))
+         .ReturnsAsync(book1);
+
+      var unitOfWork = new Mock<IUnitOfWork>();
+      unitOfWork
+         .Setup(u => u.SaveAllChangesAsync("BookUcDeactivate", ct))
+         .ReturnsAsync(1);
+
+      var sut = new BookUcDeactivate(
+         bookRepository: repository.Object,
+         unitOfWork: unitOfWork.Object,
+         clock: new FakeClock(CreatedAt.AddDays(1)),
+         logger: Mock.Of<ILogger<BookUcDeactivate>>()
+      );
+
+      // Act
+      var resultDeactivate = await sut.ExecuteAsync(
+         bookId: book1.Id,
+         ct: ct
+      );
+
+      // Assert
+      resultDeactivate.IsSuccess.Should().BeTrue();
+
+      book1.IsActive.Should().BeFalse();
+      book1.UpdatedAt.Should().Be(CreatedAt.AddDays(1));
+
+      unitOfWork.Verify(
+         u => u.SaveAllChangesAsync("BookUcDeactivate", ct),
+         Times.Once
+      );
+   }
+
+   [Fact]
+   public async Task DeactivateAsync_book_not_found_fails() {
+      // Arrange
+      var ct = TestContext.Current.CancellationToken;
+      var seed = new TestSeed();
+      var book1 = seed.Book1();
+      var repository = new Mock<IBookRepository>();
+
+      repository
+         .Setup(r => r.FindByIdAsync(book1.Id, ct))
+         .ReturnsAsync((Book?)null);
+
+      var unitOfWork = new Mock<IUnitOfWork>();
+
+      var sut = new BookUcDeactivate(
+         bookRepository: repository.Object,
+         unitOfWork: unitOfWork.Object,
+         clock: new FakeClock(CreatedAt),
+         logger: Mock.Of<ILogger<BookUcDeactivate>>()
+      );
+
+      // Act
+      var resultDeactivate = await sut.ExecuteAsync(
+         bookId: book1.Id,
+         ct: ct
+      );
+
+      // Assert
+      resultDeactivate.IsFailure.Should().BeTrue();
+      resultDeactivate.Error.Should().Be(CatalogErrors.BookNotFound);
+
+      unitOfWork.Verify(
+         u => u.SaveAllChangesAsync(
+            It.IsAny<string?>(),
+            It.IsAny<CancellationToken>()
+         ),
+         Times.Never
+      );
+   }
+
+   [Fact]
+   public async Task DeactivateAsync_empty_id_fails() {
+      // Arrange
+      var ct = TestContext.Current.CancellationToken;
+      var repository = new Mock<IBookRepository>();
+      var unitOfWork = new Mock<IUnitOfWork>();
+
+      var sut = new BookUcDeactivate(
+         bookRepository: repository.Object,
+         unitOfWork: unitOfWork.Object,
+         clock: new FakeClock(CreatedAt),
+         logger: Mock.Of<ILogger<BookUcDeactivate>>()
+      );
+
+      // Act
+      var resultDeactivate = await sut.ExecuteAsync(
+         bookId: Guid.Empty,
+         ct: ct
+      );
+
+      // Assert
+      resultDeactivate.IsFailure.Should().BeTrue();
+      resultDeactivate.Error.Should().Be(CatalogErrors.InvalidBookId);
+
+      repository.Verify(
+         r => r.FindByIdAsync(
+            It.IsAny<Guid>(),
+            It.IsAny<CancellationToken>()
+         ),
+         Times.Never
+      );
+
+      unitOfWork.Verify(
+         u => u.SaveAllChangesAsync(
+            It.IsAny<string?>(),
+            It.IsAny<CancellationToken>()
+         ),
+         Times.Never
+      );
+   }
+   #endregion
+}

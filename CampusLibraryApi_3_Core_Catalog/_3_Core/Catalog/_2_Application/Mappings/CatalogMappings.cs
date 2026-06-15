@@ -11,7 +11,8 @@ public static class CatalogMappings {
          Id: author.Id,
          Firstname: author.Firstname,
          Lastname: author.Lastname,
-         DisplayName: author.DisplayName
+         DisplayName: author.DisplayName,
+         IsActive: author.IsActive
       );
 
    public static BookDto ToBookDto(this Book bookAlt) =>
@@ -20,7 +21,8 @@ public static class CatalogMappings {
          Title: bookAlt.Title,
          Subtitle: bookAlt.Subtitle,
          Isbn: bookAlt.IsbnVo.Value,
-         BookItemCount: bookAlt.BookItems.Count
+         BookItemCount: bookAlt.BookItems.Count,
+         IsActive: bookAlt.IsActive
       );
 
    public static BookItemDto ToBookItemDto(this BookItem bookItem) =>

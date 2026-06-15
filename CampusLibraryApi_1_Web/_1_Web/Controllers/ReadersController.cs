@@ -32,19 +32,17 @@ public sealed class ReadersController(
    /// <returns>A list of reader resources.</returns>
    // Query all readers through the read model.
    [HttpGet("readers", Name = nameof(GetAllAsync))]
-   // [Produces("application/json")]
-   // [ProducesResponseType<IReadOnlyList<ReaderDto>>(StatusCodes.Status200OK)]
-   // [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
-   // [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
-   // [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
+   [Produces("application/json")]
+   [ProducesResponseType<IReadOnlyList<ReaderDto>>(StatusCodes.Status200OK)]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    public async Task<ActionResult<IReadOnlyList<ReaderDto>>> GetAllAsync(CancellationToken ct) {
       var result = await readerReadModel.SelectAllAsync(ct);
-
       if (result.IsSuccess)
          return Ok(result.Value);
 
       var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
-
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),
          WebErrorStatus.Unauthorized => Unauthorized(problem),
@@ -71,12 +69,10 @@ public sealed class ReadersController(
       CancellationToken ct
    ) {
       var result = await readerReadModel.FindByIdAsync(id, ct);
-
       if (result.IsSuccess)
          return Ok(result.Value);
 
       var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
-
       return result.Error.Status switch {
          WebErrorStatus.Unauthorized => Unauthorized(problem),
          WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),

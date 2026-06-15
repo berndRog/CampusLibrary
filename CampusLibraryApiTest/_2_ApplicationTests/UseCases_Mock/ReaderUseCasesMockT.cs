@@ -10,7 +10,7 @@ using CampusLibraryApiTest.TestHelper.Mappings;
 using CampusLibraryApiTest.TestInfrastructure;
 using Microsoft.Extensions.Logging;
 using Moq;
-namespace CampusLibraryApiTest._2_ApplicationTests.UseCases;
+namespace CampusLibraryApiTest._2_ApplicationTests.UseCases_Mock;
 
 public sealed class ReaderUseCasesMockT {
    private static readonly DateTime CreatedAt =

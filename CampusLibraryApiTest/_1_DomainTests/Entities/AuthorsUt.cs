@@ -76,7 +76,7 @@ public sealed class AuthorUt {
 
       // Assert
       result.IsFailure.Should().BeTrue();
-      result.Error.Should().Be(CatalogErrors.AuthorNameIsRequired);
+      result.Error.Should().Be(CatalogErrors.FirstnameIsRequired);
    }
 
    // [Fact]

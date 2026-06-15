@@ -71,12 +71,21 @@ public sealed class TestSeed {
    public Book Book4() => _seed.Book4();
    #endregion
    
+   #region -------------- Test BookItems (Entities) -----------------------------------------
    public string BookItem1Id => Seed.BookItem1Id;
    public string BookItem2Id => Seed.BookItem2Id;
    public string BookItem3Id => Seed.BookItem3Id;
    public string BookItem4Id => Seed.BookItem4Id;
    public string BookItem5Id => Seed.BookItem5Id;
    public string BookItem6Id => Seed.BookItem6Id;
+   #endregion
+   
+   #region -------------- Test BookAuthors --------------------------------------------------
+   public string BookAuthor1Id => Seed.BookAuthor1Id;
+   public string BookAuthor2Id => Seed.BookAuthor2Id;
+   public string BookAuthor3Id => Seed.BookAuthor3Id;
+
+   #endregion
    
    public IReadOnlyList<Book> BooksWithAuthors(
       IReadOnlyList<Author> authors

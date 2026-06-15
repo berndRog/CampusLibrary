@@ -4,5 +4,6 @@ public sealed record AuthorDto(
    Guid Id,
    string Firstname,
    string Lastname,
-   string DisplayName
+   string DisplayName,
+   bool IsActive
 );
