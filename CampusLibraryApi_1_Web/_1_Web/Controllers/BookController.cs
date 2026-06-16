@@ -5,7 +5,6 @@ using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Catalog._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Catalog._2_Application.Enums;
 using CampusLibraryApi._3_Core.Catalog._2_Application.UseCases;
-using CampusLibraryApi._3_Core.Catalog._3_Domain.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -170,11 +169,13 @@ public sealed class BooksController(
       CancellationToken ct
    ) {
       var result = await bookUseCases.CreateAsync(dto, ct);
+      
       if (result.IsSuccess) {
+         var requestedApiVersion = HttpContext.Features.Get<IApiVersioningFeature>()?.RequestedApiVersion;
          return CreatedAtRoute(
             routeName: nameof(GetBookByIdAsync),
             routeValues: new {
-               version = HttpContext.GetRequestedApiVersion()?.ToString(),
+               version = requestedApiVersion?.ToString() ?? "1",
                id = result.Value.Id
             },
             value: result.Value

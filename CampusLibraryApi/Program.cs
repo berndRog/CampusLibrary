@@ -16,9 +16,6 @@ public class Program {
       
       // Access Http-Request in Infrastructure
       builder.Services.AddHttpContextAccessor();
-      
-      // Access Http-Request in Infrastructure
-      builder.Services.AddHttpContextAccessor();
 
       // Controllers
       builder.Services.AddControllers()

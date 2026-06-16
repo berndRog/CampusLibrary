@@ -493,7 +493,7 @@ Beispiel:
 GET /camplib/v1/authors/search?searchText=Martin
 ```
 
-Sucht aktive Authors nach Firstname, Lastname oder DisplayName.
+Sucht aktive Authors nach Lastname.
 
 Erfolgreiche Antwort:
 
@@ -759,7 +759,7 @@ Beispiele:
 
 ```http
 GET /camplib/v1/books/search?searchField=Title&searchText=Clean
-GET /camplib/v1/books/search?searchField=AuthorName&searchText=Martin
+GET /camplib/v1/books/search?searchField=AuthorLastName&searchText=Martin
 GET /camplib/v1/books/search?searchField=Isbn&searchText=9780132350884
 ```
 
@@ -767,9 +767,9 @@ Sucht aktive Books anhand genau eines Suchkriteriums.
 
 Unterstützte Suchfelder:
 
-```text
+```text, 
 Title
-AuthorName
+AuthorLastName
 Isbn
 ```
 

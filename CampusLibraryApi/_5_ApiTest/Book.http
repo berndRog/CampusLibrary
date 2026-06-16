@@ -1,0 +1,529 @@
+@baseUrl = https://localhost:8010/camplib/v1
+
+### ============================================================
+### Books API
+### Seed-based manual API test
+### ============================================================
+###
+### Important:
+### The database should be deleted/reset before running this file.
+### This file rebuilds the required Catalog seed data through the public API.
+###
+### Seed.cs is the source of the stable ids.
+### The .http file creates the seed data through HTTP.
+### ============================================================
+@author1Id = a0000001-0000-0000-0000-000000000000
+@author2Id = a0000002-0000-0000-0000-000000000000
+@author3Id = a0000003-0000-0000-0000-000000000000
+@author4Id = a0000004-0000-0000-0000-000000000000
+@author5Id = a0000005-0000-0000-0000-000000000000
+
+@book1Id = b0000001-0000-0000-0000-000000000000
+@book2Id = b0000002-0000-0000-0000-000000000000
+@book3Id = b0000003-0000-0000-0000-000000000000
+@book4Id = b0000004-0000-0000-0000-000000000000
+
+@bookItem1Id = be000001-0000-0000-0000-000000000000
+@bookItem2Id = be000002-0000-0000-0000-000000000000
+@bookItem3Id = be000003-0000-0000-0000-000000000000
+@bookItem4Id = be000004-0000-0000-0000-000000000000
+@bookItem5Id = be000005-0000-0000-0000-000000000000
+@bookItem6Id = be000006-0000-0000-0000-000000000000
+
+@book1Isbn = 9780132350884
+@book2Isbn = 9780321125217
+@book3Isbn = 9780201485677
+@book4Isbn = 9780201633610
+
+@unknownBookId = b9999999-0000-0000-0000-000000000000
+@unknownAuthorId = a9999999-0000-0000-0000-000000000000
+
+
+### 1. Create seed books =======================================================
+
+### Create seed book 1: Clean Code
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Clean Code",
+  "subtitle": "A Handbook of Agile Software Craftsmanship",
+  "isbn": "{{book1Isbn}}",
+  "id": "{{book1Id}}"
+}
+
+
+### Create seed book 2: Domain-Driven Design
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Domain-Driven Design",
+  "subtitle": "Tackling Complexity in the Heart of Software",
+  "isbn": "{{book2Isbn}}",
+  "id": "{{book2Id}}"
+}
+
+
+### Create seed book 3: Refactoring
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Refactoring",
+  "subtitle": "Improving the Design of Existing Code",
+  "isbn": "{{book3Isbn}}",
+  "id": "{{book3Id}}"
+}
+
+
+### Create seed book 4: Design Patterns
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Design Patterns",
+  "subtitle": "Elements of Reusable Object-Oriented Software",
+  "isbn": "{{book4Isbn}}",
+  "id": "{{book4Id}}"
+}
+
+### 2. Assign seed authors to seed books ====================================
+### Assign Robert C. Martin to Clean Code
+POST {{baseUrl}}/books/{{book1Id}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "authorId": "{{author1Id}}"
+}
+
+
+### Assign Eric Evans to Domain-Driven Design
+POST {{baseUrl}}/books/{{book2Id}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "authorId": "{{author2Id}}"
+}
+
+
+### Assign Martin Fowler to Refactoring
+POST {{baseUrl}}/books/{{book3Id}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "authorId": "{{author3Id}}"
+}
+
+
+### Assign Kent Beck to Refactoring
+POST {{baseUrl}}/books/{{book3Id}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "authorId": "{{author5Id}}"
+}
+
+
+### Assign Erich Gamma to Design Patterns
+POST {{baseUrl}}/books/{{book4Id}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "authorId": "{{author4Id}}"
+}
+
+
+### Assign Martin Fowler to Design Patterns
+POST {{baseUrl}}/books/{{book4Id}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "authorId": "{{author3Id}}"
+}
+
+
+### 3. Add seed BookItems to seed books =========================================
+### Add BookItem 1 to Clean Code
+POST {{baseUrl}}/books/{{book1Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "inventoryNumber": "CL-BOOK-0001",
+  "id": "{{bookItem1Id}}"
+}
+
+
+### Add BookItem 2 to Clean Code
+POST {{baseUrl}}/books/{{book1Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "inventoryNumber": "CL-BOOK-0002",
+  "id": "{{bookItem2Id}}"
+}
+
+
+### Add BookItem 3 to Domain-Driven Design
+POST {{baseUrl}}/books/{{book2Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "inventoryNumber": "CL-BOOK-0003",
+  "id": "{{bookItem3Id}}"
+}
+
+
+### Add BookItem 4 to Refactoring
+POST {{baseUrl}}/books/{{book3Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "inventoryNumber": "CL-BOOK-0004",
+  "id": "{{bookItem4Id}}"
+}
+
+
+### Add BookItem 5 to Design Patterns
+POST {{baseUrl}}/books/{{book4Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "inventoryNumber": "CL-BOOK-0005",
+  "id": "{{bookItem5Id}}"
+}
+
+
+### Add BookItem 6 to Design Patterns
+POST {{baseUrl}}/books/{{book4Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "inventoryNumber": "CL-BOOK-0006",
+  "id": "{{bookItem6Id}}"
+}
+
+
+### 4. Verify seed books =======================================================
+
+### Get seed book 1: Clean Code
+GET {{baseUrl}}/books/{{book1Id}}
+Accept: application/json
+
+### Get seed book 2: Domain-Driven Design
+GET {{baseUrl}}/books/{{book2Id}}
+Accept: application/json
+
+### Get seed book 3: Refactoring
+GET {{baseUrl}}/books/{{book3Id}}
+Accept: application/json
+
+### Get seed book 4: Design Patterns
+GET {{baseUrl}}/books/{{book4Id}}
+Accept: application/json
+
+### Get all active books
+GET {{baseUrl}}/books
+Accept: application/json
+
+
+### 5. Search books by title ===================================================
+
+### Search Clean Code by title
+GET {{baseUrl}}/books/search?searchField=Title&searchText=Clean
+Accept: application/json
+
+### Search Domain-Driven Design by title
+GET {{baseUrl}}/books/search?searchField=Title&searchText=Domain
+Accept: application/json
+
+### Search Refactoring by title
+GET {{baseUrl}}/books/search?searchField=Title&searchText=Refactoring
+Accept: application/json
+
+### Search Design Patterns by title
+GET {{baseUrl}}/books/search?searchField=Title&searchText=Patterns
+Accept: application/json
+
+### Search with no expected result
+### Expected: 200 OK with empty list
+GET {{baseUrl}}/books/search?searchField=Title&searchText=NoSuchBook
+Accept: application/json
+
+
+### 6. Search books by ISBN ====================================================
+### Search Clean Code by ISBN
+GET {{baseUrl}}/books/search?searchField=Isbn&searchText={{book1Isbn}}
+Accept: application/json
+
+### Search Domain-Driven Design by ISBN
+GET {{baseUrl}}/books/search?searchField=Isbn&searchText={{book2Isbn}}
+Accept: application/json
+
+### Search Refactoring by ISBN
+GET {{baseUrl}}/books/search?searchField=Isbn&searchText={{book3Isbn}}
+Accept: application/json
+
+### Search Design Patterns by ISBN
+GET {{baseUrl}}/books/search?searchField=Isbn&searchText={{book4Isbn}}
+Accept: application/json
+
+
+### 7. Search books by author name =============================================
+
+### Search books by Robert C. Martin
+### Expected: Clean Code
+GET {{baseUrl}}/books/search?searchField=AuthorLastName&searchText=Martin
+Accept: application/json
+
+
+### Search books by Eric Evans
+### Expected: Domain-Driven Design
+GET {{baseUrl}}/books/search?searchField=AuthorLastName&searchText=Evans
+Accept: application/json
+
+### Search books by Martin Fowler
+### Expected: Refactoring and Design Patterns
+GET {{baseUrl}}/books/search?searchField=AuthorLastName&searchText=Fowler
+Accept: application/json
+
+### Search books by Erich Gamma
+### Expected: Design Patterns
+GET {{baseUrl}}/books/search?searchField=AuthorLastName&searchText=Gamma
+Accept: application/json
+
+### Search books by Kent Beck
+### Expected: Refactoring
+GET {{baseUrl}}/books/search?searchField=AuthorLastName&searchText=Beck
+Accept: application/json
+
+
+### 8. Get books by author id ==================================================
+
+### Get books by author 1: Robert C. Martin
+### Expected: Clean Code
+GET {{baseUrl}}/books/by-author/{{author1Id}}
+Accept: application/json
+
+### Get books by author 2: Eric Evans
+### Expected: Domain-Driven Design
+GET {{baseUrl}}/books/by-author/{{author2Id}}
+Accept: application/json
+
+### Get books by author 3: Martin Fowler
+### Expected: Refactoring and Design Patterns
+GET {{baseUrl}}/books/by-author/{{author3Id}}
+Accept: application/json
+
+### Get books by author 4: Erich Gamma
+### Expected: Design Patterns
+GET {{baseUrl}}/books/by-author/{{author4Id}}
+Accept: application/json
+
+### Get books by author 5: Kent Beck
+### Expected: Refactoring
+GET {{baseUrl}}/books/by-author/{{author5Id}}
+Accept: application/json
+
+
+### 9. Negative read and search tests >========================================
+
+### Get unknown book by id
+### Expected: 404 Not Found
+GET {{baseUrl}}/books/{{unknownBookId}}
+Accept: application/json
+
+
+### Get books by unknown author id
+### Expected: 200 OK with empty list
+GET {{baseUrl}}/books/by-author/{{unknownAuthorId}}
+Accept: application/json
+
+
+### Search books with invalid search field
+### Expected: 400 Bad Request
+GET {{baseUrl}}/books/search?searchField=Unknown&searchText=Clean
+Accept: application/json
+
+
+### 10. Conflict tests using seed data =========================================
+
+### Create book with existing seed id and existing seed ISBN
+### Expected: 409 Conflict
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Clean Code",
+  "subtitle": "A Handbook of Agile Software Craftsmanship",
+  "isbn": "{{book1Isbn}}",
+  "id": "{{book1Id}}"
+}
+
+
+### Create book with existing seed ISBN and no explicit id
+### Expected: 409 Conflict
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Duplicate ISBN Book",
+  "subtitle": null,
+  "isbn": "{{book2Isbn}}",
+  "id": null
+}
+
+
+### Assign existing author to existing book again
+### Seed already contains:
+### Clean Code -> Robert C. Martin
+### Expected: 409 Conflict
+POST {{baseUrl}}/books/{{book1Id}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "authorId": "{{author1Id}}"
+}
+
+
+### Add duplicate inventory number
+### Seed already contains CL-BOOK-0001
+### Expected: 409 Conflict
+POST {{baseUrl}}/books/{{book1Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "inventoryNumber": "CL-BOOK-0001",
+  "id": null
+}
+
+
+### 11. Validation tests =======================================================
+
+### Create book with invalid ISBN
+### Expected: 400 Bad Request
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Invalid ISBN Book",
+  "subtitle": null,
+  "isbn": "invalid-isbn",
+  "id": null
+}
+
+
+### Create book with missing title
+### Expected: 400 Bad Request
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "",
+  "subtitle": null,
+  "isbn": "9780201616224",
+  "id": null
+}
+
+
+### Add BookItem with missing inventory number
+### Expected: 400 Bad Request
+POST {{baseUrl}}/books/{{book1Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "inventoryNumber": "",
+  "id": null
+}
+
+
+### Assign unknown author to existing book
+### Expected: 404 Not Found
+POST {{baseUrl}}/books/{{book1Id}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "authorId": "{{unknownAuthorId}}"
+}
+
+
+### Assign existing author to unknown book
+### Expected: 404 Not Found
+POST {{baseUrl}}/books/{{unknownBookId}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "authorId": "{{author1Id}}"
+}
+
+
+### Add BookItem to unknown book
+### Expected: 404 Not Found
+POST {{baseUrl}}/books/{{unknownBookId}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "inventoryNumber": "CL-BOOK-9999",
+  "id": null
+}
+
+
+### 12. Destructive deactivation tests =========================================
+### Run these last.
+### They change the database state.
+
+
+### Deactivate seed book 4: Design Patterns
+### Expected: 200 OK
+PATCH {{baseUrl}}/books/{{book4Id}}/deactivate
+Accept: application/json
+
+
+### Get deactivated seed book 4
+### Expected: 404 Not Found
+GET {{baseUrl}}/books/{{book4Id}}
+Accept: application/json
+
+
+### Search deactivated seed book by title
+### Expected: 200 OK without Design Patterns
+GET {{baseUrl}}/books/search?searchField=Title&searchText=Patterns
+Accept: application/json
+
+
+### Get all active books after deactivation
+### Expected: 200 OK without Design Patterns
+GET {{baseUrl}}/books
+Accept: application/json
+
+
+### Deactivate unknown book
+### Expected: 404 Not Found
+PATCH {{baseUrl}}/books/{{unknownBookId}}/deactivate
+Accept: application/json

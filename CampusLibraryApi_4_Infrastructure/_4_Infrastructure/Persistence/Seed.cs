@@ -215,8 +215,6 @@ public sealed class Seed(
    }
    #endregion
    
-
-
    #region -------------- Test Bookitems  ---------------------------------------------------
    public const string BookItem1Id = "be000001-0000-0000-0000-000000000000";
    public const string BookItem2Id = "be000002-0000-0000-0000-000000000000";
@@ -231,7 +229,6 @@ public sealed class Seed(
    public const string BookAuthor2Id = "ba000002-0000-0000-0000-000000000000";
    public const string BookAuthor3Id = "ba000003-0000-0000-0000-000000000000";
    #endregion
-   
    
    #region -------------- Helper Methods ----------------------------------------------------
    private Reader CreateReader(

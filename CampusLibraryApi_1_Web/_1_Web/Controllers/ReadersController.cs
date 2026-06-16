@@ -137,10 +137,14 @@ public sealed class ReadersController(
       var result = await readerUseCases.CreateAsync(dto, ct);
 
       if (result.IsSuccess) {
+         var requestedApiVersion = HttpContext.Features.Get<IApiVersioningFeature>()?.RequestedApiVersion;
          return CreatedAtRoute(
-            nameof(GetByIdAsync),
-            new { id = result.Value.Id },
-            result.Value
+            routeName: nameof(GetByIdAsync),
+            routeValues: new {
+               version = requestedApiVersion?.ToString() ?? "1",
+               id = result.Value.Id
+            },
+            value: result.Value
          );
       }
 

@@ -11,10 +11,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- API Versioning -->
+    <PackageReference Include="Asp.Versioning.Mvc" Version="10.0.0"/>
+    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="10.0.0"/>
     <!-- Swagger -->
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
-    <PackageReference Include="Asp.Versioning.Mvc" Version="8.1.0" />
-    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7"/>
   </ItemGroup>
 
   <ItemGroup>

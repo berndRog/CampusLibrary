@@ -132,10 +132,11 @@ public sealed class AuthorsController(
       var result = await authorUseCases.CreateAsync(dto, ct);
 
       if (result.IsSuccess) {
+         var requestedApiVersion = HttpContext.Features.Get<IApiVersioningFeature>()?.RequestedApiVersion;
          return CreatedAtRoute(
             routeName: nameof(GetAuthorByIdAsync),
             routeValues: new {
-               version = HttpContext.GetRequestedApiVersion()?.ToString(),
+               version = requestedApiVersion?.ToString() ?? "1",
                id = result.Value.Id
             },
             value: result.Value

@@ -75,12 +75,10 @@ internal sealed class BookReadModelEf(
          BookSearchField.Title =>
             query.Where(b => EF.Functions.Like(b.Title, pattern)),
 
-         BookSearchField.AuthorName =>
+         BookSearchField.AuthorLastName =>
             query.Where(b =>
                b.Authors.Any(a =>
-                  EF.Functions.Like(a.Firstname, pattern) ||
-                  EF.Functions.Like(a.Lastname, pattern) ||
-                  EF.Functions.Like(a.Firstname + " " + a.Lastname, pattern))),
+                  EF.Functions.Like(a.Lastname, pattern))),
 
          BookSearchField.Isbn =>
             query.Where(b => b.IsbnVo == IsbnVo.FromPersisted(normalizedSearchText)),

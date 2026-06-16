@@ -408,7 +408,7 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
          .ToList();
 
       var search = new BookSearchDto(
-         SearchField: BookSearchField.AuthorName,
+         SearchField: BookSearchField.AuthorLastName,
          SearchText: searchText
       );
 

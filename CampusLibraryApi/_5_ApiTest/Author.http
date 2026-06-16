@@ -1,0 +1,320 @@
+@baseUrl = https://localhost:8010/camplib/v1
+
+### ============================================================
+### Authors API
+### Seed-based manual API test
+### ============================================================
+
+### Seed Author IDs from Seed.cs
+@author1Id = a0000001-0000-0000-0000-000000000000
+@author2Id = a0000002-0000-0000-0000-000000000000
+@author3Id = a0000003-0000-0000-0000-000000000000
+@author4Id = a0000004-0000-0000-0000-000000000000
+@author5Id = a0000005-0000-0000-0000-000000000000
+
+### Unknown id for negative tests
+@unknownAuthorId = a9999999-0000-0000-0000-000000000000
+
+
+### ============================================================
+### 1. Create seed authors
+### ============================================================
+### These POST requests rebuild the Author seed data after the
+### database has been deleted/reset.
+###
+### Important:
+### Run these requests first on an empty database.
+### If they are executed again without resetting the database,
+### 409 Conflict is expected.
+
+
+### Create seed author 1: Robert C. Martin
+POST {{baseUrl}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "firstname": "Robert C.",
+  "lastname": "Martin",
+  "id": "{{author1Id}}"
+}
+
+
+### Create seed author 2: Eric Evans
+POST {{baseUrl}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "firstname": "Eric",
+  "lastname": "Evans",
+  "id": "{{author2Id}}"
+}
+
+
+### Create seed author 3: Martin Fowler
+POST {{baseUrl}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "firstname": "Martin",
+  "lastname": "Fowler",
+  "id": "{{author3Id}}"
+}
+
+
+### Create seed author 4: Erich Gamma
+POST {{baseUrl}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "firstname": "Erich",
+  "lastname": "Gamma",
+  "id": "{{author4Id}}"
+}
+
+
+### Create seed author 5: Kent Beck
+POST {{baseUrl}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "firstname": "Kent",
+  "lastname": "Beck",
+  "id": "{{author5Id}}"
+}
+
+
+### ============================================================
+### 2. Verify seed authors
+### ============================================================
+
+### Get seed author 1: Robert C. Martin
+GET {{baseUrl}}/authors/{{author1Id}}
+Accept: application/json
+
+
+### Get seed author 2: Eric Evans
+GET {{baseUrl}}/authors/{{author2Id}}
+Accept: application/json
+
+
+### Get seed author 3: Martin Fowler
+GET {{baseUrl}}/authors/{{author3Id}}
+Accept: application/json
+
+
+### Get seed author 4: Erich Gamma
+GET {{baseUrl}}/authors/{{author4Id}}
+Accept: application/json
+
+
+### Get seed author 5: Kent Beck
+GET {{baseUrl}}/authors/{{author5Id}}
+Accept: application/json
+
+
+### ============================================================
+### 3. Read all active authors
+### ============================================================
+
+### Get all active authors
+GET {{baseUrl}}/authors
+Accept: application/json
+
+
+### ============================================================
+### 4. Search authors
+### ============================================================
+
+### Search Robert C. Martin by lastname
+GET {{baseUrl}}/authors/search?searchText=Martin
+Accept: application/json
+
+
+### Search Eric Evans by lastname
+GET {{baseUrl}}/authors/search?searchText=Evans
+Accept: application/json
+
+
+### Search Martin Fowler by lastname
+GET {{baseUrl}}/authors/search?searchText=Fowler
+Accept: application/json
+
+
+### Search Erich Gamma by lastname
+GET {{baseUrl}}/authors/search?searchText=Gamma
+Accept: application/json
+
+
+### Search Kent Beck by lastname
+GET {{baseUrl}}/authors/search?searchText=Beck
+Accept: application/json
+
+
+### Search with no expected result
+### Expected: 200 OK with empty list
+GET {{baseUrl}}/authors/search?searchText=NoSuchAuthor
+Accept: application/json
+
+
+### ============================================================
+### 5. Negative read test
+### ============================================================
+
+### Get unknown author by id
+### Expected: 404 Not Found
+GET {{baseUrl}}/authors/{{unknownAuthorId}}
+Accept: application/json
+
+
+### ============================================================
+### 6. Create conflict tests using seed data
+### ============================================================
+
+### Create author with existing seed id and existing seed name
+### Expected: 409 Conflict
+POST {{baseUrl}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "firstname": "Robert C.",
+  "lastname": "Martin",
+  "id": "{{author1Id}}"
+}
+
+
+### Create author with existing seed name and no explicit id
+### Expected: 409 Conflict
+POST {{baseUrl}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "firstname": "Eric",
+  "lastname": "Evans",
+  "id": null
+}
+
+
+### Create author with existing seed name and different id
+### Expected: 409 Conflict
+POST {{baseUrl}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "firstname": "Martin",
+  "lastname": "Fowler",
+  "id": "a9990003-0000-0000-0000-000000000000"
+}
+
+
+### ============================================================
+### 7. Create validation tests
+### ============================================================
+
+### Create author with missing firstname
+### Expected: 400 Bad Request
+POST {{baseUrl}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "firstname": "",
+  "lastname": "Gamma",
+  "id": null
+}
+
+
+### Create author with missing lastname
+### Expected: 400 Bad Request
+POST {{baseUrl}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "firstname": "Erich",
+  "lastname": "",
+  "id": null
+}
+
+
+### Create author with whitespace firstname
+### Expected: 400 Bad Request
+POST {{baseUrl}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "firstname": "   ",
+  "lastname": "Beck",
+  "id": null
+}
+
+
+### Create author with whitespace lastname
+### Expected: 400 Bad Request
+POST {{baseUrl}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "firstname": "Kent",
+  "lastname": "   ",
+  "id": null
+}
+
+
+### Create author with invalid id
+### Expected: 400 Bad Request
+POST {{baseUrl}}/authors
+Content-Type: application/json
+Accept: application/json
+
+{
+  "firstname": "Invalid",
+  "lastname": "Id",
+  "id": "not-a-guid"
+}
+
+
+### ============================================================
+### 8. Destructive deactivation tests
+### ============================================================
+### Run these last.
+### They change the database state.
+
+
+### Deactivate seed author 5: Kent Beck
+### Expected: 200 OK
+PATCH {{baseUrl}}/authors/{{author5Id}}/deactivate
+Accept: application/json
+
+
+### Get deactivated seed author 5
+### Expected: 404 Not Found
+GET {{baseUrl}}/authors/{{author5Id}}
+Accept: application/json
+
+
+### Search deactivated seed author
+### Expected: 200 OK without Kent Beck
+GET {{baseUrl}}/authors/search?searchText=Beck
+Accept: application/json
+
+
+### Get all active authors after deactivation
+### Expected: 200 OK without Kent Beck
+GET {{baseUrl}}/authors
+Accept: application/json
+
+
+### Deactivate unknown author
+### Expected: 404 Not Found
+PATCH {{baseUrl}}/authors/{{unknownAuthorId}}/deactivate
+Accept: application/json
