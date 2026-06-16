@@ -2,7 +2,9 @@
 
 Dieses Dokument beschreibt die Testing-Strategie im Projekt `CampusLibrary`.
 
-Das Ziel ist nicht nur, die fachliche Korrektheit zu prüfen. Die Tests sollen auch die unterschiedlichen Testebenen für Studierende sichtbar machen. Das Projekt trennt deshalb Domain Tests, Application UseCase Tests, Infrastructure Integration Tests, Controller-/API-Tests und manuelle HTTP-Dateien.
+Das Ziel ist nicht nur, die fachliche Korrektheit zu prüfen. Die Tests sollen auch die unterschiedlichen Testebenen für Studierende sichtbar machen. Das Projekt trennt deshalb Domain Tests, Application UseCase Tests, Application Integration Tests, Infrastructure Tests, Controller-/API-End-to-End-Tests und manuelle HTTP-Dateien.
+
+Für Teil 3 wird bewusst entschieden: Controller-Mock-Tests werden nicht als breite zusätzliche Testebene verwendet. Die Controller bleiben dünn. Die fachliche Logik wird in Domain- und UseCase-Tests geprüft, Persistence und Projektionen werden in Infrastructure Tests geprüft, und der öffentliche HTTP-Vertrag wird über `WebApplicationFactory` und `HttpClient` getestet.
 
 In Teil 3 wurde die Anwendung von einem fachlichen Modul auf zwei fachliche Module erweitert. Die Anwendung enthält nun das Readers-Modul und das Catalog-Modul. Das bestehende Readers-Verhalten bleibt stabil, während das neue Catalog-Verhalten ergänzt und durch Tests abgesichert wird.
 
@@ -52,21 +54,28 @@ Domain Tests
 Application UseCase Tests mit Mocks
 Application Integration Tests mit SQLite und UnitOfWork
 Infrastructure Tests für Repositories und ReadModels
-Controller-/API-Tests mit WebApplicationFactory und HttpClient
+Controller-/API-End-to-End-Tests mit WebApplicationFactory und HttpClient
 Manuelle HTTP-Dateien für didaktische API-Tests
 ```
 
-Beim aktuellen Projektstand laufen alle automatisierten Tests erfolgreich:
+Controller-Mock-Tests werden bewusst nicht als eigene Testebene aufgeführt.
 
-```text
-Test summary: total: 155, failed: 0, succeeded: 155, skipped: 0
-```
+Der Grund ist, dass die Controller keine fachliche Logik enthalten sollen. Sie nehmen HTTP-Eingaben entgegen, rufen UseCases oder ReadModels auf und übersetzen Ergebnisse in HTTP-Antworten. Dieses Verhalten ist über echte HTTP-Requests nützlicher zu testen als über isolierte Controller-Mocks.
 
 Alle automatisierten Tests werden ausgeführt mit:
 
 ```bash
 dotnet test
 ```
+
+Am Ende von Teil 3 sollte das finale Ergebnis von `dotnet test` in README und Projektdokumentation übernommen werden. Die wichtigste Abschlussbedingung ist:
+
+```text
+0 fehlgeschlagen
+0 übersprungen
+```
+
+Wenn zusätzliche Controller-/API-End-to-End-Tests für Authors und Books ergänzt werden, ist die Gesamtzahl der Tests höher als die frühere Teil-3-Zahl von 155.
 
 ## Testebenen
 
@@ -233,6 +242,37 @@ nach einem frühen Fehler werden keine unnötigen Repository-Aufrufe ausgeführt
 
 Der Zweck ist nicht, EF Core zu testen. Der Zweck ist, den Application Workflow zu testen.
 
+## Warum Controller-Mock-Tests keine eigene Testebene sind
+
+Controller-Mock-Tests werden in Teil 3 bewusst nicht als breite zusätzliche Testebene verwendet.
+
+Der Grund ist das beabsichtigte Controller-Design:
+
+```text
+Controller nehmen HTTP-Eingaben entgegen.
+Controller rufen ReadModels oder UseCases auf.
+Controller übersetzen Result<T> in HTTP-Antworten.
+Controller sollen keine fachliche Logik enthalten.
+```
+
+Wenn Controller dünn sind, wiederholen isolierte Controller-Mock-Tests meistens Verhalten, das an anderer Stelle bereits geprüft wird.
+
+Der Application Workflow wird durch UseCase Tests mit Mocks geprüft.
+
+Das Query-Verhalten wird durch ReadModel Tests geprüft.
+
+Der HTTP-Vertrag wird durch Controller-/API-End-to-End-Tests mit `WebApplicationFactory` und `HttpClient` geprüft.
+
+Controller-Mock-Tests wären nur dann sinnvoll, wenn im Controller selbst relevante Verzweigungen, besondere Statuscode-Entscheidungen, eigene Header-Logik, komplexes Authorization-Verhalten oder manuelles Response-Mapping enthalten wären, das nicht durch eine gemeinsame Hilfsmethode abgedeckt ist.
+
+Für Teil 3 lautet die didaktische Entscheidung deshalb:
+
+```text
+Keine breite Controller-Mock-Testebene.
+UseCase Tests verwenden Mocks.
+Controller-/API-Tests verwenden echtes HTTP über HttpClient.
+```
+
 ## 3. Application Integration Tests
 
 Application Integration Tests verwenden echte Infrastructure-Bestandteile, wo das sinnvoll ist.
@@ -392,7 +432,7 @@ Typische Catalog ReadModel Tests prüfen:
 ```text
 alle aktiven Authors auswählen
 aktiven Author anhand der ID finden
-aktive Authors suchen
+aktive Authors anhand des Nachnamens suchen
 
 alle aktiven Books auswählen
 aktives Book anhand der ID finden
@@ -417,9 +457,17 @@ Repositories dürfen inaktive Aggregates weiterhin laden, weil UseCases sie mög
 
 ## Tests für die Catalog-Suche
 
-Teil 3 enthält Tests für die Book-Suche im Catalog.
+Teil 3 enthält Tests für die Suche nach Authors und Books im Catalog.
 
-Die unterstützten Book-Suchfelder sind:
+Die Author-Suche verwendet den Nachnamen des Authors:
+
+```text
+GET /camplib/v1/authors/search?searchText=Martin
+```
+
+Diese Suche soll `Robert C. Martin` finden, aber nicht `Martin Fowler`, weil `Martin` bei `Martin Fowler` nur der Vorname ist.
+
+Die Book-Suche unterstützt folgende Suchfelder:
 
 ```text
 Title
@@ -506,9 +554,9 @@ Repositories laden Aggregates für Änderungen.
 ReadModels entscheiden, was in Queries sichtbar ist.
 ```
 
-## 5. Controller- / API-Tests
+## 5. Controller- / API-End-to-End-Tests
 
-Controller- und API-Tests verwenden:
+Controller-/API-End-to-End-Tests verwenden:
 
 ```text
 WebApplicationFactory<Program>
@@ -546,7 +594,7 @@ PUT    /camplib/v1/readers/{id}
 DELETE /camplib/v1/readers/{id}
 ```
 
-Die Author Controller-/API-Tests decken ab:
+Die Author Controller-/API-End-to-End-Tests sollten das öffentliche HTTP-Verhalten des `AuthorsController` abdecken, zum Beispiel:
 
 ```text
 GET   /camplib/v1/authors
@@ -556,7 +604,7 @@ POST  /camplib/v1/authors
 PATCH /camplib/v1/authors/{id}/deactivate
 ```
 
-Die Book Controller-/API-Tests decken ab:
+Die Book Controller-/API-End-to-End-Tests sollten das öffentliche HTTP-Verhalten des `BooksController` abdecken, zum Beispiel:
 
 ```text
 GET   /camplib/v1/books
@@ -573,7 +621,7 @@ PATCH /camplib/v1/books/{bookId}/deactivate
 
 Diese Tests sind am nächsten an der realen API-Nutzung.
 
-In Teil 3 prüfen Controller-/API-Tests außerdem, ob die beiden Module korrekt durch das ausführbare API-Projekt verdrahtet werden.
+In Teil 3 prüfen Controller-/API-End-to-End-Tests außerdem, ob die beiden Module korrekt durch das ausführbare API-Projekt verdrahtet werden.
 
 Sie prüfen deshalb nicht nur das Controller-Verhalten, sondern auch die Zusammensetzung aus:
 
@@ -849,7 +897,7 @@ inaktive Books werden in normalen Book Queries nicht zurückgegeben
 inaktive Authors werden in normalen Author Queries nicht zurückgegeben
 ```
 
-Controller-/API-Tests prüfen:
+Controller-/API-End-to-End-Tests prüfen:
 
 ```text
 PATCH /books/{bookId}/deactivate liefert 200 OK
@@ -876,8 +924,8 @@ Funktioniert der UseCase mit echter Persistence?
 Infrastructure Test:
 Speichert, lädt und projiziert EF Core die Daten korrekt?
 
-Controller-/API-Test:
-Verhält sich die API von außen korrekt?
+Controller-/API-End-to-End-Test:
+Verhält sich die öffentliche HTTP-API von außen korrekt?
 
 Manuelle HTTP-Datei:
 Können Studierende das API-Verhalten nach einem Datenbank-Reset manuell reproduzieren und nachvollziehen?
@@ -907,14 +955,6 @@ Catalog funktioniert
 Modulgrenzen weiterhin eingehalten werden
 Infrastructure Ports aus mehreren Modulen korrekt implementiert
 das API-Projekt alle Module korrekt verdrahtet
-```
-
-Das aktuelle Ergebnis ist:
-
-```text
-155 Tests
-0 fehlgeschlagen
-0 übersprungen
 ```
 
 ## Empfohlener Workflow
@@ -986,7 +1026,7 @@ Trennung von Testebenen
 Domain Testing ohne Infrastructure
 Mock-basierte UseCase Tests
 Integration Testing mit SQLite
-Controller Testing über HTTP
+Controller-/API-Testing über HTTP
 Wiederverwendung von Testdaten durch Seed-Objekte
 warum Fake Clocks nützlich sind
 wie partielle Updates getestet werden sollten
@@ -997,6 +1037,7 @@ wie Beziehungen über Domain und Infrastructure hinweg getestet werden können
 wie sich ReadModels von Repositories unterscheiden
 wie sich Deactivation von Deletion unterscheidet
 wie Katalogsuche nach Author-Nachname zufällige Treffer vermeidet
+warum Controller-Mock-Tests bei dünnen Controllern nicht nötig sind
 wie manuelle HTTP-Dateien API-Verhalten nach einem Datenbank-Reset reproduzierbar machen
 ```
 
@@ -1010,7 +1051,7 @@ Jede Testebene hat ihren eigenen Zweck:
 Domain Tests schützen fachliche Regeln.
 UseCase Tests schützen Application Workflows.
 Infrastructure Tests schützen Persistence-Verhalten.
-Controller-/API-Tests schützen die HTTP-API.
+Controller-/API-End-to-End-Tests schützen die öffentliche HTTP-API.
 HttpClient-Tests schützen den öffentlichen HTTP-Vertrag.
 Manuelle HTTP-Dateien machen API-Verhalten für Studierende sichtbar und reproduzierbar.
 End-to-End-Tests schützen die vollständige Komposition.
@@ -1041,8 +1082,16 @@ ReadModels blenden inaktive Daten in normalen Queries aus.
 Für die Katalogsuche ist die wichtigste Regel:
 
 ```text
-AuthorLastName sucht anhand des Author-Nachnamens.
+Author-Suche und Book-Suche verwenden den Author-Nachnamen.
 Firstname wird nicht durchsucht, weil dadurch zufällige Treffer entstehen würden.
+```
+
+Für Controller Tests ist die wichtigste Regel:
+
+```text
+UseCase Tests verwenden Mocks.
+Controller-/API-Tests verwenden HttpClient.
+Dünne Controller benötigen keine breite Controller-Mock-Testebene.
 ```
 
 Für manuelle API-Tests ist die wichtigste Regel:

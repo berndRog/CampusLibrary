@@ -19,28 +19,35 @@ The project currently contains two functional modules:
 * Repository and ReadModel infrastructure
 * Use cases for write-side workflows
 * ReadModels for query-side projections
-* Controller/API tests with a real SQLite test database
+* Controller/API tests with `WebApplicationFactory` and `HttpClient`
+* Manual `.http` files for didactic API testing
 
 The initial monolith has been refactored into a project-based modular monolith. Shared abstractions and base types are located in `BuildingBlocks`. The `Readers` and `Catalog` modules are independent core modules, while technical persistence details are implemented in the Infrastructure project.
 
-The test suite currently contains:
+The final test count for Part 3 should be updated after the final test run:
+
+```bash
+dotnet test
+```
+
+Replace this placeholder with the final result:
 
 ```text
-155 tests
+<final test count> tests
 0 failed
 0 skipped
 ```
 
 ## Versions
 
-* `v1-readers-monolith`
+* `v1-readers-monolith`  
   First completed version with the Readers module inside a single monolithic project structure.
 
-* `v2-readers-modular-monolith`
+* `v2-readers-modular-monolith`  
   Refactored version with a project-based modular monolith structure.
 
-* `v3-readers-catalog`
-  Adds the Catalog module with books, authors, book items, ISBN value object, read models, use cases, repositories, controllers and Swagger documentation.
+* `v3-readers-catalog`  
+  Adds the Catalog module with books, authors, book items, ISBN value object, read models, use cases, repositories, controllers, Swagger documentation and Catalog tests.
 
 ## Current branch
 
@@ -178,7 +185,17 @@ public enum BookItemStatus {
 }
 ```
 
-The enum is stored as an integer in the database. This keeps persistence compact and stable while the code still expresses the meaning through the enum names.
+The enum can be stored as an integer in the database. This keeps persistence compact and stable while the code still expresses the meaning through the enum names.
+
+In the JSON API, enum values may be serialized as strings when enum string serialization is enabled.
+
+Example:
+
+```json
+{
+  "status": "Available"
+}
+```
 
 ### ISBN value object
 
@@ -280,6 +297,29 @@ Repositories load aggregates.
 Controllers translate HTTP requests and responses.
 ```
 
+## Catalog search
+
+Books can be searched by one explicit search field:
+
+```text
+Title
+AuthorLastName
+Isbn
+```
+
+`AuthorLastName` searches only the lastname of assigned authors.
+
+The firstname is not searched. This avoids accidental matches.
+
+Example:
+
+```text
+AuthorLastName = Martin -> Clean Code
+AuthorLastName = Fowler -> Refactoring and Design Patterns
+```
+
+Author search also uses the author lastname as the relevant search criterion.
+
 ## Deactivate instead of Delete
 
 In the Catalog module, books and authors are not physically deleted.
@@ -339,12 +379,38 @@ PATCH /camplib/v1/authors/{id}/deactivate
 GET   /camplib/v1/books
 GET   /camplib/v1/books/{id}
 GET   /camplib/v1/books/search?searchField=Title&searchText=...
+GET   /camplib/v1/books/search?searchField=AuthorLastName&searchText=...
+GET   /camplib/v1/books/search?searchField=Isbn&searchText=...
 GET   /camplib/v1/books/by-author/{authorId}
 POST  /camplib/v1/books
 POST  /camplib/v1/books/{bookId}/items
 POST  /camplib/v1/books/{bookId}/authors
 PATCH /camplib/v1/books/{bookId}/deactivate
 ```
+
+## Manual HTTP files
+
+For manual API tests, reset or delete the database first.
+
+Then execute the HTTP files in this order:
+
+```text
+1. Authors.http
+2. Books.http
+3. Readers.http
+```
+
+`Seed.cs` defines the stable ids.
+
+The `.http` files create the corresponding data through the public API.
+
+```text
+Authors.http creates the Authors.
+Books.http creates the Books, uses the existing Authors, assigns Authors to Books and adds BookItems.
+Readers.http creates or verifies Reader data.
+```
+
+This makes the manual API tests reproducible and avoids hidden database state.
 
 ## Swagger and error handling
 
@@ -366,16 +432,16 @@ The controllers intentionally map domain errors to HTTP responses explicitly. Th
 
 ## Testing
 
-Run all tests:
+Run all automated tests:
 
 ```bash
 dotnet test
 ```
 
-Current test result:
+The final test result for Part 3 should be entered after the final test run:
 
 ```text
-155 tests
+<final test count> tests
 0 failed
 0 skipped
 ```
@@ -388,7 +454,22 @@ The test suite covers:
 * use case integration tests
 * repository integration tests
 * read model integration tests
-* controller/API tests
+* controller/API tests with `WebApplicationFactory` and `HttpClient`
+* manual `.http` files for didactic API testing
+
+Controller mock tests are intentionally not used as a broad additional test level.
+
+The controllers are thin HTTP adapters. The application workflow is tested in use case tests. The public HTTP contract is tested through `WebApplicationFactory` and `HttpClient`.
+
+The didactic distinction is:
+
+```text
+Domain tests protect business rules.
+Use case mock tests protect application workflows.
+Repository and ReadModel tests protect persistence and projections.
+Controller/API tests protect the public HTTP contract.
+Manual HTTP files make API behavior visible for students.
+```
 
 ## Running the application
 
@@ -435,6 +516,8 @@ Commands belong to use cases.
 Deactivate is not delete.
 The domain shows the business relationship.
 Infrastructure shows the persistence mechanism.
+AuthorLastName searches by author lastname.
+Controller mock tests are not required for thin controllers.
 ```
 
 ## Next step

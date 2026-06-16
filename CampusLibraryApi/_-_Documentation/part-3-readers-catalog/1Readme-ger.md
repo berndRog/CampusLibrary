@@ -4,11 +4,11 @@ Lehrprojekt für eine modular aufgebaute, DDD-orientierte ASP.NET-Core-Web-API.
 
 Das Projekt zeigt, wie ein kleiner modularer Monolith in getrennte Projekte für Web/API, Building Blocks, Core-Module, Infrastructure und Tests aufgeteilt werden kann, ohne dass das Domain Model von technischen Persistenzdetails abhängig wird.
 
-English version: [1readme.md](1readme.md)
+Englische Version: [1readme.md](1readme.md)
 
 ## Aktueller Stand
 
-Das Projekt enthält aktuell zwei funktionsfähige Module:
+Das Projekt enthält aktuell zwei fachliche Module:
 
 * Readers-Modul
 * Catalog-Modul
@@ -19,28 +19,35 @@ Das Projekt enthält aktuell zwei funktionsfähige Module:
 * Repository- und ReadModel-Infrastruktur
 * UseCases für schreibende Workflows
 * ReadModels für lesende Projektionen
-* Controller/API-Tests mit echter SQLite-Testdatenbank
+* Controller-/API-Tests mit `WebApplicationFactory` und `HttpClient`
+* Manuelle `.http`-Dateien für didaktische API-Tests
 
-Der ursprüngliche Monolith wurde in einen projektbasierten modularen Monolithen überführt. Gemeinsame Abstraktionen und Basistypen liegen in `BuildingBlocks`. Die Module `Readers` und `Catalog` sind eigenständige Core-Module. Technische Persistenzdetails werden im Infrastructure-Projekt implementiert.
+Der ursprüngliche Monolith wurde in einen projektbasierten modularen Monolithen umgebaut. Gemeinsame Abstraktionen und Basistypen liegen in `BuildingBlocks`. Die Module `Readers` und `Catalog` sind unabhängige Core-Module, während technische Persistenzdetails im Infrastructure-Projekt implementiert werden.
 
-Der aktuelle Teststand ist:
+Die finale Testanzahl für Teil 3 sollte nach dem letzten Testlauf aktualisiert werden:
+
+```bash
+dotnet test
+```
+
+Dieser Platzhalter wird danach durch das finale Ergebnis ersetzt:
 
 ```text
-155 Tests
-0 failed
-0 skipped
+<finale Testanzahl> Tests
+0 fehlgeschlagen
+0 übersprungen
 ```
 
 ## Versionen
 
-* `v1-readers-monolith`
-  Erste abgeschlossene Version mit dem Readers-Modul in einer einfachen monolithischen Projektstruktur.
+* `v1-readers-monolith`  
+  Erste abgeschlossene Version mit dem Readers-Modul in einer einzelnen monolithischen Projektstruktur.
 
-* `v2-readers-modular-monolith`
-  Refactoring in eine projektbasierte modulare Monolith-Struktur.
+* `v2-readers-modular-monolith`  
+  Umgebaute Version mit projektbasierter modularer Monolith-Struktur.
 
-* `v3-readers-catalog`
-  Ergänzt das Catalog-Modul mit Books, Authors, BookItems, ISBN Value Object, ReadModels, UseCases, Repositories, Controllern und Swagger-Dokumentation.
+* `v3-readers-catalog`  
+  Ergänzt das Catalog-Modul mit Books, Authors, BookItems, ISBN Value Object, ReadModels, UseCases, Repositories, Controllern, Swagger-Dokumentation und Catalog-Tests.
 
 ## Aktueller Branch
 
@@ -64,27 +71,27 @@ CampusLibraryApiTest
 
 Die Web/API-Schicht stellt die HTTP-Endpunkte bereit.
 
-Die Core-Module enthalten Domain Model, Application UseCases, DTOs und Ports eines Fachmoduls.
+Die Core-Module enthalten das Domain Model, Application UseCases, DTOs und Ports eines fachlichen Moduls.
 
-Das BuildingBlocks-Projekt enthält gemeinsame Abstraktionen, die nicht zu einem bestimmten Fachmodul gehören.
+Das BuildingBlocks-Projekt enthält gemeinsame Abstraktionen, die unabhängig von einem konkreten fachlichen Modul sind.
 
 Das Infrastructure-Projekt implementiert technische Details wie EF-Core-Persistenz, Repositories, ReadModels und Datenbankkonfiguration.
 
 Das Testprojekt prüft das Verhalten über Domain-, Application-, Infrastructure- und API-Grenzen hinweg.
 
-Die wichtigste Abhängigkeitsregel lautet:
+Die wichtigste Dependency-Regel lautet:
 
 ```text
 Core-Module hängen nicht von Web/API oder Infrastructure ab.
-Infrastructure hängt von Core-Modulen ab, weil sie deren Outbound Ports implementiert.
-Das API-Projekt ist Composition Root und verdrahtet die Module.
+Infrastructure hängt von Core-Modulen ab, weil es deren Outbound Ports implementiert.
+Das API-Projekt ist die Composition Root und verdrahtet alle Module.
 ```
 
 ## Module
 
 ## Readers-Modul
 
-Das Readers-Modul verwaltet Leserinnen und Leser der Bibliothek.
+Das Readers-Modul verwaltet Bibliotheksnutzer.
 
 Es enthält:
 
@@ -99,12 +106,12 @@ Es enthält:
 Typische Operationen sind:
 
 * Reader anlegen
-* Reader-Profildaten ändern
+* Reader-Profildaten aktualisieren
 * Reader löschen
 * Reader abfragen
-* Reader nach Id oder Email suchen
+* Reader anhand von ID oder Email finden
 
-Das Readers-Modul ist bewusst einfach und bildet den Einstieg in die Architektur.
+Das Readers-Modul ist bewusst einfach gehalten und dient als Einstiegspunkt in die Architektur.
 
 ## Catalog-Modul
 
@@ -122,26 +129,26 @@ Es enthält:
 * Book- und Author-Controller
 * Catalog Tests
 
-Das Catalog-Modul führt im Vergleich zum Readers-Modul ein fachlich reichhaltigeres Domain Model ein.
+Das Catalog-Modul führt im Vergleich zum Readers-Modul ein reichhaltigeres Domain Modeling ein.
 
-## Domain Model im Catalog
+## Catalog Domain Model
 
 ### Book
 
 `Book` ist ein Aggregate Root.
 
-Ein Book beschreibt das bibliografische Werk und enthält:
+Ein Book repräsentiert das bibliografische Werk und enthält:
 
-* Title
-* optional Subtitle
+* Titel
+* optionalen Untertitel
 * ISBN
 * Authors
 * BookItems
-* aktiven Zustand
+* Aktivstatus
 
 Ein Book kann mehrere Authors haben.
 
-Ein Book kann mehrere physische BookItems haben.
+Ein Book kann mehrere physische BookItems besitzen.
 
 ### Author
 
@@ -152,22 +159,22 @@ Ein Author enthält:
 * Firstname
 * Lastname
 * DisplayName
-* aktiven Zustand
+* Aktivstatus
 
-Authors werden im Catalog-Modul nicht physisch gelöscht. Sie werden deaktiviert, indem `IsActive` auf `false` gesetzt wird.
+Authors werden im Catalog-Modul nicht physisch gelöscht. Sie werden durch `IsActive = false` deaktiviert.
 
 ### BookItem
 
 `BookItem` ist eine Entity innerhalb des `Book`-Aggregates.
 
-Ein BookItem beschreibt ein physisches Exemplar eines Buches.
+Ein BookItem repräsentiert ein physisches Exemplar eines Books.
 
 Es enthält:
 
 * InventoryNumber
 * Status
 
-Der Status wird durch ein Enum modelliert:
+Der BookItem-Status wird als Enum modelliert:
 
 ```csharp
 public enum BookItemStatus {
@@ -178,13 +185,23 @@ public enum BookItemStatus {
 }
 ```
 
-Der Enum-Wert wird in der Datenbank als Zahl gespeichert. Das ist kompakt und technisch stabil. Die fachliche Bedeutung bleibt im Code über die Enum-Namen sichtbar.
+Das Enum kann in der Datenbank als Integer gespeichert werden. Dadurch bleibt die Persistenz kompakt und stabil, während der Code die Bedeutung weiterhin über die Enum-Namen ausdrückt.
+
+In der JSON-API können Enum-Werte als Strings serialisiert werden, wenn Enum-String-Serialisierung aktiviert ist.
+
+Beispiel:
+
+```json
+{
+  "status": "Available"
+}
+```
 
 ### ISBN Value Object
 
 `IsbnVo` ist ein Value Object.
 
-Es schützt die fachliche Regel, dass ein Book eine gültige ISBN benötigt. Die Domain arbeitet dadurch nicht mit beliebigen Strings, wenn ein Wert eine konkrete fachliche Bedeutung hat.
+Es schützt die Domain-Regel, dass ein Book eine gültige ISBN haben muss. Die Domain sollte nicht mit beliebigen Strings arbeiten, wenn ein Wert eine konkrete fachliche Bedeutung besitzt.
 
 ## Beziehungen
 
@@ -208,10 +225,10 @@ Book n --- m Author
 
 Die Domain zeigt diese Beziehung über `Book.Authors`.
 
-Die Datenbank speichert die Beziehung über eine Join-Tabelle in der Infrastructure.
+Die Datenbank speichert die Beziehung über eine Join-Tabelle auf Infrastructure-Ebene.
 
 ```text
-BookAuthorJoin ist ein Infrastrukturdetail.
+BookAuthorJoin ist ein Infrastructure-Detail.
 BookAuthorJoin ist keine Domain Entity.
 BookAuthorJoin verwendet den zusammengesetzten Schlüssel BookId + AuthorId.
 ```
@@ -243,7 +260,7 @@ AuthorUseCases
 - DeactivateAsync
 ```
 
-UseCases arbeiten mit Repositories, Domain-Objekten und UnitOfWork.
+UseCases arbeiten mit Repositories, Domain-Objekten und der Unit of Work.
 
 ### ReadModels
 
@@ -276,9 +293,32 @@ Die zentrale Unterscheidung lautet:
 ```text
 UseCases verändern Zustand.
 ReadModels lesen und projizieren Daten.
-Repositories laden Aggregate.
-Controller übersetzen HTTP-Anfragen und HTTP-Antworten.
+Repositories laden Aggregates.
+Controller übersetzen HTTP Requests und Responses.
 ```
+
+## Katalogsuche
+
+Books können über ein explizites Suchfeld gesucht werden:
+
+```text
+Title
+AuthorLastName
+Isbn
+```
+
+`AuthorLastName` sucht ausschließlich im Nachnamen der zugeordneten Authors.
+
+Der Vorname wird nicht durchsucht. Dadurch werden zufällige Treffer vermieden.
+
+Beispiel:
+
+```text
+AuthorLastName = Martin -> Clean Code
+AuthorLastName = Fowler -> Refactoring und Design Patterns
+```
+
+Auch die Author-Suche verwendet den Nachnamen des Authors als fachlich relevantes Suchkriterium.
 
 ## Deactivate statt Delete
 
@@ -292,7 +332,7 @@ IsActive = false
 
 Repositories können das Aggregate weiterhin laden.
 
-ReadModels entscheiden, was in normalen Abfragen sichtbar ist.
+ReadModels entscheiden, was in normalen Queries sichtbar ist.
 
 Normale Listen und Suchen liefern nur aktive Books und Authors.
 
@@ -339,6 +379,8 @@ PATCH /camplib/v1/authors/{id}/deactivate
 GET   /camplib/v1/books
 GET   /camplib/v1/books/{id}
 GET   /camplib/v1/books/search?searchField=Title&searchText=...
+GET   /camplib/v1/books/search?searchField=AuthorLastName&searchText=...
+GET   /camplib/v1/books/search?searchField=Isbn&searchText=...
 GET   /camplib/v1/books/by-author/{authorId}
 POST  /camplib/v1/books
 POST  /camplib/v1/books/{bookId}/items
@@ -346,11 +388,35 @@ POST  /camplib/v1/books/{bookId}/authors
 PATCH /camplib/v1/books/{bookId}/deactivate
 ```
 
+## Manuelle HTTP-Dateien
+
+Für manuelle API-Tests wird die Datenbank zuerst zurückgesetzt oder gelöscht.
+
+Danach werden die HTTP-Dateien in dieser Reihenfolge ausgeführt:
+
+```text
+1. Authors.http
+2. Books.http
+3. Readers.http
+```
+
+`Seed.cs` definiert die stabilen IDs.
+
+Die `.http`-Dateien erzeugen die entsprechenden Daten über die öffentliche API.
+
+```text
+Authors.http erzeugt die Authors.
+Books.http erzeugt die Books, verwendet die vorhandenen Authors, ordnet Authors zu Books zu und fügt BookItems hinzu.
+Readers.http erzeugt oder prüft Reader-Daten.
+```
+
+Dadurch bleiben manuelle API-Tests reproduzierbar und hängen nicht von verstecktem Datenbankzustand ab.
+
 ## Swagger und Fehlerbehandlung
 
-Die Controller enthalten XML-Kommentare und Swagger-Response-Annotationen.
+Die Controller enthalten XML-Kommentare und Swagger Response Annotations.
 
-Die API dokumentiert Erfolgs- und Fehlerantworten explizit.
+Die API dokumentiert Erfolgs- und Fehlerantworten ausdrücklich.
 
 Typische Fehlerantworten sind:
 
@@ -362,25 +428,25 @@ Typische Fehlerantworten sind:
 
 Fehler werden als `ProblemDetails` zurückgegeben.
 
-Die Controller bilden Domain Errors bewusst explizit auf HTTP-Antworten ab. Dadurch wird für die Lehre sichtbar, welcher fachliche Fehler zu welchem HTTP-Status führt.
+Die Controller mappen Domain Errors bewusst explizit auf HTTP Responses. Dadurch wird für die Lehre sichtbar, welcher Domain Error zu welchem HTTP-Statuscode führt.
 
-## Tests
+## Testing
 
-Alle Tests ausführen:
+Alle automatisierten Tests ausführen:
 
 ```bash
 dotnet test
 ```
 
-Aktueller Teststand:
+Das finale Testergebnis für Teil 3 sollte nach dem letzten Testlauf eingetragen werden:
 
 ```text
-155 Tests
-0 failed
-0 skipped
+<finale Testanzahl> Tests
+0 fehlgeschlagen
+0 übersprungen
 ```
 
-Die Testsuite umfasst:
+Die Testsuite deckt ab:
 
 * Domain Tests
 * Value Object Tests
@@ -388,7 +454,22 @@ Die Testsuite umfasst:
 * UseCase Integration Tests
 * Repository Integration Tests
 * ReadModel Integration Tests
-* Controller/API Tests
+* Controller-/API-Tests mit `WebApplicationFactory` und `HttpClient`
+* Manuelle `.http`-Dateien für didaktische API-Tests
+
+Controller-Mock-Tests werden bewusst nicht als breite zusätzliche Testebene verwendet.
+
+Die Controller sind dünne HTTP-Adapter. Der Application Workflow wird in UseCase Tests geprüft. Der öffentliche HTTP-Vertrag wird über `WebApplicationFactory` und `HttpClient` geprüft.
+
+Die didaktische Unterscheidung lautet:
+
+```text
+Domain Tests schützen fachliche Regeln.
+UseCase Mock Tests schützen Application Workflows.
+Repository- und ReadModel-Tests schützen Persistenz und Projektionen.
+Controller-/API-Tests schützen den öffentlichen HTTP-Vertrag.
+Manuelle HTTP-Dateien machen API-Verhalten für Studierende sichtbar.
+```
 
 ## Anwendung starten
 
@@ -396,9 +477,9 @@ Die Testsuite umfasst:
 dotnet run --project CampusLibraryApi
 ```
 
-## Migrationen
+## Migrations
 
-Migration erzeugen:
+Migration erstellen:
 
 ```bash
 dotnet ef migrations add <MigrationName> \
@@ -420,9 +501,9 @@ dotnet ef database update \
 Controller sind HTTP-Adapter.
 UseCases verändern Zustand.
 ReadModels liefern Daten für Anzeige und Suche.
-Repositories laden Aggregate.
+Repositories laden Aggregates.
 Domain-Objekte schützen fachliche Regeln.
-DTOs überschreiten Anwendungsschichtgrenzen.
+DTOs überschreiten Application-Grenzen.
 Infrastructure implementiert technische Details.
 ```
 
@@ -432,25 +513,27 @@ Wichtige Regeln:
 Core-Module hängen nicht von Infrastructure ab.
 Queries gehören in ReadModels.
 Commands gehören in UseCases.
-Deactivate ist kein Delete.
+Deactivate ist nicht Delete.
 Die Domain zeigt die fachliche Beziehung.
-Infrastructure zeigt die technische Persistenz.
+Infrastructure zeigt den Persistenzmechanismus.
+AuthorLastName sucht anhand des Author-Nachnamens.
+Controller-Mock-Tests sind für dünne Controller nicht erforderlich.
 ```
 
 ## Nächster Schritt
 
 Das nächste geplante Modul ist das Loans-Modul.
 
-Das fachliche Ziel lautet:
+Das wichtigste fachliche Ziel lautet:
 
 ```text
 Ein Reader leiht ein BookItem aus.
 ```
 
-Dadurch entstehen neue Architekturfragen:
+Dadurch entstehen Beziehungen zwischen Modulen und neue Designfragen:
 
-* Ist Loan ein eigenes Aggregate?
-* Wie referenziert ein Modul Daten eines anderen Moduls?
+* Soll Loan ein eigenes Aggregate sein?
+* Wie referenziert ein Modul Daten aus einem anderen Modul?
 * Welche Daten werden direkt referenziert?
-* Welche Daten werden als Snapshot übernommen?
+* Welche Daten sollten als Snapshot gespeichert werden?
 * Wie werden modulübergreifende Regeln geprüft?

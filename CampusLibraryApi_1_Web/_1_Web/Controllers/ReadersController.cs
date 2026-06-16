@@ -20,7 +20,7 @@ namespace CampusLibraryApi._1_Web.Controllers;
 [Route("camplib/v{version:apiVersion}")]
 [ApiController]
 
-public sealed class ReadersController(
+public sealed class ReaderController(
    IReaderReadModel readerReadModel,
    IReaderUseCases readerUseCases
 ) : ControllerBase {

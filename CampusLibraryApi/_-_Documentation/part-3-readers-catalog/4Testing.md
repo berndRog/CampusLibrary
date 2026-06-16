@@ -2,7 +2,9 @@
 
 This document describes the testing strategy used in the `CampusLibrary` project.
 
-The goal is not only to verify correctness, but also to make the different test levels visible for teaching purposes. The project therefore separates domain tests, application use case tests, infrastructure integration tests, controller/API tests, and manual HTTP files.
+The goal is not only to verify correctness, but also to make the different test levels visible for teaching purposes. The project therefore separates domain tests, application use case tests, application integration tests, infrastructure tests, controller/API end-to-end tests, and manual HTTP files.
+
+A conscious decision is made in Part 3: controller mock tests are not used as a broad additional test level. Controllers are kept thin. The business logic is tested in domain and use case tests, persistence and projections are tested in infrastructure tests, and the public HTTP contract is tested through `WebApplicationFactory` and `HttpClient`.
 
 In Part 3, the application has been extended from one functional module to two functional modules. The application now contains the Readers module and the Catalog module. The existing Readers behavior remains stable, while the new Catalog behavior is added and verified by tests.
 
@@ -52,21 +54,28 @@ Domain tests
 Application use case tests with mocks
 Application integration tests with SQLite and UnitOfWork
 Infrastructure tests for repositories and read models
-Controller/API tests with WebApplicationFactory and HttpClient
+Controller/API end-to-end tests with WebApplicationFactory and HttpClient
 Manual HTTP files for didactic API testing
 ```
 
-At the current project state, all automated tests pass:
+Controller mock tests are intentionally not listed as a separate test level.
 
-```text
-Test summary: total: 155, failed: 0, succeeded: 155, skipped: 0
-```
+The reason is that the controllers should contain no business logic. They receive HTTP input, call use cases or read models, and translate results into HTTP responses. This behavior is more useful to test through real HTTP requests than through isolated controller mocks.
 
 Run all automated tests with:
 
 ```bash
 dotnet test
 ```
+
+At the end of Part 3, the final `dotnet test` result should be copied into the README and project documentation. The important final condition is:
+
+```text
+0 failed
+0 skipped
+```
+
+If additional controller/API end-to-end tests for Authors and Books are added, the total test count will be higher than the earlier Part 3 count of 155.
 
 ## Test Levels
 
@@ -233,6 +242,37 @@ no unnecessary repository call is made after an early failure
 
 The purpose is not to test EF Core. The purpose is to test the application workflow.
 
+## Why Controller Mock Tests Are Not a Separate Test Level
+
+Controller mock tests are deliberately not used as a broad additional test level in Part 3.
+
+The reason is the intended controller design:
+
+```text
+Controllers receive HTTP input.
+Controllers call read models or use cases.
+Controllers translate Result<T> into HTTP responses.
+Controllers should not contain business logic.
+```
+
+If controllers are thin, isolated controller mock tests usually repeat behavior that is already covered elsewhere.
+
+The application workflow is tested by use case tests with mocks.
+
+The query behavior is tested by read model tests.
+
+The HTTP contract is tested by controller/API end-to-end tests with `WebApplicationFactory` and `HttpClient`.
+
+Controller mock tests would only be useful if the controller itself contained relevant branching logic, special status-code decisions, custom header logic, complex authorization behavior, or manual response mapping that is not covered by a shared helper.
+
+For Part 3, the didactic decision is therefore:
+
+```text
+No broad controller mock test layer.
+UseCase tests use mocks.
+Controller/API tests use real HTTP through HttpClient.
+```
+
 ## 3. Application Integration Tests
 
 Application integration tests use real infrastructure parts where useful.
@@ -392,7 +432,7 @@ Typical Catalog read model tests verify:
 ```text
 select all active authors
 find active author by id
-search active authors
+search active authors by lastname
 
 select all active books
 find active book by id
@@ -417,9 +457,17 @@ Repositories may still load inactive aggregates because use cases may need them.
 
 ## Catalog Search Tests
 
-Part 3 includes catalog search tests for Books.
+Part 3 includes catalog search tests for Authors and Books.
 
-The supported Book search fields are:
+Author search uses the Author lastname:
+
+```text
+GET /camplib/v1/authors/search?searchText=Martin
+```
+
+This should find `Robert C. Martin`, but not `Martin Fowler`, because `Martin` is only the firstname of `Martin Fowler`.
+
+Book search supports the following search fields:
 
 ```text
 Title
@@ -506,9 +554,9 @@ Repositories load aggregates for changes.
 ReadModels decide what is visible in queries.
 ```
 
-## 5. Controller / API Tests
+## 5. Controller / API End-to-End Tests
 
-Controller and API tests use:
+Controller/API end-to-end tests use:
 
 ```text
 WebApplicationFactory<Program>
@@ -546,7 +594,7 @@ PUT    /camplib/v1/readers/{id}
 DELETE /camplib/v1/readers/{id}
 ```
 
-The Author controller/API tests cover:
+The Author controller/API end-to-end tests should cover the public HTTP behavior of the `AuthorsController`, for example:
 
 ```text
 GET   /camplib/v1/authors
@@ -556,7 +604,7 @@ POST  /camplib/v1/authors
 PATCH /camplib/v1/authors/{id}/deactivate
 ```
 
-The Book controller/API tests cover:
+The Book controller/API end-to-end tests should cover the public HTTP behavior of the `BooksController`, for example:
 
 ```text
 GET   /camplib/v1/books
@@ -573,7 +621,7 @@ PATCH /camplib/v1/books/{bookId}/deactivate
 
 These tests are closest to real API usage.
 
-In Part 3, controller/API tests also verify that the two modules are wired correctly by the executable API project.
+In Part 3, controller/API end-to-end tests also verify that the two modules are wired correctly by the executable API project.
 
 They therefore check not only controller behavior, but also the composition of:
 
@@ -849,7 +897,7 @@ inactive Books are not returned in normal Book queries
 inactive Authors are not returned in normal Author queries
 ```
 
-Controller/API tests verify:
+Controller/API end-to-end tests verify:
 
 ```text
 PATCH /books/{bookId}/deactivate returns 200 OK
@@ -876,8 +924,8 @@ Does the use case work with real persistence?
 Infrastructure test:
 Does EF Core store, load and project the data correctly?
 
-Controller/API test:
-Does the API behave correctly from the outside?
+Controller/API end-to-end test:
+Does the public HTTP API behave correctly from the outside?
 
 Manual HTTP file:
 Can students reproduce and inspect the API behavior manually after a database reset?
@@ -907,14 +955,6 @@ Catalog works
 module boundaries still hold
 Infrastructure correctly implements ports from multiple modules
 the API project wires all modules together correctly
-```
-
-The current result is:
-
-```text
-155 tests
-0 failed
-0 skipped
 ```
 
 ## Recommended Workflow
@@ -986,7 +1026,7 @@ separation of test levels
 domain testing without infrastructure
 mock-based use case testing
 integration testing with SQLite
-controller testing through HTTP
+controller/API testing through HTTP
 test data reuse through seed objects
 why fake clocks are useful
 how partial updates should be tested
@@ -997,6 +1037,7 @@ how relationships can be tested across domain and infrastructure
 how read models differ from repositories
 how deactivation differs from deletion
 how catalog search by author lastname avoids accidental matches
+why controller mock tests are not needed when controllers are thin
 how manual HTTP files can reproduce API behavior after a database reset
 ```
 
@@ -1010,7 +1051,7 @@ Each test level has its own purpose:
 Domain tests protect business rules.
 Use case tests protect application workflows.
 Infrastructure tests protect persistence behavior.
-Controller/API tests protect the HTTP API.
+Controller/API end-to-end tests protect the public HTTP API.
 HttpClient tests protect the public HTTP contract.
 Manual HTTP files make API behavior visible and reproducible for students.
 End-to-end tests protect the full composition.
@@ -1041,8 +1082,16 @@ ReadModels hide inactive data from normal queries.
 For catalog search, the most important rule is:
 
 ```text
-AuthorLastName searches by author lastname.
+Author search and Book search use author lastname.
 Firstname is not searched, because it would create accidental matches.
+```
+
+For controller tests, the most important rule is:
+
+```text
+UseCase tests use mocks.
+Controller/API tests use HttpClient.
+Thin controllers do not need a broad controller mock test layer.
 ```
 
 For manual API tests, the most important rule is:

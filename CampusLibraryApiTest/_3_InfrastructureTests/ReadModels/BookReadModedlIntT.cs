@@ -365,7 +365,7 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
    }
 
    [Fact]
-   public async Task SearchAsync_by_author_name_ok() {
+   public async Task SearchAsync_by_author_lastname_ok() {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
@@ -376,33 +376,17 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
 
       // Arrange
       var authors = seed.Authors;
-
-      var books = seed.BooksWithAuthors(
-         authors: authors
-      );
-
+      var books = seed.BooksWithAuthors(authors);
       var searchText = authors[0].Lastname;
 
-      authorRepository.AddRange(
-         authors: authors
-      );
-
-      bookRepository.AddRange(
-         books: books
-      );
-
-      await unitOfWork.SaveAllChangesAsync(
-         "Books with authors inserted",
-         ct
-      );
-
+      authorRepository.AddRange(authors: authors);
+      bookRepository.AddRange(books: books);
+      await unitOfWork.SaveAllChangesAsync("Books with authors inserted", ct);
       unitOfWork.ClearChangeTracker();
 
       var expBookIds = books
          .Where(b => b.Authors.Any(a =>
-            a.Firstname.Contains(searchText) ||
-            a.Lastname.Contains(searchText) ||
-            a.DisplayName.Contains(searchText)))
+            a.Lastname.Contains(searchText)))
          .Select(b => b.Id)
          .OrderBy(id => id)
          .ToList();
@@ -413,10 +397,7 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       );
 
       // Act
-      var result = await readModel.SearchAsync(
-         search: search,
-         ct: ct
-      );
+      var result = await readModel.SearchAsync(search, ct);
 
       // Assert
       result.IsSuccess.Should().BeTrue();

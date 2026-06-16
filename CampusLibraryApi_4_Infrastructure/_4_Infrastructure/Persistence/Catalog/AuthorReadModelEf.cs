@@ -57,9 +57,7 @@ internal sealed class AuthorReadModelEf(
          .AsNoTracking()
          .Where(a => a.IsActive)
          .Where(a =>
-            EF.Functions.Like(a.Firstname, pattern) ||
-            EF.Functions.Like(a.Lastname, pattern) ||
-            EF.Functions.Like(a.Firstname + " " + a.Lastname, pattern))
+            EF.Functions.Like(a.Lastname, pattern))
          .OrderBy(a => a.Lastname)
          .ThenBy(a => a.Firstname)
          .ToListAsync(ct);
