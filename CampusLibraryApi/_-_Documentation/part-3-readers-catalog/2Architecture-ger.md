@@ -1,12 +1,12 @@
-# Architektur: CampusLibrary Teil 3 — Readers + Catalog Modular Monolith
+# Architektur: CampusLibrary Teil 3 — Readers + Catalog Modularer Monolith
 
-Dieses Dokument beschreibt die Architektur von Teil 3 der CampusLibraryApi.
+Dieses Dokument beschreibt die Architektur von Teil 3 der `CampusLibraryApi`.
 
-Teil 3 erweitert den projektbasierten modularen Monolithen aus Teil 2 um ein zweites fachliches Modul: Catalog.
+Teil 3 erweitert den projektbasierten modularen Monolithen aus Teil 2 um ein zweites fachliches Modul: `Catalog`.
 
-Teil 2 hatte die technische Modularisierung eingeführt. Die Anwendung bestand weiterhin nur aus dem Readers-Modul, war aber bereits in getrennte Projekte für Web/API, BuildingBlocks, Core, Infrastructure und Tests aufgeteilt.
+Teil 2 hatte die Architekturgrenzen gestärkt, indem der strukturierte Readers-Monolith in getrennte Projekte für Web/API, BuildingBlocks, Core, Infrastructure und Tests aufgeteilt wurde.
 
-Teil 3 behält diese modulare Struktur bei und ergänzt ein fachlich reichhaltigeres Domain Model mit Books, Authors, BookItems, einem ISBN Value Object, einer 1:n-Beziehung und einer m:n-Beziehung.
+Teil 3 behält diese modulare Struktur bei und ergänzt ein reichhaltigeres Domain Model mit Books, Authors, physischen BookItems, einem ISBN Value Object, einer 1:n-Beziehung und einer m:n-Beziehung.
 
 Das bedeutet:
 
@@ -14,45 +14,49 @@ Das bedeutet:
 * mehrere Projekte
 * eine Datenbank
 * zwei fachliche Module: Readers und Catalog
-* stärkere Modulgrenzen durch Projektstruktur
-* ein fachlich reichhaltigeres Domain Model im Catalog-Modul
-* unverändertes Verhalten des Readers-Moduls
-* bestehende und neue Tests bleiben grün
+* stärkere Modulgrenzen durch Projektgrenzen
+* ein reichhaltigeres Domain Model im Catalog-Modul
+* unverändertes Readers-Verhalten
+* bestehende und neue Tests bleiben nach dem finalen Testlauf grün
 
-Der aktuelle Teststand lautet:
+Die finale Testanzahl für Teil 3 sollte nach dem letzten Testlauf aktualisiert werden:
 
-```text
-155 Tests
-0 failed
-0 skipped
+```bash
+dotnet test
 ```
 
-## Architektonisches Ziel
+Dieser Platzhalter wird danach durch das finale Ergebnis ersetzt:
 
-Die Architektur von Teil 3 soll für die Lehre folgende Konzepte sichtbar machen:
+```text
+<finale Testanzahl> Tests
+0 fehlgeschlagen
+0 übersprungen
+```
+
+## Architekturziel
+
+Die Architektur von Teil 3 soll folgende Konzepte für die Lehre sichtbar machen:
 
 * wie ein zweites fachliches Modul zu einem modularen Monolithen hinzugefügt wird
-* wie bestehendes Verhalten stabil bleibt, während die Anwendung erweitert wird
+* wie bestehendes Modulverhalten stabil bleibt, während das System erweitert wird
 * wie ein reichhaltigeres Domain Model mit Aggregates, Entities und Value Objects modelliert wird
 * wie eine 1:n-Beziehung innerhalb eines Aggregates modelliert wird
 * wie eine m:n-Beziehung modelliert wird, ohne die Join-Tabelle zur Domain Entity zu machen
-* wie fachliche Beziehungen von technischen Persistenzdetails getrennt werden
+* wie Domain-Beziehungen von Persistenzdetails getrennt werden
 * wie Core-Module unabhängig von EF Core und Datenbankkonfiguration bleiben
 * wie schreibende UseCases von lesenden ReadModels getrennt werden
-* wie Domain, Application, Infrastructure und API getestet werden
-* wie die HTTP API mit Swagger/OpenAPI dokumentiert wird
+* wie Domain, Application, Infrastructure und API über Modulgrenzen hinweg getestet werden
+* wie die HTTP-API mit Swagger/OpenAPI dokumentiert wird
 
 Teil 3 beantwortet damit diese Frage:
 
 ```text
-Wie kann ein zweites fachliches Modul mit reichhaltigeren Beziehungen
-zu einem projektbasierten modularen Monolithen hinzugefügt werden,
-ohne die bestehenden Architekturgrenzen aufzuweichen?
+Wie kann ein zweites fachliches Modul mit reichhaltigeren Domain-Beziehungen zu einem projektbasierten modularen Monolithen hinzugefügt werden, ohne die bestehende Architektur zu schwächen?
 ```
 
 ## Aktuelle Projektstruktur
 
-Aktueller Stand mit den Modulen Readers und Catalog:
+Aktueller Zustand mit den Modulen Readers und Catalog:
 
 ```text
 CampusLibraryApi
@@ -96,26 +100,8 @@ CampusLibraryApi_3_Core_Catalog
 │
 ├─ _2_Application
 │  ├─ Dtos
-│  │  ├─ AuthorCreateDto.cs
-│  │  ├─ AuthorDto.cs
-│  │  ├─ BookAssignAuthorDto.cs
-│  │  ├─ BookCreateDto.cs
-│  │  ├─ BookDetailDto.cs
-│  │  ├─ BookDto.cs
-│  │  ├─ BookItemAddDto.cs
-│  │  ├─ BookItemDto.cs
-│  │  ├─ BookListItemDto.cs
-│  │  └─ BookSearchDto.cs
 │  ├─ Mappings
 │  └─ UseCases
-│     ├─ AuthorUcCreate.cs
-│     ├─ AuthorUcDeactivate.cs
-│     ├─ AuthorUseCases.cs
-│     ├─ BookUcCreate.cs
-│     ├─ BookUcAddBookItem.cs
-│     ├─ BookUcAssignAuthor.cs
-│     ├─ BookUcDeactivate.cs
-│     └─ BookUseCases.cs
 │
 └─ _3_Domain
    ├─ Entities
@@ -134,28 +120,16 @@ CampusLibraryApi_4_Infrastructure
    ├─ Catalog
    │  └─ BookAuthorJoin.cs
    ├─ Configurations
-   │  ├─ ConfigAuthor.cs
-   │  ├─ ConfigBook.cs
-   │  ├─ ConfigBookItem.cs
-   │  └─ ConfigReader.cs
    ├─ Database
-   │  ├─ AppDbContext.cs
-   │  └─ UnitOfWorkEf.cs
    ├─ ReadModels
-   │  ├─ ReaderReadModelEf.cs
-   │  ├─ AuthorReadModelEf.cs
-   │  └─ BookReadModelEf.cs
    ├─ Repositories
-   │  ├─ ReaderRepositoryEf.cs
-   │  ├─ AuthorRepositoryEf.cs
-   │  └─ BookRepositoryEf.cs
    └─ Seed.cs
 
 CampusLibraryApiTest
-└─ Tests für Domain, Value Objects, UseCases, Repositories, ReadModels und Controller/API
+└─ Tests für Domain, Value Objects, UseCases, Repositories, ReadModels und Controller/API-Szenarien
 ```
 
-## Warum dies weiterhin ein modularer Monolith ist
+## Warum das weiterhin ein modularer Monolith ist
 
 Teil 3 ist weiterhin ein Monolith, weil die Anwendung als eine Anwendung deployt wird.
 
@@ -167,7 +141,7 @@ eine Datenbank
 einen Runtime-Prozess
 ```
 
-Die Anwendung ist aber modular, weil die Lösung in getrennte Projekte und fachliche Module aufgeteilt ist.
+Gleichzeitig ist die Anwendung modular, weil die Solution in getrennte Projekte und fachliche Module mit expliziten Dependency-Regeln aufgeteilt ist.
 
 Der wichtige Unterschied zu Teil 2 lautet:
 
@@ -176,11 +150,11 @@ Teil 2: ein fachliches Modul, Readers.
 Teil 3: zwei fachliche Module, Readers und Catalog.
 ```
 
-Mit zwei Modulen wird die modulare Struktur fachlich relevanter. Die Architektur ist nicht mehr nur Vorbereitung auf spätere Module, sondern muss nun echte Modultrennung unterstützen.
+Mit zwei Modulen wird die modulare Struktur fachlich bedeutsamer. Die Architektur ist nicht mehr nur Vorbereitung auf spätere Module, sondern muss echte Modultrennung tragen.
 
-## Verantwortlichkeiten der Projekte
+## Projektverantwortlichkeiten
 
-Teil 3 verwendet folgende Hauptprojekte:
+Teil 3 verwendet diese Hauptprojekte:
 
 ```text
 CampusLibraryApi
@@ -198,9 +172,9 @@ Jedes Projekt hat eine klare Verantwortung.
 
 `CampusLibraryApi` ist das ausführbare Anwendungsprojekt.
 
-Es enthält den Composition Root der Anwendung.
+Es enthält die Composition Root der Anwendung.
 
-Typische Aufgaben sind:
+Typische Verantwortlichkeiten sind:
 
 * Anwendungshost konfigurieren
 * Konfiguration laden
@@ -213,13 +187,13 @@ Typische Aufgaben sind:
 
 `CampusLibraryApi` verdrahtet die Anwendung.
 
-Dieses Projekt darf alle anderen Produktionsprojekte referenzieren, weil es die laufende Anwendung zusammensetzt.
+Es darf alle anderen Produktionsprojekte referenzieren, weil es die laufende Anwendung zusammensetzt.
 
-Es darf keine Domainlogik enthalten.
+Es enthält keine Domain-Logik.
 
 ## CampusLibraryApi_1_Web
 
-`CampusLibraryApi_1_Web` enthält die HTTP API.
+`CampusLibraryApi_1_Web` enthält die HTTP-API-Oberfläche.
 
 In Teil 3 sind das:
 
@@ -231,19 +205,19 @@ BooksController
 
 Das Web-Projekt übersetzt HTTP Requests in Application-Aufrufe.
 
-Typische Aufgaben sind:
+Typische Verantwortlichkeiten sind:
 
 * Routen definieren
-* DTOs entgegennehmen
-* ReadModels für GET Requests aufrufen
+* DTOs, Route-Parameter und Query-Parameter entgegennehmen
+* ReadModels für GET-Requests aufrufen
 * UseCases für schreibende Requests aufrufen
-* Result-Fehler in HTTP-Antworten übersetzen
+* Result-Fehler in HTTP Responses übersetzen
 * DTOs oder ProblemDetails zurückgeben
-* Swagger/OpenAPI-Metadaten bereitstellen
+* Erfolgs- und Fehlerantworten für Swagger/OpenAPI dokumentieren
 
-Das Web-Projekt enthält keine Fachlogik.
+Das Web-Projekt enthält keine fachlichen Regeln.
 
-Der Controller entscheidet zum Beispiel nicht, ob eine ISBN gültig ist. Das ist Aufgabe des Catalog Domain Models.
+Ein Controller entscheidet zum Beispiel nicht, ob eine ISBN gültig ist. Diese Regel gehört in das Catalog Domain Model.
 
 ## CampusLibraryApi_2_BuildingBlocks
 
@@ -261,33 +235,33 @@ Typische Inhalte sind:
 
 Diese Typen sind nicht spezifisch für Readers oder Catalog.
 
-Sie sind gemeinsame Konzepte für aktuelle und zukünftige Module.
+Sie sind allgemeine Konzepte für aktuelle und zukünftige Module.
 
 Die wichtige Regel lautet:
 
 ```text
-BuildingBlocks dürfen nicht von einem konkreten Fachmodul abhängen.
+BuildingBlocks hängt nicht von einem konkreten fachlichen Modul ab.
 ```
 
-BuildingBlocks sind allgemeine Architekturbausteine. Sie sind nicht der Ort für reader-spezifische, catalog-spezifische oder loan-spezifische Fachlogik.
+BuildingBlocks sind allgemeine architektonische Elemente. Sie sind nicht der Ort für reader-spezifische, catalog-spezifische oder loan-spezifische Fachlogik.
 
 ## CampusLibraryApi_3_Core_Readers
 
 `CampusLibraryApi_3_Core_Readers` ist das erste fachliche Modul.
 
-Es enthält das readerspezifische Domain Model, Application UseCases, DTOs, Mappings und Ports.
+Es enthält das reader-spezifische Domain Model, Application UseCases, DTOs, Mappings und Ports.
 
 Das Readers-Modul bleibt in Teil 3 stabil.
 
 Die wichtige Regel lautet:
 
 ```text
-Das Hinzufügen von Catalog darf keine Änderung am Readers Domain Model erzwingen.
+Das Ergänzen von Catalog darf keine Änderung am Readers Domain Model erzwingen.
 ```
 
 Readers ist weiterhin nur für Readers verantwortlich.
 
-Das Modul kennt keine Books, Authors, BookItems oder Catalog-Persistenzdetails.
+Es kennt keine Books, Authors, BookItems oder Catalog-Persistenzdetails.
 
 ## CampusLibraryApi_3_Core_Catalog
 
@@ -309,11 +283,11 @@ Die wichtige Regel lautet:
 Das Catalog Core Modul hängt nicht von Web oder Infrastructure ab.
 ```
 
-Damit bleibt das Catalog-Modul unabhängig von HTTP, EF Core, SQLite und Swagger.
+Dadurch bleibt das Catalog-Modul unabhängig von HTTP, EF Core, SQLite und Swagger.
 
 ## Catalog Domain
 
-Der Domain-Bereich des Catalog-Moduls enthält:
+Der Domain-Teil des Catalog-Moduls enthält:
 
 * Book
 * Author
@@ -322,7 +296,7 @@ Der Domain-Bereich des Catalog-Moduls enthält:
 * BookItemStatus
 * CatalogErrors
 
-Die Catalog Domain enthält fachliche Regeln und fachliche Validierung.
+Die Catalog Domain enthält fachliche Regeln und Domain-Validierung.
 
 Sie kennt nicht:
 
@@ -333,22 +307,22 @@ Sie kennt nicht:
 * Datenbankdetails
 * Dependency Injection
 
-Das Domain Model soll verständlich sein, ohne wissen zu müssen, wie Daten gespeichert oder HTTP Requests empfangen werden.
+Das Domain Model soll verständlich sein, ohne zu wissen, wie Daten gespeichert werden oder wie HTTP Requests empfangen werden.
 
 ## Book als Aggregate Root
 
 `Book` ist ein Aggregate Root.
 
-Es beschreibt das bibliografische Werk.
+Es repräsentiert das bibliografische Werk.
 
-Ein Book besitzt:
+Ein Book hat:
 
-* Title
-* optionalen Subtitle
+* Titel
+* optionalen Untertitel
 * ISBN
 * Authors
 * BookItems
-* aktiven Zustand
+* Aktivstatus
 
 Das Aggregate wird über eine Factory-Methode erzeugt:
 
@@ -356,7 +330,7 @@ Das Aggregate wird über eine Factory-Methode erzeugt:
 Book.Create(...)
 ```
 
-Es wird über explizite Domain-Methoden geändert, zum Beispiel:
+Es wird über explizite Domain-Methoden verändert, zum Beispiel:
 
 ```csharp
 Book.AddBookItem(...)
@@ -369,22 +343,21 @@ Dadurch werden unkontrollierte Änderungen über öffentliche Setter vermieden.
 Die didaktische Regel lautet:
 
 ```text
-Domain-Zustand sollte über explizite Domain-Methoden verändert werden,
-nicht durch Setzen von Properties von außen.
+Domain-Zustand sollte über explizite Domain-Methoden geändert werden, nicht durch Setzen von Properties von außen.
 ```
 
 ## Author als Aggregate Root
 
 `Author` ist ein Aggregate Root.
 
-Ein Author beschreibt eine Person, die Books zugeordnet werden kann.
+Es repräsentiert eine Person, die Books zugeordnet werden kann.
 
-Ein Author besitzt:
+Ein Author hat:
 
 * Firstname
 * Lastname
 * DisplayName
-* aktiven Zustand
+* Aktivstatus
 
 Authors werden im Catalog-Modul nicht physisch gelöscht.
 
@@ -394,20 +367,20 @@ Sie werden über eine Domain-Methode deaktiviert:
 Author.Deactivate(...)
 ```
 
-Damit wird der fachliche Zustand geändert, statt die Datenbankzeile zu löschen.
+Dadurch wird der fachliche Zustand geändert, statt die Datenbankzeile zu löschen.
 
 ## BookItem als Entity
 
 `BookItem` ist eine Entity innerhalb des Book-Aggregates.
 
-Es beschreibt ein physisches Exemplar eines Buches.
+Es repräsentiert ein physisches Exemplar eines Books.
 
-Ein BookItem besitzt:
+Ein BookItem hat:
 
 * InventoryNumber
 * Status
 
-Der Status wird durch ein Enum modelliert:
+Der aktuelle Status wird durch ein Enum dargestellt:
 
 ```csharp
 public enum BookItemStatus {
@@ -418,9 +391,19 @@ public enum BookItemStatus {
 }
 ```
 
-Der Enum wird in der Datenbank als Zahl gespeichert.
+Das Enum kann in der Datenbank als Integer gespeichert werden.
 
-Das hält die Datenbank kompakt und stabil, während der Code die fachliche Bedeutung durch die Enum-Namen ausdrückt.
+Dadurch bleibt die Datenbank kompakt und stabil, während der Code die Bedeutung über die Enum-Namen ausdrückt.
+
+In der JSON-API können Enum-Werte als Strings serialisiert werden, wenn Enum-String-Serialisierung aktiviert ist.
+
+Beispiel:
+
+```json
+{
+  "status": "Available"
+}
+```
 
 ## ISBN als Value Object
 
@@ -433,11 +416,10 @@ Ziel ist, ISBN-Validierung nicht über Controller, UseCases und Repositories zu 
 Die didaktische Regel lautet:
 
 ```text
-Wenn ein Wert fachliche Bedeutung und Regeln besitzt,
-sollte er als Value Object modelliert werden.
+Wenn ein Wert fachliche Bedeutung und Regeln besitzt, modelliere ihn als Value Object.
 ```
 
-## Beziehungen im Catalog
+## Catalog-Beziehungen
 
 Teil 3 führt zwei wichtige Beziehungstypen ein.
 
@@ -449,7 +431,7 @@ Die Beziehung zwischen `Book` und `BookItem` ist eine 1:n-Beziehung.
 Book 1 --- n BookItem
 ```
 
-Diese Beziehung gehört in das Book-Aggregate.
+Diese Beziehung gehört innerhalb des Book-Aggregates.
 
 Ein BookItem wird über das Book-Aggregate hinzugefügt:
 
@@ -460,7 +442,7 @@ Book.AddBookItem(...)
 Die didaktische Bedeutung lautet:
 
 ```text
-Book ist für die Konsistenz innerhalb seiner Aggregate-Grenze verantwortlich.
+Book ist für Konsistenz innerhalb seiner Aggregate-Grenze verantwortlich.
 BookItem gehört zu Book.
 BookItem wird nicht unabhängig über eine eigene UseCase-Fassade verwaltet.
 ```
@@ -487,16 +469,16 @@ Book.AssignAuthor(...)
 
 Die Datenbank speichert die Beziehung über eine Join-Tabelle.
 
-Der Join-Typ wird in der Infrastructure implementiert:
+Der Join-Typ ist in Infrastructure implementiert:
 
 ```text
 BookAuthorJoin
 ```
 
-Die wichtige Architekturentscheidung lautet:
+Die wichtige Designentscheidung lautet:
 
 ```text
-BookAuthorJoin ist ein Infrastrukturdetail.
+BookAuthorJoin ist ein Infrastructure-Detail.
 BookAuthorJoin ist keine Domain Entity.
 BookAuthorJoin besitzt keine eigene fachliche Identität.
 ```
@@ -507,41 +489,41 @@ Die Datenbankbeziehung verwendet den zusammengesetzten Schlüssel:
 BookId + AuthorId
 ```
 
-Damit wird das Persistenzmodell sichtbar, ohne das Domain Model mit einer technischen Join-Entity zu belasten.
+So bleibt das Persistenzmodell explizit, ohne das Domain Model mit einer technischen Join Entity zu verunreinigen.
 
 ## Warum BookAuthorJoin keine Domain Entity ist
 
 Eine Domain Entity sollte eine eigene fachliche Identität und fachliche Bedeutung besitzen.
 
-In diesem Projekt ist die Beziehung zwischen Book und Author wichtig. Die Join-Zeile selbst besitzt aber keinen eigenen fachlichen Lebenszyklus.
+In diesem Projekt ist die Beziehung zwischen Book und Author wichtig, aber die Join-Zeile selbst hat keinen eigenen fachlichen Lebenszyklus.
 
-Es gibt kein eigenes Fachkonzept wie `AuthorshipAssignment` mit eigenen Attributen und Regeln.
+Es gibt kein separates Fachkonzept wie `AuthorshipAssignment` mit eigenen Attributen und Regeln.
 
 Daher gilt:
 
 ```text
 Book und Author sind Domain-Konzepte.
-Die Book-Author-Beziehung ist eine fachliche Beziehung.
+Die Book-Author-Beziehung ist eine Domain-Beziehung.
 Die Join-Tabelle ist ein Persistenzmechanismus.
 ```
 
-Die Infrastrukturklasse existiert, weil EF Core die m:n-Tabelle explizit abbilden soll.
+Die Infrastructure-Join-Klasse existiert nur, weil EF Core die m:n-Tabelle explizit abbilden muss.
 
 ## Deactivate statt Delete
 
 Im Catalog-Modul werden Books und Authors nicht physisch gelöscht.
 
-Stattdessen werden sie deaktiviert:
+Sie werden deaktiviert:
 
 ```text
 IsActive = false
 ```
 
-Das hat zwei Konsequenzen:
+Das hat zwei Folgen:
 
 ```text
 Repositories können das Aggregate weiterhin laden.
-ReadModels entscheiden, was in normalen Abfragen sichtbar ist.
+ReadModels entscheiden, was in normalen Queries sichtbar ist.
 ```
 
 Normale Listen und Suchen liefern nur aktive Books und Authors.
@@ -557,7 +539,7 @@ Das Catalog-Modul verwendet Deactivate, um historische und referenzielle Informa
 
 ## Repositories und ReadModels
 
-Teil 3 hält die Trennung zwischen Repositories und ReadModels klar ein.
+Teil 3 behält die klare Trennung zwischen Repositories und ReadModels bei.
 
 ## Repositories
 
@@ -572,17 +554,17 @@ IBookRepository
 IAuthorRepository
 ```
 
-Typische Repository-Aufgaben sind:
+Typische Repository-Verantwortlichkeiten sind:
 
 * Aggregate hinzufügen
-* mehrere Aggregate für Seed oder Tests hinzufügen
-* Aggregate anhand der Id laden
+* mehrere Aggregates für Seed oder Tests hinzufügen
+* Aggregate anhand der ID finden
 * Eindeutigkeitsregeln prüfen
-* EF-Core-Tracking für Schreibworkflows ermöglichen
+* EF-Core-Tracking für Schreib-Workflows erhalten
 
-Repositories geben Domain-Objekte zurück.
+Repositories liefern Domain-Objekte zurück.
 
-Sie sind nicht für Anzeigeoptimierung zuständig.
+Sie sind nicht für optimierte Anzeige-Projektionen verantwortlich.
 
 ## ReadModels
 
@@ -597,23 +579,50 @@ IBookReadModel
 IAuthorReadModel
 ```
 
-Typische ReadModel-Aufgaben sind:
+Typische ReadModel-Verantwortlichkeiten sind:
 
 * aktive Books abfragen
 * aktive Authors abfragen
 * Books suchen
 * Authors suchen
 * Datenbankdaten in DTOs projizieren
-* AsNoTracking für Nur-Lese-Abfragen verwenden
+* `AsNoTracking` für reine Leseabfragen verwenden
 
-ReadModels geben DTOs zurück, keine Domain-Objekte.
+ReadModels liefern DTOs, keine Domain-Objekte.
 
 Die didaktische Regel lautet:
 
 ```text
 Repositories laden Aggregates für Änderungen.
-ReadModels liefern DTOs für Abfragen.
+ReadModels liefern DTOs für Queries.
 ```
+
+## Catalog-Suche
+
+Das Catalog-Modul verwendet explizite Suchkriterien für Books.
+
+Die unterstützten Book-Suchfelder sind:
+
+```text
+Title
+AuthorLastName
+Isbn
+```
+
+`AuthorLastName` sucht ausschließlich im Nachnamen der zugeordneten Authors.
+
+Der Vorname wird nicht durchsucht. Dadurch werden zufällige Treffer vermieden.
+
+Beispiel:
+
+```text
+AuthorLastName = Martin -> Clean Code
+AuthorLastName = Fowler -> Refactoring und Design Patterns
+```
+
+Auch die Author-Suche verwendet den Nachnamen des Authors als fachlich relevantes Suchkriterium.
+
+Dadurch ist das Suchverhalten explizit und ein allgemeiner Begriff wie "AuthorName" wird nicht irrtümlich als Firstname plus Lastname interpretiert.
 
 ## UseCases und ReadModels
 
@@ -627,11 +636,11 @@ ReadModel = lesende DB-zu-DTO-Projektion
 Daher gilt:
 
 ```text
-GET Requests                → ReadModel
-POST / PUT / PATCH / DELETE → UseCase
+GET Requests                 → ReadModel
+POST / PUT / PATCH / DELETE  → UseCase
 ```
 
-Für Catalog bedeutet das zum Beispiel:
+Für Catalog:
 
 ```text
 GET /camplib/v1/books
@@ -659,11 +668,11 @@ Diese Unterscheidung ist für die Lehre wichtig.
 
 GET Requests sollen nicht versehentlich zu Domain Workflows werden. Sie fragen Daten ab und liefern DTOs.
 
-Schreibende Requests schützen fachliche Konsistenz.
+Schreibende Requests schützen die Domain-Konsistenz.
 
 ## Application Layer im Catalog
 
-Der Application-Bereich des Catalog-Moduls koordiniert UseCases.
+Der Application-Teil des Catalog-Moduls koordiniert UseCases.
 
 Er enthält:
 
@@ -685,10 +694,10 @@ Beispiele:
 
 UseCases sind für Workflows verantwortlich.
 
-Typische Aufgaben eines UseCases sind:
+Typische Verantwortlichkeiten eines UseCases sind:
 
-* grundlegende Eingaben prüfen
-* optionale Ids auflösen
+* grundlegende Eingaben validieren
+* optionale IDs auflösen
 * Aggregates laden
 * Value Objects erzeugen
 * Eindeutigkeitsregeln über Repositories prüfen
@@ -696,11 +705,11 @@ Typische Aufgaben eines UseCases sind:
 * Änderungen über IUnitOfWork speichern
 * DTOs zurückgeben
 
-UseCases sollten keine detaillierten Domain-Regeln enthalten, wenn diese Regeln in das Domain Model gehören.
+UseCases sollten keine detaillierten Domain-Regeln enthalten, wenn diese Regeln ins Domain Model gehören.
 
 ## UseCase-Fassaden
 
-Das Modul stellt Fassadeninterfaces für schreibende UseCases bereit:
+Das Modul veröffentlicht Fassadeninterfaces für Command UseCases:
 
 ```text
 IBookUseCases
@@ -718,46 +727,46 @@ Commands gehören in UseCases.
 Queries gehören in ReadModels.
 ```
 
-Dadurch wird verhindert, dass die UseCase-Fassade zu einem allgemeinen Service-Interface für alles wird, was der Controller braucht.
+Dadurch wird vermieden, dass die UseCase-Fassade zu einem allgemeinen Service-Interface für alles wird, was ein Controller benötigt.
 
-Ein Controller darf daher von beidem abhängen:
+Der Controller darf von beiden abhängig sein:
 
 ```text
 IBookUseCases für Commands.
 IBookReadModel für Queries.
 ```
 
-Das ist Absicht.
+Das ist bewusst so gewählt.
 
 Die didaktische Regel lautet:
 
 ```text
-Nicht alles, was der Controller braucht, ist ein UseCase.
+Nicht alles, was ein Controller braucht, ist ein UseCase.
 ```
 
 ## DTOs im Catalog
 
-Das Catalog-Modul verwendet unterschiedliche DTOs für unterschiedliche Zwecke.
+Das Catalog-Modul verwendet verschiedene DTOs für unterschiedliche Anwendungsfälle.
 
 Beispiele:
 
 ```text
 BookCreateDto       → Eingabe zum Erzeugen eines Books
 BookDto             → Ergebnis schreibender Operationen
-BookDetailDto       → ausführliches Ergebnis der Detailanzeige
-BookListItemDto     → Ergebnis für Listen und Suchtreffer
-BookItemAddDto      → Eingabe zum Hinzufügen eines physischen Exemplars
-BookItemDto         → Darstellung eines physischen Exemplars
+BookDetailDto       → detailliertes ReadModel-Ergebnis
+BookListItemDto     → Listen- und Suchergebnis
+BookItemAddDto      → Eingabe zum Hinzufügen eines physischen BookItems
+BookItemDto         → Darstellung eines physischen BookItems
 BookAssignAuthorDto → Eingabe zum Zuordnen eines Authors zu einem Book
 AuthorCreateDto     → Eingabe zum Erzeugen eines Authors
-AuthorDto           → Darstellung eines Authors
+AuthorDto           → Author-Darstellung
 ```
 
-Der wichtige Punkt ist:
+Wichtig ist:
 
 ```text
-DTOs werden für UseCases und Queries zugeschnitten.
-Sie müssen das Domain Model nicht exakt spiegeln.
+DTOs werden nach UseCases und Queries geformt.
+Sie müssen nicht exakt das Domain Model spiegeln.
 ```
 
 `BookDetailDto` enthält zum Beispiel Authors, BookItems und berechnete Zähler.
@@ -766,15 +775,15 @@ Sie müssen das Domain Model nicht exakt spiegeln.
 
 ## BookAssignAuthorDto
 
-Der Endpoint für die Zuordnung eines Authors zu einem Book lautet:
+Der Endpunkt für die Zuordnung eines Authors zu einem Book ist:
 
 ```text
 POST /camplib/v1/books/{bookId}/authors
 ```
 
-Die Book-Id kommt aus der Route.
+Die Book-ID kommt aus der Route.
 
-Der Request Body benötigt daher nur die Author-Id:
+Der Request Body benötigt deshalb nur die Author-ID:
 
 ```csharp
 public sealed record BookAssignAuthorDto(
@@ -782,9 +791,9 @@ public sealed record BookAssignAuthorDto(
 );
 ```
 
-Es gibt keine BookAuthor-Id.
+Es gibt keine BookAuthor-ID.
 
-Die Join-Tabelle ist ein Infrastrukturdetail und besitzt keine API-Identität.
+Die Join-Tabelle ist ein Infrastructure-Detail und hat keine API-Identität.
 
 ## Infrastructure in Teil 3
 
@@ -804,7 +813,7 @@ Das Infrastructure-Projekt darf EF Core kennen.
 
 Die Core-Module dürfen EF Core nicht kennen.
 
-Die Abhängigkeitsrichtung bleibt:
+Die Dependency-Richtung bleibt:
 
 ```text
 Core-Module definieren Ports.
@@ -836,13 +845,12 @@ Dadurch hängt jedes Core-Modul nur von dem Teil des DbContext ab, den es benöt
 Die didaktische Idee lautet:
 
 ```text
-Auch mit einem physischen DbContext können Module ihre eigene logische Sicht
-auf die Datenbank definieren.
+Auch mit einem physischen DbContext können Module ihre eigene logische Sicht auf die Datenbank definieren.
 ```
 
 ## EF-Core-Konfiguration
 
-EF-Core-Konfiguration gehört in die Infrastructure.
+EF-Core-Konfiguration gehört in Infrastructure.
 
 Beispiele:
 
@@ -855,20 +863,20 @@ ConfigBookItem
 
 Das Domain Model soll keine EF-Core-spezifische Konfiguration enthalten.
 
-Die m:n-Beziehung zwischen Book und Author wird in der Infrastructure über `BookAuthorJoin` konfiguriert.
+Die m:n-Beziehung zwischen Book und Author wird in Infrastructure über `BookAuthorJoin` konfiguriert.
 
-Die Beziehung zwischen Book und BookItem wird als 1:n-Beziehung konfiguriert.
+Die Beziehung von Book zu BookItem wird als 1:n-Beziehung konfiguriert.
 
-Der BookItem-Status wird als Integer gespeichert.
+Der BookItemStatus kann in der Datenbank als Integer gespeichert werden.
 
 Dadurch bleibt die Datenbank kompakt, während der Code ausdrucksstark bleibt.
 
-## Abhängigkeitsregeln
+## Dependency-Regeln
 
-Die wichtigsten Projektabhängigkeitsregeln lauten:
+Die wichtigsten Projekt-Dependency-Regeln lauten:
 
 ```text
-BuildingBlocks hängt von keinem Fachmodul ab.
+BuildingBlocks hängt von keinem fachlichen Modul ab.
 
 Readers hängt von BuildingBlocks ab.
 
@@ -880,10 +888,10 @@ Web hängt von Readers, Catalog und BuildingBlocks ab.
 
 Das ausführbare API-Projekt verdrahtet alle Projekte.
 
-Tests dürfen alle Projekte referenzieren, die für Tests benötigt werden.
+Tests dürfen alle Projekte referenzieren, die zum Testen erforderlich sind.
 ```
 
-Eine vereinfachte Abhängigkeitsrichtung ist:
+Eine vereinfachte Dependency-Richtung ist:
 
 ```text
 CampusLibraryApi_2_BuildingBlocks
@@ -956,7 +964,6 @@ Beispiel für das Hinzufügen eines BookItems:
 POST /camplib/v1/books/{bookId}/items
 → BooksController
 → IBookUseCases.AddBookItemAsync
-→ BookUcAddBookItem
 → IBookRepository.FindByIdAsync(...)
 → Book.AddBookItem(...)
 → UnitOfWorkEf
@@ -985,7 +992,7 @@ Controller
 → DTO
 ```
 
-Beispiel für die Book-Suche:
+Beispiel für Book-Suche nach Titel:
 
 ```text
 GET /camplib/v1/books/search?searchField=Title&searchText=clean
@@ -996,7 +1003,18 @@ GET /camplib/v1/books/search?searchField=Title&searchText=clean
 → BookListItemDto
 ```
 
-Beispiel für die Author-Suche:
+Beispiel für Book-Suche nach Author-Nachname:
+
+```text
+GET /camplib/v1/books/search?searchField=AuthorLastName&searchText=Martin
+→ BooksController
+→ IBookReadModel.SearchAsync
+→ BookReadModelEf
+→ AppDbContext
+→ BookListItemDto
+```
+
+Beispiel für Author-Suche:
 
 ```text
 GET /camplib/v1/authors/search?searchText=Martin
@@ -1021,7 +1039,7 @@ Aktuelle Routen verwenden:
 /camplib/v1
 ```
 
-Die aktuelle HTTP API enthält Endpunkte für:
+Die aktuelle HTTP-API enthält Endpunkte für:
 
 * Readers
 * Authors
@@ -1029,11 +1047,11 @@ Die aktuelle HTTP API enthält Endpunkte für:
 
 Swagger/OpenAPI ist für Dokumentation und manuelle Tests konfiguriert.
 
-Die Controller enthalten XML-Kommentare und Response-Annotationen.
+Die Controller enthalten XML-Kommentare und Response Annotations.
 
 Swagger dokumentiert:
 
-* erfolgreiche Antworten
+* erfolgreiche Responses
 * ProblemDetails-Fehlerantworten
 * 400 Bad Request
 * 401 Unauthorized
@@ -1052,9 +1070,9 @@ UseCases schreiben.
 ReadModels lesen.
 ```
 
-## Aktuelle HTTP API
+## Aktuelle HTTP-API
 
-Die aktuelle HTTP API unterstützt folgende Endpoint-Gruppen.
+Die aktuelle HTTP-API unterstützt diese Endpoint-Gruppen.
 
 ## Readers
 
@@ -1083,6 +1101,8 @@ PATCH /camplib/v1/authors/{id}/deactivate
 GET   /camplib/v1/books
 GET   /camplib/v1/books/{id}
 GET   /camplib/v1/books/search?searchField=Title&searchText=...
+GET   /camplib/v1/books/search?searchField=AuthorLastName&searchText=...
+GET   /camplib/v1/books/search?searchField=Isbn&searchText=...
 GET   /camplib/v1/books/by-author/{authorId}
 POST  /camplib/v1/books
 POST  /camplib/v1/books/{bookId}/items
@@ -1094,11 +1114,9 @@ PATCH /camplib/v1/books/{bookId}/deactivate
 
 Erwartete fachliche Fehler werden über `Result` zurückgegeben.
 
-Controller übersetzen fehlgeschlagene Results in HTTP-Antworten.
+Controller übersetzen fehlgeschlagene Results in HTTP Responses.
 
 Fehler werden als `ProblemDetails` zurückgegeben.
-
-Die Entscheidung ist bewusst im Controller sichtbar.
 
 Beispiel-Mapping:
 
@@ -1110,11 +1128,11 @@ NotFound     → 404
 Conflict     → 409
 ```
 
-Diese Dopplung ist für die Lehre beabsichtigt.
+Diese explizite Übersetzung ist für die Lehre bewusst sichtbar.
 
-Ziel ist, dass Studierende sehen können, welcher DomainError.Status zu welcher HTTP-Antwort führt.
+Studierende sollen erkennen können, welcher Domain Error zu welchem HTTP-Statuscode führt.
 
-## Testarchitektur
+## Testing-Architektur
 
 Teil 3 behält die bestehende Teststrategie bei und erweitert sie.
 
@@ -1126,12 +1144,13 @@ Typische Testgruppen sind:
 * UseCase Integration Tests
 * Repository Integration Tests
 * ReadModel Integration Tests
-* Controller/API Tests
+* Controller-/API-Tests mit `WebApplicationFactory` und `HttpClient`
+* Manuelle `.http`-Dateien für didaktische API-Tests
 
 Die aktuelle Testsuite prüft:
 
-* Reader Domain Verhalten
-* Catalog Domain Verhalten
+* Reader-Domain-Verhalten
+* Catalog-Domain-Verhalten
 * Email- und Address-Validierung
 * ISBN-Validierung
 * Create UseCases
@@ -1141,19 +1160,44 @@ Die aktuelle Testsuite prüft:
 * BookItem-Erzeugung
 * Repository-Verhalten
 * ReadModel-Projektionen
-* Filterung inaktiver Daten auf der Leseseite
-* HTTP Controller Verhalten
+* Ausblenden inaktiver Daten auf der Leseseite
+* HTTP-Controller-Verhalten über `WebApplicationFactory` und `HttpClient`
 * Swagger-dokumentiertes API-Verhalten
+* manuelle API-Workflows über `.http`-Dateien
 
-Der aktuelle Teststand für Teil 3 lautet:
+Das finale Testergebnis für Teil 3 sollte nach dem letzten Testlauf eingetragen werden:
 
 ```text
-155 Tests
-0 failed
-0 skipped
+<finale Testanzahl> Tests
+0 fehlgeschlagen
+0 übersprungen
 ```
 
-Das beabsichtigte Ergebnis ist:
+Controller-Mock-Tests werden bewusst nicht als breite zusätzliche Testebene verwendet.
+
+Die Controller sind dünne HTTP-Adapter. Der Application Workflow wird in UseCase Tests geprüft. Der öffentliche HTTP-Vertrag wird über `WebApplicationFactory` und `HttpClient` geprüft.
+
+Die didaktische Unterscheidung lautet:
+
+```text
+Domain Tests schützen fachliche Regeln.
+UseCase Mock Tests schützen Application Workflows.
+Repository- und ReadModel-Tests schützen Persistenz und Projektionen.
+Controller-/API-Tests schützen den öffentlichen HTTP-Vertrag.
+Manuelle HTTP-Dateien machen API-Verhalten für Studierende sichtbar.
+```
+
+Manuelle HTTP-Dateien werden nach einem Datenbank-Reset in dieser Reihenfolge ausgeführt:
+
+```text
+1. Authors.http
+2. Books.http
+3. Readers.http
+```
+
+`Seed.cs` definiert die stabilen IDs. Die `.http`-Dateien erzeugen die entsprechenden Daten über die öffentliche API.
+
+Das gewünschte Ergebnis lautet:
 
 ```text
 Die Architektur wächst.
@@ -1163,7 +1207,7 @@ Neues Verhalten ist durch Tests abgesichert.
 
 ## Version
 
-Teil 3 wird durch folgenden Branch und geplanten Tag repräsentiert:
+Teil 3 wird durch diesen Branch und das geplante Tag repräsentiert:
 
 ```text
 Branch: part-3/readers-catalog
@@ -1184,7 +1228,7 @@ Tag: v1-readers-monolith
 
 ## Geplante Weiterentwicklung
 
-Teil 3 bildet die Grundlage für den nächsten Lehrschritt.
+Teil 3 ist die Grundlage für den nächsten Lehrschritt.
 
 Die geplante Entwicklung lautet:
 
@@ -1196,21 +1240,21 @@ Teil 4: Readers + Catalog + Loans
 Teil 5: AuthN + AuthZ
 ```
 
-Teil 4 wird ein drittes fachliches Modul hinzufügen.
+Teil 4 ergänzt ein drittes fachliches Modul.
 
-Dieser Schritt ist wichtig, weil die Architektur dann Beziehungen zwischen Modulen zeigen muss.
+Dieser Schritt ist wichtig, weil die Architektur dann Beziehungen zwischen Modulen sichtbar machen muss.
 
-## Regeln für die Erweiterung von Teil 3
+## Regeln für Erweiterungen nach Teil 3
 
-Neue fachliche Module sollen der gleichen Struktur wie Readers und Catalog folgen.
+Neue fachliche Module sollten derselben Struktur folgen wie Readers und Catalog.
 
-Ein neues Core-Modul sollte ein eigenes Projekt besitzen, zum Beispiel:
+Ein neues Core-Modul sollte ein eigenes Projekt erhalten, zum Beispiel:
 
 ```text
 CampusLibraryApi_3_Core_Loans
 ```
 
-Die interne Struktur sollte dem gleichen Muster folgen:
+Die interne Struktur sollte demselben Muster folgen:
 
 ```text
 _1_Ports
@@ -1230,19 +1274,19 @@ Core-Module hängen nicht von Infrastructure ab.
 
 Web-Controller liegen im Web-Projekt.
 
-Controller enthalten keine Domainlogik. Sie übersetzen HTTP Requests in Aufrufe an UseCases oder ReadModels.
+Controller enthalten keine Domain-Logik. Sie übersetzen HTTP Requests in Aufrufe an UseCases oder ReadModels.
 
 ## Architekturregeln
 
 Die Anwendung ist eine deploybare Anwendung.
 
-Die Lösung ist in mehrere Projekte aufgeteilt.
+Die Solution ist in mehrere Projekte aufgeteilt.
 
 Projektgrenzen repräsentieren Architekturgrenzen.
 
-Fachliche Module werden als eigene Core-Projekte modelliert.
+Fachliche Module werden als getrennte Core-Projekte dargestellt.
 
-Web übersetzt HTTP und enthält keine Domainlogik.
+Web übersetzt HTTP und enthält keine Domain-Logik.
 
 BuildingBlocks enthält wiederverwendbare architektonische Basistypen.
 
@@ -1258,15 +1302,19 @@ Repositories werden auf der Schreibseite verwendet.
 
 ReadModels werden auf der Leseseite verwendet.
 
+Book-Suche verwendet explizite Suchfelder wie `Title`, `AuthorLastName` und `Isbn`.
+
+Controller-Mock-Tests sind für dünne Controller nicht erforderlich.
+
 Infrastructure implementiert Core Ports.
 
-EF-Core-Konfiguration gehört in die Infrastructure.
+EF-Core-Konfiguration gehört in Infrastructure.
 
 Join-Tabellen sind Persistenzdetails, solange sie keine eigene fachliche Identität besitzen.
 
-Program.cs verdrahtet Module, enthält aber keine Domainlogik.
+Program.cs verdrahtet Module, enthält aber keine Domain-Logik.
 
-Zusätzliche Module sollen der gleichen Struktur wie Readers und Catalog folgen.
+Zusätzliche Module sollten derselben Struktur folgen wie Readers und Catalog.
 
 AuthN/AuthZ wird später ergänzt, ohne die Grundstruktur zu verändern.
 
@@ -1276,14 +1324,14 @@ UseCases schützen fachliche Regeln auf der Schreibseite.
 
 ReadModels liefern einfache DTOs auf der Leseseite.
 
-Kurz:
+Oder kürzer:
 
 ```text
 UseCases schreiben.
 ReadModels lesen.
 ```
 
-Für Teil 3 ist zusätzlich wichtig:
+Für Teil 3 ist eine weitere Regel wichtig:
 
 ```text
 Die Domain zeigt die fachliche Beziehung.
@@ -1293,13 +1341,19 @@ Infrastructure zeigt den Persistenzmechanismus.
 Für die Book-Author-Beziehung bedeutet das:
 
 ```text
-Book.Authors gehört zum Domain Model.
-BookAuthorJoin gehört zur Infrastructure.
+Book.Authors ist Teil des Domain Models.
+BookAuthorJoin ist Teil der Infrastructure.
 ```
 
-Und für die Modularisierung:
+Für die Katalogsuche gilt:
 
 ```text
-Ein neues Modul soll die Architektur erweitern,
-nicht die bestehenden Grenzen aufweichen.
+AuthorLastName sucht anhand des Author-Nachnamens.
+Firstname wird nicht durchsucht, weil dadurch zufällige Treffer entstehen würden.
+```
+
+Und für Modularisierung:
+
+```text
+Ein neues Modul soll die Architektur erweitern, nicht die Grenzen schwächen.
 ```

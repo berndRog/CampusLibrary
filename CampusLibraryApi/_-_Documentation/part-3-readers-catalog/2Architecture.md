@@ -17,12 +17,18 @@ This means:
 * stronger modular boundaries through project references
 * a richer domain model in the Catalog module
 * unchanged Readers behavior
-* existing and new tests remain green
+* existing and new tests remain green after the final test run
 
-The current test suite contains:
+The final test count for Part 3 should be updated after the final test run:
+
+```bash
+dotnet test
+```
+
+Replace this placeholder with the final result:
 
 ```text
-155 tests
+<final test count> tests
 0 failed
 0 skipped
 ```
@@ -415,9 +421,19 @@ public enum BookItemStatus {
 }
 ```
 
-The enum is stored as an integer in the database.
+The enum can be stored as an integer in the database.
 
 This keeps the database compact and stable while the code expresses the meaning through the enum names.
+
+In the JSON API, enum values may be serialized as strings when enum string serialization is enabled.
+
+Example:
+
+```json
+{
+  "status": "Available"
+}
+```
 
 ## ISBN as Value Object
 
@@ -610,6 +626,34 @@ The didactic rule is:
 Repositories load aggregates for changes.
 Read models return DTOs for queries.
 ```
+
+## Catalog Search
+
+The Catalog module uses explicit search criteria for books.
+
+The supported book search fields are:
+
+```text
+Title
+AuthorLastName
+Isbn
+```
+
+`AuthorLastName` searches only the lastname of assigned authors.
+
+The firstname is not searched. This avoids accidental matches.
+
+Example:
+
+```text
+AuthorLastName = Martin -> Clean Code
+AuthorLastName = Fowler -> Refactoring and Design Patterns
+```
+
+Author search also uses the author lastname as the relevant search criterion.
+
+This makes the search behavior explicit and avoids interpreting a generic "author name" as firstname plus lastname.
+
 
 ## Use Cases and Read Models
 
@@ -854,9 +898,11 @@ The many-to-many relationship between Book and Author is configured in Infrastru
 
 The Book to BookItem relationship is configured as a one-to-many relationship.
 
-The BookItem status enum is stored as an integer.
+The BookItem status enum can be stored as an integer in the database.
 
 This keeps the database compact while the code remains expressive.
+
+The JSON API may serialize enum values as strings when enum string serialization is enabled.
 
 ## Dependency Rules
 
@@ -980,10 +1026,21 @@ Controller
 → DTO
 ```
 
-Example for book search:
+Example for book search by title:
 
 ```text
 GET /camplib/v1/books/search?searchField=Title&searchText=clean
+→ BooksController
+→ IBookReadModel.SearchAsync
+→ BookReadModelEf
+→ AppDbContext
+→ BookListItemDto
+```
+
+Example for book search by author lastname:
+
+```text
+GET /camplib/v1/books/search?searchField=AuthorLastName&searchText=Martin
 → BooksController
 → IBookReadModel.SearchAsync
 → BookReadModelEf
@@ -1078,6 +1135,8 @@ PATCH /camplib/v1/authors/{id}/deactivate
 GET   /camplib/v1/books
 GET   /camplib/v1/books/{id}
 GET   /camplib/v1/books/search?searchField=Title&searchText=...
+GET   /camplib/v1/books/search?searchField=AuthorLastName&searchText=...
+GET   /camplib/v1/books/search?searchField=Isbn&searchText=...
 GET   /camplib/v1/books/by-author/{authorId}
 POST  /camplib/v1/books
 POST  /camplib/v1/books/{bookId}/items
@@ -1121,7 +1180,8 @@ Typical test groups are:
 * Use case integration tests
 * Repository integration tests
 * Read model integration tests
-* Controller / API tests
+* Controller/API tests with `WebApplicationFactory` and `HttpClient`
+* Manual `.http` files for didactic API testing
 
 The current test suite verifies:
 
@@ -1137,16 +1197,42 @@ The current test suite verifies:
 * repository behavior
 * read model projections
 * inactive data filtering on the read side
-* HTTP controller behavior
+* HTTP controller behavior through `WebApplicationFactory` and `HttpClient`
 * Swagger-documented API behavior
+* manual API workflows through `.http` files
 
-The latest known test status for Part 3 is:
+The final test status for Part 3 should be entered after the final test run:
 
 ```text
-155 tests
+<final test count> tests
 0 failed
 0 skipped
 ```
+
+
+Controller mock tests are intentionally not used as a broad additional test level.
+
+The controllers are thin HTTP adapters. The application workflow is tested in use case tests. The public HTTP contract is tested through `WebApplicationFactory` and `HttpClient`.
+
+The didactic distinction is:
+
+```text
+Domain tests protect business rules.
+Use case mock tests protect application workflows.
+Repository and ReadModel tests protect persistence and projections.
+Controller/API tests protect the public HTTP contract.
+Manual HTTP files make API behavior visible for students.
+```
+
+Manual HTTP files are executed after a database reset in this order:
+
+```text
+1. Authors.http
+2. Books.http
+3. Readers.http
+```
+
+`Seed.cs` defines the stable ids. The `.http` files create the corresponding data through the public API.
 
 The intended result is:
 
@@ -1253,6 +1339,10 @@ Repositories are used on the write side.
 
 Read models are used on the read side.
 
+Book search uses explicit search fields such as `Title`, `AuthorLastName` and `Isbn`.
+
+Controller mock tests are not required for thin controllers.
+
 Infrastructure implements Core ports.
 
 EF Core configuration belongs to Infrastructure.
@@ -1283,6 +1373,13 @@ For Part 3, another rule is important:
 ```text
 The domain shows the business relationship.
 Infrastructure shows the persistence mechanism.
+```
+
+For catalog search, the rule is:
+
+```text
+AuthorLastName searches by author lastname.
+Firstname is not searched, because it would create accidental matches.
 ```
 
 For the Book-Author relationship this means:
