@@ -1,12 +1,12 @@
 # API-Dokumentation
 
-Dieses Dokument beschreibt die öffentliche HTTP API der aktuellen `CampusLibraryApi`.
+Dieses Dokument beschreibt die öffentliche HTTP-API der aktuellen `CampusLibraryApi`.
 
 Swagger/OpenAPI ist die verbindliche technische API-Beschreibung. Dieses Dokument ergänzt Swagger um eine didaktische Übersicht für Studierende.
 
 ## Base URL
 
-In der Entwicklungsumgebung ist die API erreichbar unter:
+Im Development-Modus hört die API auf:
 
 ```text
 https://localhost:8010
@@ -19,7 +19,7 @@ Der aktuelle API-Präfix lautet:
 /camplib/v1
 ```
 
-Die Version ist Teil der URL.
+Die Version ist Bestandteil der URL.
 
 Beispiel:
 
@@ -29,7 +29,7 @@ GET /camplib/v1/readers
 
 ## Swagger
 
-Die Swagger UI ist im Development-Modus erreichbar unter:
+Swagger UI ist im Development-Modus erreichbar unter:
 
 ```text
 https://localhost:8010/swagger
@@ -41,9 +41,9 @@ Das generierte OpenAPI-Dokument beschreibt:
 Routen
 Request Bodies
 Response Bodies
-Status Codes
-ProblemDetails Responses
-DTO Schemas
+Statuscodes
+ProblemDetails-Antworten
+DTO-Schemas
 ```
 
 Die aktuelle API enthält drei Endpoint-Gruppen:
@@ -53,6 +53,30 @@ Readers
 Authors
 Books
 ```
+
+## Manuelle HTTP-Dateien
+
+Für manuelle API-Tests wird die Datenbank zuerst gelöscht oder zurückgesetzt.
+
+Danach werden die HTTP-Dateien in dieser Reihenfolge ausgeführt:
+
+```text
+1. Authors.http
+2. Books.http
+3. Readers.http
+```
+
+`Seed.cs` definiert die stabilen IDs.
+
+Die `.http`-Dateien erzeugen diese Datensätze über die öffentliche API.
+
+```text
+Authors.http erzeugt die Authors.
+Books.http erzeugt die Books, verwendet die vorhandenen Authors, ordnet Authors zu Books zu und fügt BookItems hinzu.
+Readers.http erzeugt oder prüft Reader-Daten.
+```
+
+Dadurch bleiben manuelle API-Tests reproduzierbar und hängen nicht von verstecktem Datenbankzustand ab.
 
 ## Module
 
@@ -65,15 +89,15 @@ Catalog-Modul
 
 Das Readers-Modul verwaltet Bibliotheksnutzer.
 
-Das Catalog-Modul verwaltet Books, Authors und physische BookItems.
+Das Catalog-Modul verwaltet Bücher, Authors und physische Buchexemplare.
 
 # Readers-Modul
 
-Ein Reader repräsentiert einen fachlichen Bibliotheksnutzer der CampusLibrary-Domäne.
+Ein Reader repräsentiert einen fachlichen Bibliotheksnutzer der CampusLibrary.
 
 Ein Reader ist nicht dasselbe wie ein technisches Benutzerkonto.
 
-Die Referenz auf die technische Identität wird abgebildet durch:
+Die technische Identitätsreferenz wird dargestellt durch:
 
 ```text
 Subject
@@ -81,13 +105,13 @@ Subject
 
 ## Reader-Routen
 
-## Alle Reader abrufen
+### Alle Reader abrufen
 
 ```http
 GET /camplib/v1/readers
 ```
 
-Liefert alle Reader.
+Gibt alle Reader zurück.
 
 Erfolgreiche Antwort:
 
@@ -95,12 +119,12 @@ Erfolgreiche Antwort:
 200 OK
 ```
 
-Response Body:
+Beispiel für den Response Body:
 
 ```json
 [
   {
-    "id": "10000000-0000-0000-0000-000000000000",
+    "id": "00000001-0000-0000-0000-000000000000",
     "subject": "a00090ad-d9df-486a-8757-4a649e26a54e",
     "firstname": "Erika",
     "lastname": "Mustermann",
@@ -123,7 +147,7 @@ Mögliche Fehlerantworten:
 403 Forbidden
 ```
 
-## Einen Reader anhand der Id abrufen
+### Einen Reader anhand der ID abrufen
 
 ```http
 GET /camplib/v1/readers/{id}
@@ -132,7 +156,7 @@ GET /camplib/v1/readers/{id}
 Beispiel:
 
 ```http
-GET /camplib/v1/readers/10000000-0000-0000-0000-000000000000
+GET /camplib/v1/readers/00000001-0000-0000-0000-000000000000
 ```
 
 Erfolgreiche Antwort:
@@ -149,7 +173,7 @@ Mögliche Fehlerantworten:
 404 Not Found
 ```
 
-## Einen Reader anhand der Email abrufen
+### Einen Reader anhand der Email abrufen
 
 ```http
 GET /camplib/v1/readers/email?email={email}
@@ -176,7 +200,7 @@ Mögliche Fehlerantworten:
 404 Not Found
 ```
 
-## Einen Reader anlegen
+### Reader anlegen
 
 ```http
 POST /camplib/v1/readers
@@ -196,7 +220,7 @@ Request Body:
     "country": "DE"
   },
   "subject": "70000000-0007-0000-0000-000000000000",
-  "id": null
+  "id": "00000007-0000-0000-0000-000000000000"
 }
 ```
 
@@ -204,24 +228,6 @@ Erfolgreiche Antwort:
 
 ```http
 201 Created
-```
-
-Response Body:
-
-```json
-{
-  "id": "generated-or-provided-id",
-  "subject": "70000000-0007-0000-0000-000000000000",
-  "firstname": "Edgar",
-  "lastname": "Engel",
-  "email": "e.engel@freenet.de",
-  "addressDto": {
-    "street": "Am Markt 14",
-    "postalCode": "04109",
-    "city": "Leipzig",
-    "country": "DE"
-  }
-}
 ```
 
 Mögliche Fehlerantworten:
@@ -233,7 +239,7 @@ Mögliche Fehlerantworten:
 409 Conflict
 ```
 
-## ReaderCreateDto
+### ReaderCreateDto
 
 ```csharp
 public sealed record ReaderCreateDto(
@@ -248,15 +254,11 @@ public sealed record ReaderCreateDto(
 
 `Id` ist optional.
 
-Das ist Absicht.
+Bei normaler API-Nutzung kann die ID weggelassen werden. Der UseCase erzeugt dann eine neue ID.
 
-Die Id kann bei normaler API-Nutzung weggelassen werden. Der UseCase erzeugt dann eine neue Id.
+Für Lehre, Tests oder deterministische Seed-Daten darf die ID mitgegeben werden.
 
-Für Lehre, Tests oder deterministische Seed-Daten kann die Id angegeben werden.
-
-Deshalb ist `Id` sowohl technisch als auch fachlich nullable.
-
-## Einen Reader aktualisieren
+### Reader aktualisieren
 
 ```http
 PUT /camplib/v1/readers/{id}
@@ -265,7 +267,7 @@ PUT /camplib/v1/readers/{id}
 Beispiel:
 
 ```http
-PUT /camplib/v1/readers/10000000-0000-0000-0000-000000000000
+PUT /camplib/v1/readers/00000001-0000-0000-0000-000000000000
 ```
 
 Request Body, um nur den Nachnamen zu ändern:
@@ -275,31 +277,6 @@ Request Body, um nur den Nachnamen zu ändern:
   "lastname": "Meier",
   "email": null,
   "addressDto": null
-}
-```
-
-Request Body, um nur die Email zu ändern:
-
-```json
-{
-  "lastname": null,
-  "email": "e.meier@gmx.de",
-  "addressDto": null
-}
-```
-
-Request Body, um nur die Adresse zu ändern:
-
-```json
-{
-  "lastname": null,
-  "email": null,
-  "addressDto": {
-    "street": "Schillerstr. 1",
-    "postalCode": "30123",
-    "city": "Hannover",
-    "country": "DE"
-  }
 }
 ```
 
@@ -319,7 +296,7 @@ Mögliche Fehlerantworten:
 409 Conflict
 ```
 
-## ReaderUpdateDto
+### ReaderUpdateDto
 
 ```csharp
 public sealed record ReaderUpdateDto(
@@ -329,11 +306,9 @@ public sealed record ReaderUpdateDto(
 );
 ```
 
-Alle Properties sind bewusst nullable.
+Alle Eigenschaften sind bewusst nullable.
 
-Das ist für partielle Updates erforderlich.
-
-Die Bedeutung von `null` lautet:
+Die Bedeutung von `null` ist:
 
 ```text
 Lastname = null   -> keine Änderung
@@ -341,15 +316,13 @@ Email = null      -> keine Änderung
 AddressDto = null -> keine Änderung
 ```
 
-Das ist technisch und fachlich erforderlich.
+`Firstname` ist absichtlich nicht Bestandteil des Update-DTOs.
 
-`Firstname` ist bewusst nicht Teil des Update DTOs.
+`Subject` ist ebenfalls absichtlich nicht Bestandteil des Update-DTOs.
 
-`Subject` ist ebenfalls bewusst nicht Teil des Update DTOs.
+Die technische Identitätsreferenz wird durch normale Profiländerungen nicht verändert.
 
-Die technische Identitätsreferenz wird durch normale Profiländerungen nicht geändert.
-
-## Einen Reader löschen
+### Reader löschen
 
 ```http
 DELETE /camplib/v1/readers/{id}
@@ -358,7 +331,7 @@ DELETE /camplib/v1/readers/{id}
 Beispiel:
 
 ```http
-DELETE /camplib/v1/readers/30000000-0000-0000-0000-000000000000
+DELETE /camplib/v1/readers/00000003-0000-0000-0000-000000000000
 ```
 
 Erfolgreiche Antwort:
@@ -376,7 +349,7 @@ Mögliche Fehlerantworten:
 404 Not Found
 ```
 
-## AddressDto
+### AddressDto
 
 ```csharp
 public sealed record AddressDto(
@@ -387,15 +360,13 @@ public sealed record AddressDto(
 );
 ```
 
-Die Adresse wird in der Application-Schicht in ein `AddressVo` umgewandelt.
+Die Adresse wird in der Application Layer in ein `AddressVo` umgewandelt.
 
-Das Value Object führt seine eigene Validierung aus.
+Das Value Object führt seine eigene Validierung durch.
 
 # Catalog-Modul
 
-Das Catalog-Modul verwaltet Books, Authors und physische BookItems.
-
-Das Modul führt ein fachlich reichhaltigeres Domain Model ein als das Readers-Modul.
+Das Catalog-Modul verwaltet Bücher, Authors und physische Buchexemplare.
 
 Es enthält:
 
@@ -406,11 +377,11 @@ BookItem
 IsbnVo
 ```
 
-Ein `Book` beschreibt das bibliografische Werk.
+Ein `Book` repräsentiert das bibliografische Werk.
 
-Ein `Author` beschreibt eine Person, die Books zugeordnet werden kann.
+Ein `Author` repräsentiert eine Person, die Books zugeordnet werden kann.
 
-Ein `BookItem` beschreibt ein physisches Exemplar eines Books.
+Ein `BookItem` repräsentiert ein physisches Exemplar eines Books.
 
 Ein `IsbnVo` schützt die ISBN-Validierungsregeln.
 
@@ -422,7 +393,7 @@ Ein `IsbnVo` schützt die ISBN-Validierungsregeln.
 GET /camplib/v1/authors
 ```
 
-Liefert alle aktiven Authors.
+Gibt alle aktiven Authors zurück.
 
 Erfolgreiche Antwort:
 
@@ -430,15 +401,15 @@ Erfolgreiche Antwort:
 200 OK
 ```
 
-Response Body:
+Beispiel für den Response Body:
 
 ```json
 [
   {
     "id": "a0000001-0000-0000-0000-000000000000",
-    "firstname": "Robert",
+    "firstname": "Robert C.",
     "lastname": "Martin",
-    "displayName": "Robert Martin",
+    "displayName": "Robert C. Martin",
     "isActive": true
   }
 ]
@@ -452,7 +423,7 @@ Mögliche Fehlerantworten:
 403 Forbidden
 ```
 
-## Einen aktiven Author anhand der Id abrufen
+## Einen aktiven Author anhand der ID abrufen
 
 ```http
 GET /camplib/v1/authors/{id}
@@ -479,7 +450,7 @@ Mögliche Fehlerantworten:
 404 Not Found
 ```
 
-Inaktive Authors werden von diesem normalen Read-Endpunkt nicht zurückgegeben.
+Inaktive Authors werden über diesen normalen Lese-Endpunkt nicht zurückgegeben.
 
 ## Aktive Authors suchen
 
@@ -493,7 +464,7 @@ Beispiel:
 GET /camplib/v1/authors/search?searchText=Martin
 ```
 
-Sucht aktive Authors nach Lastname.
+Sucht aktive Authors anhand des Nachnamens.
 
 Erfolgreiche Antwort:
 
@@ -501,15 +472,15 @@ Erfolgreiche Antwort:
 200 OK
 ```
 
-Response Body:
+Beispiel für den Response Body:
 
 ```json
 [
   {
     "id": "a0000001-0000-0000-0000-000000000000",
-    "firstname": "Robert",
+    "firstname": "Robert C.",
     "lastname": "Martin",
-    "displayName": "Robert Martin",
+    "displayName": "Robert C. Martin",
     "isActive": true
   }
 ]
@@ -523,9 +494,9 @@ Mögliche Fehlerantworten:
 403 Forbidden
 ```
 
-Wenn kein Author zum Suchtext passt, liefert der Endpunkt eine leere Liste.
+Wenn kein Author passt, liefert der Endpunkt eine leere Liste.
 
-## Einen Author anlegen
+## Author anlegen
 
 ```http
 POST /camplib/v1/authors
@@ -535,9 +506,9 @@ Request Body:
 
 ```json
 {
-  "firstname": "Robert",
+  "firstname": "Robert C.",
   "lastname": "Martin",
-  "id": null
+  "id": "a0000001-0000-0000-0000-000000000000"
 }
 ```
 
@@ -547,14 +518,14 @@ Erfolgreiche Antwort:
 201 Created
 ```
 
-Response Body:
+Beispiel für den Response Body:
 
 ```json
 {
-  "id": "generated-or-provided-id",
-  "firstname": "Robert",
+  "id": "a0000001-0000-0000-0000-000000000000",
+  "firstname": "Robert C.",
   "lastname": "Martin",
-  "displayName": "Robert Martin",
+  "displayName": "Robert C. Martin",
   "isActive": true
 }
 ```
@@ -580,11 +551,11 @@ public sealed record AuthorCreateDto(
 
 `Id` ist optional.
 
-Die Id kann bei normaler API-Nutzung weggelassen werden. Der UseCase erzeugt dann eine neue Id.
+Bei normaler API-Nutzung kann die ID weggelassen werden. Der UseCase erzeugt dann eine neue ID.
 
-Für Lehre, Tests oder deterministische Seed-Daten kann die Id angegeben werden.
+Für Lehre, Tests oder deterministische Seed-Daten darf die ID mitgegeben werden.
 
-## Einen Author deaktivieren
+## Author deaktivieren
 
 ```http
 PATCH /camplib/v1/authors/{id}/deactivate
@@ -593,7 +564,7 @@ PATCH /camplib/v1/authors/{id}/deactivate
 Beispiel:
 
 ```http
-PATCH /camplib/v1/authors/a0000001-0000-0000-0000-000000000000/deactivate
+PATCH /camplib/v1/authors/a0000005-0000-0000-0000-000000000000/deactivate
 ```
 
 Erfolgreiche Antwort:
@@ -602,14 +573,14 @@ Erfolgreiche Antwort:
 200 OK
 ```
 
-Response Body:
+Beispiel für den Response Body:
 
 ```json
 {
-  "id": "a0000001-0000-0000-0000-000000000000",
-  "firstname": "Robert",
-  "lastname": "Martin",
-  "displayName": "Robert Martin",
+  "id": "a0000005-0000-0000-0000-000000000000",
+  "firstname": "Kent",
+  "lastname": "Beck",
+  "displayName": "Kent Beck",
   "isActive": false
 }
 ```
@@ -641,7 +612,7 @@ public sealed record AuthorDto(
 );
 ```
 
-`AuthorDto` wird sowohl für Read-Antworten als auch für Antworten schreibender UseCases verwendet.
+`AuthorDto` wird sowohl für Leseantworten als auch für Antworten von schreibenden UseCases verwendet.
 
 # Book-Routen
 
@@ -651,7 +622,7 @@ public sealed record AuthorDto(
 GET /camplib/v1/books
 ```
 
-Liefert alle aktiven Books als kompakte Listeneinträge.
+Gibt alle aktiven Books als kompakte Listeneinträge zurück.
 
 Erfolgreiche Antwort:
 
@@ -659,17 +630,17 @@ Erfolgreiche Antwort:
 200 OK
 ```
 
-Response Body:
+Beispiel für den Response Body:
 
 ```json
 [
   {
     "id": "b0000001-0000-0000-0000-000000000000",
     "title": "Clean Code",
-    "subtitle": null,
+    "subtitle": "A Handbook of Agile Software Craftsmanship",
     "isbn": "9780132350884",
     "authors": [
-      "Robert Martin"
+      "Robert C. Martin"
     ],
     "totalBookItems": 2,
     "availableBookItems": 2
@@ -685,7 +656,7 @@ Mögliche Fehlerantworten:
 403 Forbidden
 ```
 
-## Ein aktives Book anhand der Id abrufen
+## Ein aktives Book anhand der ID abrufen
 
 ```http
 GET /camplib/v1/books/{id}
@@ -697,7 +668,7 @@ Beispiel:
 GET /camplib/v1/books/b0000001-0000-0000-0000-000000000000
 ```
 
-Liefert eine ausführliche Book-Darstellung.
+Gibt eine Detaildarstellung eines Books zurück.
 
 Erfolgreiche Antwort:
 
@@ -705,33 +676,33 @@ Erfolgreiche Antwort:
 200 OK
 ```
 
-Response Body:
+Beispiel für den Response Body:
 
 ```json
 {
   "id": "b0000001-0000-0000-0000-000000000000",
   "title": "Clean Code",
-  "subtitle": null,
+  "subtitle": "A Handbook of Agile Software Craftsmanship",
   "isbn": "9780132350884",
   "authors": [
     {
       "id": "a0000001-0000-0000-0000-000000000000",
-      "firstname": "Robert",
+      "firstname": "Robert C.",
       "lastname": "Martin",
-      "displayName": "Robert Martin",
+      "displayName": "Robert C. Martin",
       "isActive": true
     }
   ],
   "bookItems": [
     {
-      "id": "i0000001-0000-0000-0000-000000000000",
+      "id": "be000001-0000-0000-0000-000000000000",
       "bookId": "b0000001-0000-0000-0000-000000000000",
-      "inventoryNumber": "CL-0001",
-      "status": 1
+      "inventoryNumber": "CL-BOOK-0001",
+      "status": "Available"
     }
   ],
-  "totalBookItems": 1,
-  "availableBookItems": 1,
+  "totalBookItems": 2,
+  "availableBookItems": 2,
   "isActive": true,
   "createdAt": "2025-01-01T00:00:00Z",
   "updatedAt": "2025-01-01T00:00:00Z"
@@ -747,7 +718,7 @@ Mögliche Fehlerantworten:
 404 Not Found
 ```
 
-Inaktive Books werden von diesem normalen Read-Endpunkt nicht zurückgegeben.
+Inaktive Books werden über diesen normalen Lese-Endpunkt nicht zurückgegeben.
 
 ## Aktive Books suchen
 
@@ -763,15 +734,19 @@ GET /camplib/v1/books/search?searchField=AuthorLastName&searchText=Martin
 GET /camplib/v1/books/search?searchField=Isbn&searchText=9780132350884
 ```
 
-Sucht aktive Books anhand genau eines Suchkriteriums.
+Sucht aktive Books nach genau einem Suchkriterium.
 
 Unterstützte Suchfelder:
 
-```text, 
+```text
 Title
 AuthorLastName
 Isbn
 ```
+
+`AuthorLastName` sucht ausschließlich im Nachnamen der zugeordneten Authors.
+
+Der Vorname wird nicht durchsucht. Dadurch werden zufällige Treffer vermieden, zum Beispiel `Martin` als Vorname bei `Martin Fowler`, wenn eigentlich nach dem Nachnamen `Martin` gesucht wird.
 
 Erfolgreiche Antwort:
 
@@ -779,17 +754,17 @@ Erfolgreiche Antwort:
 200 OK
 ```
 
-Response Body:
+Beispiel für den Response Body:
 
 ```json
 [
   {
     "id": "b0000001-0000-0000-0000-000000000000",
     "title": "Clean Code",
-    "subtitle": null,
+    "subtitle": "A Handbook of Agile Software Craftsmanship",
     "isbn": "9780132350884",
     "authors": [
-      "Robert Martin"
+      "Robert C. Martin"
     ],
     "totalBookItems": 2,
     "availableBookItems": 2
@@ -807,7 +782,7 @@ Mögliche Fehlerantworten:
 
 Wenn kein Book zum Suchkriterium passt, liefert der Endpunkt eine leere Liste.
 
-## Aktive Books zu einem Author abrufen
+## Aktive Books anhand einer Author-ID abrufen
 
 ```http
 GET /camplib/v1/books/by-author/{authorId}
@@ -819,7 +794,7 @@ Beispiel:
 GET /camplib/v1/books/by-author/a0000001-0000-0000-0000-000000000000
 ```
 
-Liefert alle aktiven Books, die einem Author zugeordnet sind.
+Gibt alle aktiven Books zurück, die einem bestimmten Author zugeordnet sind.
 
 Erfolgreiche Antwort:
 
@@ -827,17 +802,17 @@ Erfolgreiche Antwort:
 200 OK
 ```
 
-Response Body:
+Beispiel für den Response Body:
 
 ```json
 [
   {
     "id": "b0000001-0000-0000-0000-000000000000",
     "title": "Clean Code",
-    "subtitle": null,
+    "subtitle": "A Handbook of Agile Software Craftsmanship",
     "isbn": "9780132350884",
     "authors": [
-      "Robert Martin"
+      "Robert C. Martin"
     ],
     "totalBookItems": 2,
     "availableBookItems": 2
@@ -855,7 +830,7 @@ Mögliche Fehlerantworten:
 
 Wenn dem Author kein aktives Book zugeordnet ist, liefert der Endpunkt eine leere Liste.
 
-## Ein Book anlegen
+## Book anlegen
 
 ```http
 POST /camplib/v1/books
@@ -866,9 +841,9 @@ Request Body:
 ```json
 {
   "title": "Clean Code",
-  "subtitle": null,
+  "subtitle": "A Handbook of Agile Software Craftsmanship",
   "isbn": "9780132350884",
-  "id": null
+  "id": "b0000001-0000-0000-0000-000000000000"
 }
 ```
 
@@ -878,13 +853,13 @@ Erfolgreiche Antwort:
 201 Created
 ```
 
-Response Body:
+Beispiel für den Response Body:
 
 ```json
 {
-  "id": "generated-or-provided-id",
+  "id": "b0000001-0000-0000-0000-000000000000",
   "title": "Clean Code",
-  "subtitle": null,
+  "subtitle": "A Handbook of Agile Software Craftsmanship",
   "isbn": "9780132350884",
   "bookItemCount": 0,
   "isActive": true
@@ -913,13 +888,13 @@ public sealed record BookCreateDto(
 
 `Id` ist optional.
 
-Die Id kann bei normaler API-Nutzung weggelassen werden. Der UseCase erzeugt dann eine neue Id.
+Bei normaler API-Nutzung kann die ID weggelassen werden. Der UseCase erzeugt dann eine neue ID.
 
-Für Lehre, Tests oder deterministische Seed-Daten kann die Id angegeben werden.
+Für Lehre, Tests oder deterministische Seed-Daten darf die ID mitgegeben werden.
 
 Die ISBN wird durch `IsbnVo` validiert.
 
-## Ein physisches BookItem hinzufügen
+## Physisches BookItem hinzufügen
 
 ```http
 POST /camplib/v1/books/{bookId}/items
@@ -935,8 +910,8 @@ Request Body:
 
 ```json
 {
-  "inventoryNumber": "CL-0001",
-  "id": null
+  "inventoryNumber": "CL-BOOK-0001",
+  "id": "be000001-0000-0000-0000-000000000000"
 }
 ```
 
@@ -946,14 +921,14 @@ Erfolgreiche Antwort:
 200 OK
 ```
 
-Response Body:
+Beispiel für den Response Body:
 
 ```json
 {
-  "id": "generated-or-provided-id",
+  "id": "be000001-0000-0000-0000-000000000000",
   "bookId": "b0000001-0000-0000-0000-000000000000",
-  "inventoryNumber": "CL-0001",
-  "status": 1
+  "inventoryNumber": "CL-BOOK-0001",
+  "status": "Available"
 }
 ```
 
@@ -973,13 +948,9 @@ Ein neu hinzugefügtes BookItem startet mit dem Status:
 Available
 ```
 
-In der aktuellen JSON-Darstellung wird `Available` serialisiert als:
+Das Enum kann in der Datenbank weiterhin als Integer gespeichert werden.
 
-```text
-1
-```
-
-Der Enum wird bewusst als Integer in der Datenbank gespeichert.
+In der JSON-API wird es als String serialisiert, weil die API Enum-String-Serialisierung verwendet.
 
 ## BookItemAddDto
 
@@ -994,11 +965,11 @@ public sealed record BookItemAddDto(
 
 `Id` ist optional.
 
-Die Id kann bei normaler API-Nutzung weggelassen werden. Der UseCase erzeugt dann eine neue Id.
+Bei normaler API-Nutzung kann die ID weggelassen werden. Der UseCase erzeugt dann eine neue ID.
 
-Für Lehre, Tests oder deterministische Seed-Daten kann die Id angegeben werden.
+Für Lehre, Tests oder deterministische Seed-Daten darf die ID mitgegeben werden.
 
-## Einen Author einem Book zuordnen
+## Author einem Book zuordnen
 
 ```http
 POST /camplib/v1/books/{bookId}/authors
@@ -1024,13 +995,13 @@ Erfolgreiche Antwort:
 200 OK
 ```
 
-Response Body:
+Beispiel für den Response Body:
 
 ```json
 {
   "id": "b0000001-0000-0000-0000-000000000000",
   "title": "Clean Code",
-  "subtitle": null,
+  "subtitle": "A Handbook of Agile Software Craftsmanship",
   "isbn": "9780132350884",
   "bookItemCount": 0,
   "isActive": true
@@ -1053,7 +1024,7 @@ Die `authorId` kommt aus dem Request Body.
 
 Es gibt keine `BookAuthorId`.
 
-Die Join-Tabelle ist ein Infrastrukturdetail.
+Die Join-Tabelle ist ein Infrastructure-Detail.
 
 ## BookAssignAuthorDto
 
@@ -1063,9 +1034,9 @@ public sealed record BookAssignAuthorDto(
 );
 ```
 
-Dieses DTO enthält nur die Author-Id, weil die Book-Id bereits Teil der Route ist.
+Dieses DTO enthält nur die Author-ID, weil die Book-ID bereits Bestandteil der Route ist.
 
-## Ein Book deaktivieren
+## Book deaktivieren
 
 ```http
 PATCH /camplib/v1/books/{bookId}/deactivate
@@ -1074,7 +1045,7 @@ PATCH /camplib/v1/books/{bookId}/deactivate
 Beispiel:
 
 ```http
-PATCH /camplib/v1/books/b0000001-0000-0000-0000-000000000000/deactivate
+PATCH /camplib/v1/books/b0000004-0000-0000-0000-000000000000/deactivate
 ```
 
 Erfolgreiche Antwort:
@@ -1083,15 +1054,15 @@ Erfolgreiche Antwort:
 200 OK
 ```
 
-Response Body:
+Beispiel für den Response Body:
 
 ```json
 {
-  "id": "b0000001-0000-0000-0000-000000000000",
-  "title": "Clean Code",
-  "subtitle": null,
-  "isbn": "9780132350884",
-  "bookItemCount": 0,
+  "id": "b0000004-0000-0000-0000-000000000000",
+  "title": "Design Patterns",
+  "subtitle": "Elements of Reusable Object-Oriented Software",
+  "isbn": "9780201633610",
+  "bookItemCount": 2,
   "isActive": false
 }
 ```
@@ -1111,6 +1082,20 @@ Das Book bleibt in der Datenbank gespeichert.
 
 Normale ReadModels entscheiden, ob inaktive Books sichtbar sind.
 
+## BookSearchField
+
+```csharp
+public enum BookSearchField {
+   Title = 1,
+   AuthorLastName = 2,
+   Isbn = 3
+}
+```
+
+`AuthorLastName` ist das katalogorientierte Suchfeld für Authors.
+
+Es sucht Books anhand des Nachnamens der zugeordneten Authors.
+
 ## BookDto
 
 ```csharp
@@ -1124,7 +1109,7 @@ public sealed record BookDto(
 );
 ```
 
-`BookDto` wird hauptsächlich als Ergebnis schreibender Book-UseCases verwendet.
+`BookDto` wird hauptsächlich als Ergebnis von schreibenden Book-UseCases verwendet.
 
 ## BookListItemDto
 
@@ -1177,7 +1162,7 @@ public sealed record BookItemDto(
 );
 ```
 
-`BookItemDto` repräsentiert ein physisches BookItem.
+`BookItemDto` repräsentiert ein physisches Buchexemplar.
 
 ## BookItemStatus
 
@@ -1190,13 +1175,21 @@ public enum BookItemStatus {
 }
 ```
 
-Die Integer-Darstellung ist aktuell in JSON und im Swagger-Schema sichtbar.
+Die fachliche Bedeutung bleibt über die Enum-Namen sichtbar.
 
-Das ist kompakt und technisch stabil.
+Die Datenbank kann das Enum weiterhin als Integer speichern.
 
-Die fachliche Bedeutung bleibt im Code durch die Enum-Namen sichtbar.
+Die JSON-API serialisiert Enum-Werte als Strings.
 
-## Fehlerantworten
+Beispiel:
+
+```json
+{
+  "status": "Available"
+}
+```
+
+# Fehlerantworten
 
 Die API verwendet `ProblemDetails` für Fehlerantworten.
 
@@ -1204,16 +1197,14 @@ Beispielstruktur:
 
 ```json
 {
-  "type": "about:blank",
-  "title": "Bad Request",
-  "status": 400,
-  "detail": "Invalid email.",
-  "code": "Reader.InvalidEmail",
+  "type": "https://httpstatuses.com/404",
+  "title": "Catalog: Author NotFound",
+  "status": 404,
+  "detail": "The author was not found.",
+  "instance": "/camplib/v1/books/b0000001-0000-0000-0000-000000000000/authors",
   "traceId": "..."
 }
 ```
-
-Der konkrete `code` hängt vom Domain- oder Application-Fehler ab.
 
 Typische Kategorien:
 
@@ -1236,9 +1227,9 @@ Beispiele:
 409 Conflict -> Author ist dem Book bereits zugeordnet
 ```
 
-## Leseseite und Schreibseite
+# Lese- und Schreibseite
 
-Die Controller verwenden unterschiedliche Application Ports für Lesen und Schreiben.
+Die Controller verwenden unterschiedliche Application Ports für Lese- und Schreibverhalten.
 
 Readers:
 
@@ -1303,19 +1294,19 @@ Repositories arbeiten mit Domain-Objekten.
 ReadModels liefern DTOs direkt zurück.
 ```
 
-## Wichtige Designentscheidungen
+# Wichtige Designentscheidungen
 
 ## Book zu BookItem
 
 Ein Book kann mehrere physische BookItems besitzen.
 
-Das wird als 1:n-Beziehung modelliert:
+Das ist eine 1:n-Beziehung:
 
 ```text
 Book 1 --- n BookItem
 ```
 
-Ein BookItem wird über das `Book`-Aggregate hinzugefügt.
+Ein BookItem wird über das `Book`-Aggregate hinzugefügt:
 
 ```text
 POST /camplib/v1/books/{bookId}/items
@@ -1327,13 +1318,13 @@ Ein Book kann mehrere Authors haben.
 
 Ein Author kann mehreren Books zugeordnet sein.
 
-Das wird als m:n-Beziehung modelliert:
+Das ist eine m:n-Beziehung:
 
 ```text
 Book n --- m Author
 ```
 
-Die API stellt die Zuordnung so bereit:
+Die API veröffentlicht die Zuordnung als:
 
 ```text
 POST /camplib/v1/books/{bookId}/authors
@@ -1342,6 +1333,21 @@ POST /camplib/v1/books/{bookId}/authors
 Der Request Body enthält nur die `authorId`.
 
 Die technische Join-Tabelle wird nicht als API-Ressource veröffentlicht.
+
+## Katalogsuche nach Author-Nachname
+
+Für die Katalogsuche ist der Nachname des Authors das fachlich relevante Suchkriterium.
+
+Der Vorname wird nicht durchsucht.
+
+Dadurch werden zufällige Treffer vermieden.
+
+Beispiel:
+
+```text
+AuthorLastName = Martin -> Clean Code
+AuthorLastName = Fowler -> Refactoring und Design Patterns
+```
 
 ## Deactivate statt Delete im Catalog
 
@@ -1353,32 +1359,36 @@ Sie werden deaktiviert.
 IsActive = false
 ```
 
-Repositories können sie weiterhin laden.
+Repositories dürfen sie weiterhin laden.
 
 ReadModels entscheiden, ob inaktive Daten sichtbar sind.
 
-Normale Kataloglisten und Suchfunktionen liefern nur aktive Books und Authors.
+Normale Kataloglisten und Suchen liefern nur aktive Books und Authors.
 
-## Didaktische Ziele
+# Didaktische Ziele
 
-Diese API soll zeigen:
+Diese API soll folgende Themen demonstrieren:
 
 ```text
 REST-artige Endpunkte
 API-Versionierung
 Swagger/OpenAPI-Dokumentation
 DTOs als API-Verträge
-Result-basierte Fehlerbehandlung
+Result-basiertes Fehlerhandling
 ProblemDetails-Antworten
 Semantik partieller Updates
 Trennung von Lese- und Schreibpfaden
-Controller-Tests mit WebApplicationFactory
+Controller Tests mit WebApplicationFactory
 1:n-Beziehung innerhalb eines Aggregates
 m:n-Beziehung über Infrastructure-Mapping
+Katalogsuche nach Author-Nachname
 Deactivate statt Delete
 modulspezifische ReadModels und UseCases
 ```
 
-Swagger sollte für die technische Erkundung verwendet werden.
+Swagger soll für die technische Exploration verwendet werden.
 
-Dieses Dokument sollte für die konzeptionelle Erklärung verwendet werden.
+Dieses Dokument soll für die konzeptionelle Erklärung verwendet werden.
+
+```
+```
