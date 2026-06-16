@@ -2,7 +2,7 @@
 
 This document describes the testing strategy used in the `CampusLibrary` project.
 
-The goal is not only to verify correctness, but also to make the different test levels visible for teaching purposes. The project therefore separates domain tests, application use case tests, infrastructure integration tests, and controller/API tests.
+The goal is not only to verify correctness, but also to make the different test levels visible for teaching purposes. The project therefore separates domain tests, application use case tests, infrastructure integration tests, controller/API tests, and manual HTTP files.
 
 In Part 3, the application has been extended from one functional module to two functional modules. The application now contains the Readers module and the Catalog module. The existing Readers behavior remains stable, while the new Catalog behavior is added and verified by tests.
 
@@ -52,16 +52,17 @@ Domain tests
 Application use case tests with mocks
 Application integration tests with SQLite and UnitOfWork
 Infrastructure tests for repositories and read models
-Controller/API tests with WebApplicationFactory
+Controller/API tests with WebApplicationFactory and HttpClient
+Manual HTTP files for didactic API testing
 ```
 
-At the current project state, all tests pass:
+At the current project state, all automated tests pass:
 
 ```text
 Test summary: total: 155, failed: 0, succeeded: 155, skipped: 0
 ```
 
-Run all tests with:
+Run all automated tests with:
 
 ```bash
 dotnet test
@@ -396,7 +397,7 @@ search active authors
 select all active books
 find active book by id
 search active books by title
-search active books by author name
+search active books by author lastname
 search active books by ISBN
 select active books by author id
 ```
@@ -413,6 +414,59 @@ inactive Authors are not returned by normal Author read models
 This is different from repository behavior.
 
 Repositories may still load inactive aggregates because use cases may need them.
+
+## Catalog Search Tests
+
+Part 3 includes catalog search tests for Books.
+
+The supported Book search fields are:
+
+```text
+Title
+AuthorLastName
+Isbn
+```
+
+`AuthorLastName` searches only the lastname of assigned Authors.
+
+The firstname is not searched.
+
+This avoids accidental matches.
+
+For example:
+
+```text
+AuthorLastName = Martin -> Clean Code
+AuthorLastName = Fowler -> Refactoring and Design Patterns
+```
+
+A specific regression test should verify that:
+
+```text
+AuthorLastName = Martin
+```
+
+returns:
+
+```text
+Clean Code
+```
+
+but does not return:
+
+```text
+Refactoring
+Design Patterns
+```
+
+because in those books, `Martin` is only the firstname of `Martin Fowler`.
+
+This test makes the fachliche search decision visible:
+
+```text
+In catalog search, the author lastname is the relevant search criterion.
+The firstname should not create accidental matches.
+```
 
 ## Repository vs ReadModel Tests
 
@@ -454,13 +508,14 @@ ReadModels decide what is visible in queries.
 
 ## 5. Controller / API Tests
 
-Controller tests use:
+Controller and API tests use:
 
 ```text
 WebApplicationFactory<Program>
 TestBaseFactory
 TestBaseEndToEnd
 TestAuthHandler
+HttpClient
 ```
 
 These tests start the ASP.NET Core application in a test host and call the API through HTTP.
@@ -477,9 +532,10 @@ ProblemDetails mapping
 dependency injection
 database integration
 Swagger-compatible API behavior
+HTTP contract from the outside
 ```
 
-The Reader controller tests cover:
+The Reader controller/API tests cover:
 
 ```text
 GET    /camplib/v1/readers
@@ -490,7 +546,7 @@ PUT    /camplib/v1/readers/{id}
 DELETE /camplib/v1/readers/{id}
 ```
 
-The Author controller tests cover:
+The Author controller/API tests cover:
 
 ```text
 GET   /camplib/v1/authors
@@ -500,12 +556,14 @@ POST  /camplib/v1/authors
 PATCH /camplib/v1/authors/{id}/deactivate
 ```
 
-The Book controller tests cover:
+The Book controller/API tests cover:
 
 ```text
 GET   /camplib/v1/books
 GET   /camplib/v1/books/{id}
-GET   /camplib/v1/books/search?searchField=...&searchText=...
+GET   /camplib/v1/books/search?searchField=Title&searchText=...
+GET   /camplib/v1/books/search?searchField=AuthorLastName&searchText=...
+GET   /camplib/v1/books/search?searchField=Isbn&searchText=...
 GET   /camplib/v1/books/by-author/{authorId}
 POST  /camplib/v1/books
 POST  /camplib/v1/books/{bookId}/items
@@ -527,9 +585,60 @@ Infrastructure
 BuildingBlocks
 ```
 
+These tests do not test individual classes.
+
+They test the public HTTP contract of the application.
+
+The didactic rule is:
+
+```text
+Domain tests verify business rules.
+UseCase tests verify workflows.
+Repository and ReadModel tests verify persistence and projections.
+HttpClient tests verify that the API works from the outside.
+```
+
+## Manual HTTP Files
+
+In addition to automated tests, Part 3 also contains manual HTTP files for didactic API testing.
+
+These files are used after the database has been deleted or reset.
+
+The intended execution order is:
+
+```text
+1. Authors.http
+2. Books.http
+3. Readers.http
+```
+
+`Seed.cs` defines the stable ids.
+
+The `.http` files create the corresponding data through the public API.
+
+```text
+Authors.http creates the Authors.
+Books.http creates the Books, uses the existing Authors, assigns Authors to Books and adds BookItems.
+Readers.http creates or verifies Reader data.
+```
+
+This is intentional.
+
+The manual HTTP files should not invent unrelated ad-hoc ids for relationships.
+
+They should use the stable ids from `Seed.cs`, so that tests, documentation and manual API usage describe the same examples.
+
+The didactic rule is:
+
+```text
+Seed.cs defines stable example data.
+The .http files create this data through the public API.
+Manual API tests should be reproducible after a database reset.
+```
+
 ## Test Database
 
-The tests use SQLite through the test infrastructure.
+The automated tests use SQLite through the test infrastructure.
 
 The test database is created by:
 
@@ -588,10 +697,13 @@ Typical Catalog data includes:
 Author1
 Author2
 Author3
+Author4
+Author5
 
 Book1
 Book2
 Book3
+Book4
 
 Books with Authors
 Books with BookItems
@@ -604,6 +716,10 @@ This keeps the examples consistent and easier to understand for students.
 For Catalog tests, seed data is also useful because relationships should be built from the same tracked object graph where necessary.
 
 For example, books with authors should use existing Author instances instead of creating duplicate Author objects with the same ids.
+
+The same principle is used by the manual HTTP files.
+
+`Seed.cs` defines stable ids, while the `.http` files create the corresponding records through the public API.
 
 ## Partial Update Tests
 
@@ -762,6 +878,9 @@ Does EF Core store, load and project the data correctly?
 
 Controller/API test:
 Does the API behave correctly from the outside?
+
+Manual HTTP file:
+Can students reproduce and inspect the API behavior manually after a database reset?
 ```
 
 Together, these tests form a teaching-oriented test strategy.
@@ -829,6 +948,14 @@ BookItemStatus representation
 BookSearchField representation
 ```
 
+For manual API testing, reset the database and execute:
+
+```text
+Authors.http
+Books.http
+Readers.http
+```
+
 ## Version
 
 The current version belongs to Part 3:
@@ -869,6 +996,8 @@ how a modular monolith can still be tested end-to-end
 how relationships can be tested across domain and infrastructure
 how read models differ from repositories
 how deactivation differs from deletion
+how catalog search by author lastname avoids accidental matches
+how manual HTTP files can reproduce API behavior after a database reset
 ```
 
 The tests are therefore not only a safety net, but also part of the learning material.
@@ -881,7 +1010,9 @@ Each test level has its own purpose:
 Domain tests protect business rules.
 Use case tests protect application workflows.
 Infrastructure tests protect persistence behavior.
-Controller tests protect the HTTP API.
+Controller/API tests protect the HTTP API.
+HttpClient tests protect the public HTTP contract.
+Manual HTTP files make API behavior visible and reproducible for students.
 End-to-end tests protect the full composition.
 ```
 
@@ -905,4 +1036,18 @@ For Catalog this is especially visible with deactivation:
 ```text
 Repositories may still load inactive aggregates.
 ReadModels hide inactive data from normal queries.
+```
+
+For catalog search, the most important rule is:
+
+```text
+AuthorLastName searches by author lastname.
+Firstname is not searched, because it would create accidental matches.
+```
+
+For manual API tests, the most important rule is:
+
+```text
+Seed.cs defines stable example data.
+The .http files create this data through the public API.
 ```

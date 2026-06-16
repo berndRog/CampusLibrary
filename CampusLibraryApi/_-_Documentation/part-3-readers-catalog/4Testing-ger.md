@@ -1,19 +1,19 @@
-# Teststrategie
+# Testing-Strategie
 
-Dieses Dokument beschreibt die Teststrategie, die im Projekt `CampusLibrary` verwendet wird.
+Dieses Dokument beschreibt die Testing-Strategie im Projekt `CampusLibrary`.
 
-Das Ziel besteht nicht nur darin, Korrektheit zu prüfen. Die verschiedenen Testebenen sollen auch für die Lehre sichtbar werden. Das Projekt trennt daher Domain Tests, Application UseCase Tests, Infrastructure Integration Tests und Controller-/API-Tests.
+Das Ziel ist nicht nur, die fachliche Korrektheit zu prüfen. Die Tests sollen auch die unterschiedlichen Testebenen für Studierende sichtbar machen. Das Projekt trennt deshalb Domain Tests, Application UseCase Tests, Infrastructure Integration Tests, Controller-/API-Tests und manuelle HTTP-Dateien.
 
-In Teil 3 wurde die Anwendung von einem funktionsfähigen Modul auf zwei funktionsfähige Module erweitert. Die Anwendung enthält jetzt das Readers-Modul und das Catalog-Modul. Das bestehende Readers-Verhalten bleibt stabil, während das neue Catalog-Verhalten ergänzt und durch Tests abgesichert wird.
+In Teil 3 wurde die Anwendung von einem fachlichen Modul auf zwei fachliche Module erweitert. Die Anwendung enthält nun das Readers-Modul und das Catalog-Modul. Das bestehende Readers-Verhalten bleibt stabil, während das neue Catalog-Verhalten ergänzt und durch Tests abgesichert wird.
 
-Teil 3 ist daher nicht hauptsächlich ein Refactoring-Schritt. Teil 3 ist ein Erweiterungsschritt. Die Testsuite prüft beides:
+Teil 3 ist deshalb nicht hauptsächlich ein Refactoring-Schritt. Teil 3 ist ein Erweiterungsschritt. Die Testsuite prüft beides:
 
 ```text
 bestehendes Readers-Verhalten funktioniert weiterhin
 neues Catalog-Verhalten funktioniert korrekt
 ```
 
-Das Catalog-Modul führt zusätzliche fachliche Konzepte ein:
+Das Catalog-Modul führt zusätzliche Domain-Konzepte ein:
 
 ```text
 Book
@@ -24,7 +24,7 @@ Book-zu-BookItem 1:n-Beziehung
 Book-zu-Author m:n-Beziehung
 ```
 
-Die Tests prüfen außerdem, dass die Architekturregeln aus Teil 2 weiterhin gelten, obwohl ein zweites Modul hinzugefügt wurde.
+Die Tests prüfen außerdem, dass die Architekturregeln aus Teil 2 weiterhin gelten, wenn ein zweites Modul ergänzt wird.
 
 ## Überblick
 
@@ -34,7 +34,7 @@ Das aktuelle Testprojekt ist:
 CampusLibraryApiTest
 ```
 
-Der Produktivcode ist auf mehrere Projekte verteilt:
+Der produktive Code ist auf mehrere Projekte aufgeteilt:
 
 ```text
 CampusLibraryApi
@@ -52,16 +52,17 @@ Domain Tests
 Application UseCase Tests mit Mocks
 Application Integration Tests mit SQLite und UnitOfWork
 Infrastructure Tests für Repositories und ReadModels
-Controller/API Tests mit WebApplicationFactory
+Controller-/API-Tests mit WebApplicationFactory und HttpClient
+Manuelle HTTP-Dateien für didaktische API-Tests
 ```
 
-Im aktuellen Projektstand sind alle Tests grün:
+Beim aktuellen Projektstand laufen alle automatisierten Tests erfolgreich:
 
 ```text
 Test summary: total: 155, failed: 0, succeeded: 155, skipped: 0
 ```
 
-Alle Tests ausführen:
+Alle automatisierten Tests werden ausgeführt mit:
 
 ```bash
 dotnet test
@@ -106,14 +107,14 @@ Normalisierung
 ungültige Eingaben
 Domain Errors
 Aggregate-Invarianten
-Value-Object-Validierung
+Validierung von Value Objects
 Beziehungsregeln
-aktiver/inaktiver Zustand
+Aktiv-/Inaktiv-Zustand
 ```
 
-Die Domain-Schicht verwendet kein EF Core, kein ASP.NET Core, keine Repositories, keine Controller, kein Swagger und kein HTTP.
+Die Domain Layer verwendet kein EF Core, kein ASP.NET Core, keine Repositories, keine Controller, kein Swagger und kein HTTP.
 
-Das Hauptziel ist zu prüfen, ob Aggregates, Entities und Value Objects ihre eigenen Invarianten schützen.
+Das wichtigste Ziel ist zu prüfen, dass Aggregates, Entities und Value Objects ihre eigenen Invarianten schützen.
 
 In der Struktur des modularen Monolithen prüfen diese Tests hauptsächlich Code aus:
 
@@ -125,20 +126,20 @@ CampusLibraryApi_2_BuildingBlocks
 
 ## Catalog Domain Tests
 
-Die Catalog Domain Tests sind besonders wichtig, weil Teil 3 ein reichhaltigeres Domain Model einführt als Teil 2.
+Die Catalog Domain Tests sind wichtig, weil Teil 3 ein reichhaltigeres Domain Model einführt als Teil 2.
 
 Die Tests prüfen zum Beispiel:
 
 ```text
-ein Book kann mit gültigem Title und gültiger ISBN erzeugt werden
+ein Book kann mit gültigem Titel und gültiger ISBN erzeugt werden
 ein Book kann nicht mit ungültiger ISBN erzeugt werden
 ein BookItem kann einem Book hinzugefügt werden
 ein BookItem startet mit dem Status Available
 ein Author kann einem Book zugeordnet werden
-derselbe Author kann demselben Book nicht doppelt zugeordnet werden
+derselbe Author kann demselben Book nicht zweimal zugeordnet werden
 ein Book kann deaktiviert werden
 ein Author kann deaktiviert werden
-CreatedAt und UpdatedAt müssen gültige UTC-Zeitstempel sein
+CreatedAt und UpdatedAt müssen gültige UTC-Zeitpunkte sein
 ```
 
 Diese Tests machen die Aggregate-Grenze sichtbar.
@@ -149,7 +150,7 @@ Ein `BookItem` wird zum Beispiel über das `Book`-Aggregate hinzugefügt:
 Book.AddBookItem(...)
 ```
 
-Der Test prüft daher nicht nur das `BookItem`, sondern auch, ob das `Book`-Aggregate die Konsistenz seines eigenen Objektgraphen schützt.
+Der Test prüft deshalb nicht nur das `BookItem`, sondern auch, dass das `Book`-Aggregate die Konsistenz seines eigenen Objektgraphen schützt.
 
 ## 2. Application UseCase Tests mit Mocks
 
@@ -186,11 +187,11 @@ IClock
 ILogger<T>
 ```
 
-Ziel ist zu prüfen, ob der UseCase den Workflow korrekt koordiniert:
+Der Zweck ist zu prüfen, ob der UseCase den Ablauf korrekt koordiniert:
 
 ```text
-grundlegende Eingaben prüfen
-optionale Ids auflösen
+grundlegende Eingaben validieren
+optionale IDs auflösen
 Aggregates laden
 Value Objects erzeugen
 Eindeutigkeit prüfen
@@ -199,17 +200,17 @@ Domain-Methoden aufrufen
 DTOs oder Fehler zurückgeben
 ```
 
-`BookUcCreate` prüft zum Beispiel, ob die ISBN bereits existiert, bevor ein neues Book erzeugt wird.
+Zum Beispiel prüft `BookUcCreate`, ob die ISBN bereits existiert, bevor ein neues Book erzeugt wird.
 
 `BookUcAddBookItem` prüft, ob die InventoryNumber bereits existiert, bevor ein neues physisches BookItem hinzugefügt wird.
 
 `BookUcAssignAuthor` lädt sowohl das Book als auch den Author, bevor die Domain-Methode aufgerufen wird, die den Author dem Book zuordnet.
 
-Diese Tests sind weitgehend unabhängig von EF Core und HTTP. Sie konzentrieren sich auf Application-Logik innerhalb der Core-Module.
+Diese Tests sind weitgehend unabhängig von EF Core und HTTP. Sie konzentrieren sich auf die Application-Logik innerhalb der Core-Module.
 
-## Was mockbasierte UseCase Tests prüfen sollten
+## Was Mock-basierte UseCase Tests prüfen sollten
 
-UseCase Tests mit Mocks sollten sowohl Erfolgs- als auch Fehlerpfade prüfen.
+UseCase Tests mit Mocks sollten sowohl Erfolgsfälle als auch Fehlerfälle prüfen.
 
 Typische Prüfungen im Erfolgsfall sind:
 
@@ -223,67 +224,67 @@ das zurückgegebene DTO enthält die erwarteten Daten
 Typische Prüfungen im Fehlerfall sind:
 
 ```text
-ungültige Eingaben liefern einen Domain Error
+ungültige Eingabe liefert einen Domain Error
 fehlendes Aggregate liefert NotFound
 doppelte Daten liefern Conflict
 UnitOfWork wird bei Fehlern nicht aufgerufen
-nach einem frühen Fehler erfolgen keine unnötigen Repository-Aufrufe
+nach einem frühen Fehler werden keine unnötigen Repository-Aufrufe ausgeführt
 ```
 
-Ziel ist nicht, EF Core zu testen. Ziel ist, den Application Workflow zu testen.
+Der Zweck ist nicht, EF Core zu testen. Der Zweck ist, den Application Workflow zu testen.
 
 ## 3. Application Integration Tests
 
-Application Integration Tests verwenden echte Infrastructure-Bestandteile, wenn das sinnvoll ist.
+Application Integration Tests verwenden echte Infrastructure-Bestandteile, wo das sinnvoll ist.
 
-Sie prüfen, ob UseCases korrekt zusammenarbeiten mit:
+Sie prüfen, ob UseCases zusammenarbeiten mit:
 
 ```text
 echter Repository-Implementierung
-echtem UnitOfWork
+echter UnitOfWork
 SQLite-Testdatenbank
 EF-Core-Tracking
 echten EF-Core-Mappings
 ```
 
-Das ist nützlich, weil manche Fehler erst auftreten, wenn EF Core, Repository und UnitOfWork gemeinsam verwendet werden.
+Das ist nützlich, weil manche Fehler erst sichtbar werden, wenn EF Core, Repository und UnitOfWork zusammenspielen.
 
 Diese Tests sind langsamer als reine Domain Tests, geben aber mehr Sicherheit, dass Application und Persistence korrekt zusammenspielen.
 
-In Teil 3 sind diese Tests besonders wichtig, weil es jetzt zwei Core-Module und ein gemeinsames Infrastructure-Projekt gibt.
+In Teil 3 sind diese Tests besonders wichtig, weil es nun zwei Core-Module und ein gemeinsames Infrastructure-Projekt gibt.
 
-Die beabsichtigte Abhängigkeitsrichtung bleibt:
+Die beabsichtigte Dependency-Richtung bleibt:
 
 ```text
 Core-Module definieren Ports.
 Infrastructure implementiert Ports.
-Tests prüfen, dass beide korrekt zusammenspielen.
+Tests prüfen, ob beides zusammen korrekt funktioniert.
 ```
 
 ## Catalog Application Integration Tests
 
-Catalog Integration Tests prüfen, ob Catalog UseCases korrekt mit den echten Persistenzadaptern funktionieren.
+Catalog Integration Tests prüfen, ob Catalog UseCases mit den echten Persistence-Adaptern korrekt funktionieren.
 
 Typische Beispiele sind:
 
 ```text
-einen Author erzeugen und persistieren
-ein Book erzeugen und mit ISBN persistieren
-ein BookItem hinzufügen und persistieren
-einen Author zuordnen und die Book-Author-Beziehung persistieren
-ein Book deaktivieren und IsActive aktualisieren
-einen Author deaktivieren und IsActive aktualisieren
+das Erzeugen eines Authors persistiert den Author
+das Erzeugen eines Books persistiert Book und ISBN
+das Hinzufügen eines BookItems persistiert das BookItem
+das Zuordnen eines Authors persistiert die Book-Author-Beziehung
+das Deaktivieren eines Books aktualisiert IsActive
+das Deaktivieren eines Authors aktualisiert IsActive
 ```
 
-Diese Tests sind wichtig, weil Teil 3 Beziehungen enthält, die von EF Core korrekt abgebildet werden müssen.
+Diese Tests sind wichtig, weil Teil 3 Beziehungen enthält, die von EF Core korrekt gemappt werden müssen.
 
-Die Zuordnung eines Authors zu einem Book betrifft zum Beispiel:
+Zum Beispiel umfasst das Zuordnen eines Authors zu einem Book:
 
 ```text
 Book-Aggregate
 Author-Aggregate
 Book.Authors-Navigation
-BookAuthorJoin-Tabelle in der Infrastructure
+BookAuthorJoin-Tabelle in Infrastructure
 UnitOfWork
 SQLite-Datenbank
 ```
@@ -294,7 +295,7 @@ Ein Integration Test prüft, ob die Beziehung tatsächlich persistiert wird.
 
 ## 4. Infrastructure Tests
 
-Infrastructure Tests prüfen die Persistenzadapter.
+Infrastructure Tests prüfen die Persistence-Adapter.
 
 Typische Bereiche sind:
 
@@ -314,9 +315,9 @@ SQLite-Verhalten
 
 Das Repository gehört zur Schreibseite.
 
-Das ReadModel gehört zur Leseseite.
+Das ReadModel gehört zur Query-Seite.
 
-Diese Trennung ist beabsichtigt:
+Diese Trennung ist bewusst gewählt:
 
 ```text
 Repository -> domain-orientierter Schreibzugriff
@@ -331,7 +332,7 @@ In der projektbasierten Struktur prüfen diese Tests hauptsächlich Code aus:
 CampusLibraryApi_4_Infrastructure
 ```
 
-zusammen mit Domain-Typen und Ports aus:
+zusammen mit Domain Types und Ports aus:
 
 ```text
 CampusLibraryApi_3_Core_Readers
@@ -341,48 +342,48 @@ CampusLibraryApi_2_BuildingBlocks
 
 ## Repository Tests
 
-Repository Tests prüfen das Persistenzverhalten auf der Schreibseite.
+Repository Tests prüfen das Verhalten der schreibseitigen Persistence.
 
-Für Readers ist typisches Repository-Verhalten:
+Für Readers sind typische Repository-Verhalten:
 
 ```text
 Reader hinzufügen
-Reader anhand der Id finden
+Reader anhand der ID finden
 Reader anhand der Email finden
 Subject-Eindeutigkeit prüfen
 Reader entfernen
 ```
 
-Für Catalog ist typisches Repository-Verhalten:
+Für Catalog sind typische Repository-Verhalten:
 
 ```text
 Author hinzufügen
-Author anhand der Id finden
+Author anhand der ID finden
 Eindeutigkeit des Author-Namens prüfen
 
 Book hinzufügen
-Book anhand der Id finden
+Book anhand der ID finden
 ISBN-Eindeutigkeit prüfen
-Eindeutigkeit der InventoryNumber prüfen
+InventoryNumber-Eindeutigkeit prüfen
 Book mit Authors laden
 Book mit BookItems laden
 ```
 
 Repositories arbeiten mit Domain-Objekten.
 
-Sie sind nicht für optimierte DTO-Projektionen zuständig.
+Sie sind nicht für optimierte DTO-Projektionen verantwortlich.
 
 ## ReadModel Tests
 
-ReadModel Tests prüfen Projektionen auf der Leseseite.
+ReadModel Tests prüfen query-seitige Projektionen.
 
-ReadModels geben direkt DTOs zurück.
+ReadModels liefern DTOs direkt zurück.
 
 Typische Reader ReadModel Tests prüfen:
 
 ```text
 alle Reader auswählen
-Reader anhand der Id finden
+Reader anhand der ID finden
 Reader anhand der Email finden
 ```
 
@@ -390,18 +391,18 @@ Typische Catalog ReadModel Tests prüfen:
 
 ```text
 alle aktiven Authors auswählen
-aktiven Author anhand der Id finden
+aktiven Author anhand der ID finden
 aktive Authors suchen
 
 alle aktiven Books auswählen
-aktives Book anhand der Id finden
-aktive Books nach Title suchen
-aktive Books nach AuthorName suchen
-aktive Books nach ISBN suchen
-aktive Books anhand der AuthorId auswählen
+aktives Book anhand der ID finden
+aktive Books anhand des Titels suchen
+aktive Books anhand des Author-Nachnamens suchen
+aktive Books anhand der ISBN suchen
+aktive Books anhand der Author-ID auswählen
 ```
 
-ReadModel Tests sind außerdem dafür verantwortlich, Sichtbarkeitsregeln auf der Leseseite zu prüfen.
+ReadModel Tests sind außerdem dafür verantwortlich, die Sichtbarkeitsregeln der Leseseite zu prüfen.
 
 Zum Beispiel:
 
@@ -414,15 +415,68 @@ Das unterscheidet sich vom Repository-Verhalten.
 
 Repositories dürfen inaktive Aggregates weiterhin laden, weil UseCases sie möglicherweise benötigen.
 
+## Tests für die Catalog-Suche
+
+Teil 3 enthält Tests für die Book-Suche im Catalog.
+
+Die unterstützten Book-Suchfelder sind:
+
+```text
+Title
+AuthorLastName
+Isbn
+```
+
+`AuthorLastName` sucht ausschließlich im Nachnamen der zugeordneten Authors.
+
+Der Vorname wird nicht durchsucht.
+
+Dadurch werden zufällige Treffer vermieden.
+
+Zum Beispiel:
+
+```text
+AuthorLastName = Martin -> Clean Code
+AuthorLastName = Fowler -> Refactoring und Design Patterns
+```
+
+Ein gezielter Regressionstest sollte prüfen, dass:
+
+```text
+AuthorLastName = Martin
+```
+
+nur dieses Book liefert:
+
+```text
+Clean Code
+```
+
+aber nicht:
+
+```text
+Refactoring
+Design Patterns
+```
+
+Denn bei diesen Books ist `Martin` nur der Vorname von `Martin Fowler`.
+
+Dieser Test macht die fachliche Suchentscheidung sichtbar:
+
+```text
+In der Katalogsuche ist der Author-Nachname das relevante Suchkriterium.
+Der Vorname soll keine zufälligen Treffer erzeugen.
+```
+
 ## Repository Tests vs. ReadModel Tests
 
-Teil 3 macht die Unterscheidung zwischen Repository Tests und ReadModel Tests besonders sichtbar.
+Teil 3 macht die Unterscheidung zwischen Repository Tests und ReadModel Tests besonders wichtig.
 
-Repositories testen das Persistenzmodell der Schreibseite.
+Repositories testen das schreibseitige Persistence Model.
 
-ReadModels testen das Query-Modell der Leseseite.
+ReadModels testen das leseseitige Query Model.
 
-Bei Catalog wird diese Unterscheidung besonders durch Deactivation sichtbar.
+Für Catalog wird dieser Unterschied besonders bei Deactivation sichtbar.
 
 Repository Tests sollten prüfen:
 
@@ -439,10 +493,10 @@ IsActive ist false
 ReadModel Tests sollten prüfen:
 
 ```text
-inaktive Books werden in normalen Book-Listen verborgen
-inaktive Books werden in normalen Book-Suchergebnissen verborgen
-inaktive Authors werden in normalen Author-Listen verborgen
-inaktive Authors werden in normalen Author-Suchergebnissen verborgen
+inaktive Books werden in normalen Book-Listen ausgeblendet
+inaktive Books werden in normalen Book-Suchergebnissen ausgeblendet
+inaktive Authors werden in normalen Author-Listen ausgeblendet
+inaktive Authors werden in normalen Author-Suchergebnissen ausgeblendet
 ```
 
 Die didaktische Regel lautet:
@@ -454,13 +508,14 @@ ReadModels entscheiden, was in Queries sichtbar ist.
 
 ## 5. Controller- / API-Tests
 
-Controller Tests verwenden:
+Controller- und API-Tests verwenden:
 
 ```text
 WebApplicationFactory<Program>
 TestBaseFactory
 TestBaseEndToEnd
 TestAuthHandler
+HttpClient
 ```
 
 Diese Tests starten die ASP.NET-Core-Anwendung in einem Testhost und rufen die API über HTTP auf.
@@ -471,15 +526,16 @@ Sie prüfen:
 Routing
 Model Binding
 Controller Actions
-Status Codes
+Statuscodes
 JSON-Serialisierung
 ProblemDetails-Mapping
 Dependency Injection
 Datenbankintegration
 Swagger-kompatibles API-Verhalten
+HTTP-Vertrag von außen
 ```
 
-Die Reader Controller Tests decken folgende Endpunkte ab:
+Die Reader Controller-/API-Tests decken ab:
 
 ```text
 GET    /camplib/v1/readers
@@ -490,7 +546,7 @@ PUT    /camplib/v1/readers/{id}
 DELETE /camplib/v1/readers/{id}
 ```
 
-Die Author Controller Tests decken folgende Endpunkte ab:
+Die Author Controller-/API-Tests decken ab:
 
 ```text
 GET   /camplib/v1/authors
@@ -500,12 +556,14 @@ POST  /camplib/v1/authors
 PATCH /camplib/v1/authors/{id}/deactivate
 ```
 
-Die Book Controller Tests decken folgende Endpunkte ab:
+Die Book Controller-/API-Tests decken ab:
 
 ```text
 GET   /camplib/v1/books
 GET   /camplib/v1/books/{id}
-GET   /camplib/v1/books/search?searchField=...&searchText=...
+GET   /camplib/v1/books/search?searchField=Title&searchText=...
+GET   /camplib/v1/books/search?searchField=AuthorLastName&searchText=...
+GET   /camplib/v1/books/search?searchField=Isbn&searchText=...
 GET   /camplib/v1/books/by-author/{authorId}
 POST  /camplib/v1/books
 POST  /camplib/v1/books/{bookId}/items
@@ -515,9 +573,9 @@ PATCH /camplib/v1/books/{bookId}/deactivate
 
 Diese Tests sind am nächsten an der realen API-Nutzung.
 
-In Teil 3 prüfen Controller-/API-Tests außerdem, ob beide Module korrekt durch das ausführbare API-Projekt verdrahtet werden.
+In Teil 3 prüfen Controller-/API-Tests außerdem, ob die beiden Module korrekt durch das ausführbare API-Projekt verdrahtet werden.
 
-Sie prüfen daher nicht nur Controller-Verhalten, sondern auch die Zusammensetzung von:
+Sie prüfen deshalb nicht nur das Controller-Verhalten, sondern auch die Zusammensetzung aus:
 
 ```text
 Web
@@ -527,9 +585,60 @@ Infrastructure
 BuildingBlocks
 ```
 
+Diese Tests testen keine einzelnen Klassen.
+
+Sie testen den öffentlichen HTTP-Vertrag der Anwendung.
+
+Die didaktische Regel lautet:
+
+```text
+Domain Tests prüfen fachliche Regeln.
+UseCase Tests prüfen Workflows.
+Repository- und ReadModel-Tests prüfen Persistenz und Projektionen.
+HttpClient-Tests prüfen, ob die API von außen funktioniert.
+```
+
+## Manuelle HTTP-Dateien
+
+Zusätzlich zu den automatisierten Tests enthält Teil 3 manuelle HTTP-Dateien für didaktische API-Tests.
+
+Diese Dateien werden verwendet, nachdem die Datenbank gelöscht oder zurückgesetzt wurde.
+
+Die vorgesehene Ausführungsreihenfolge lautet:
+
+```text
+1. Authors.http
+2. Books.http
+3. Readers.http
+```
+
+`Seed.cs` definiert die stabilen IDs.
+
+Die `.http`-Dateien erzeugen die entsprechenden Daten über die öffentliche API.
+
+```text
+Authors.http erzeugt die Authors.
+Books.http erzeugt die Books, verwendet die vorhandenen Authors, ordnet Authors zu Books zu und fügt BookItems hinzu.
+Readers.http erzeugt oder prüft Reader-Daten.
+```
+
+Das ist bewusst so gewählt.
+
+Die manuellen HTTP-Dateien sollen für Beziehungen keine beliebigen Ad-hoc-IDs erfinden.
+
+Sie verwenden die stabilen IDs aus `Seed.cs`, damit Tests, Dokumentation und manuelle API-Nutzung dieselben Beispiele beschreiben.
+
+Die didaktische Regel lautet:
+
+```text
+Seed.cs definiert stabile Beispieldaten.
+Die .http-Dateien erzeugen diese Daten über die öffentliche API.
+Manuelle API-Tests sollen nach einem Datenbank-Reset reproduzierbar sein.
+```
+
 ## Testdatenbank
 
-Die Tests verwenden SQLite über die Testinfrastruktur.
+Die automatisierten Tests verwenden SQLite über die Test-Infrastruktur.
 
 Die Testdatenbank wird erzeugt durch:
 
@@ -538,7 +647,7 @@ TestDatabase
 TestBaseFactory
 ```
 
-Die Factory ersetzt ausgewählte Produktivdienste:
+Die Factory ersetzt ausgewählte Produktionsservices:
 
 ```text
 AppDbContext
@@ -582,30 +691,37 @@ Reader6
 ReaderRegister
 ```
 
-Typische Catalog-Daten sind:
+Typische Catalog-Daten enthalten:
 
 ```text
 Author1
 Author2
 Author3
+Author4
+Author5
 
 Book1
 Book2
 Book3
+Book4
 
-Books with Authors
-Books with BookItems
+Books mit Authors
+Books mit BookItems
 ```
 
-Tests sollten Seed-Daten gegenüber manuell konstruierten Ad-hoc-Daten bevorzugen.
+Die Tests sollten Seed-Daten gegenüber manuell konstruierten Ad-hoc-Daten bevorzugen.
 
-Dadurch bleiben Beispiele konsistent und für Studierende leichter verständlich.
+Das hält die Beispiele konsistent und für Studierende leichter nachvollziehbar.
 
-Für Catalog Tests sind Seed-Daten außerdem hilfreich, weil Beziehungen bei Bedarf aus demselben getrackten Objektgraphen aufgebaut werden sollten.
+Für Catalog Tests sind Seed-Daten außerdem nützlich, weil Beziehungen bei Bedarf aus demselben getrackten Objektgraphen aufgebaut werden sollten.
 
-Books mit Authors sollten zum Beispiel vorhandene Author-Instanzen verwenden, statt doppelte Author-Objekte mit denselben Ids zu erzeugen.
+Zum Beispiel sollten Books mit Authors vorhandene Author-Instanzen verwenden, statt doppelte Author-Objekte mit denselben IDs zu erzeugen.
 
-## Tests für partielle Updates
+Dasselbe Prinzip gilt für die manuellen HTTP-Dateien.
+
+`Seed.cs` definiert stabile IDs, während die `.http`-Dateien die entsprechenden Datensätze über die öffentliche API erzeugen.
+
+## Partial Update Tests
 
 `ReaderUpdateDto` unterstützt partielle Updates:
 
@@ -617,12 +733,12 @@ public sealed record ReaderUpdateDto(
 );
 ```
 
-Die Bedeutung von `null` lautet:
+Die Bedeutung von `null` ist:
 
 ```text
-Lastname = null   -> aktuellen Nachnamen beibehalten
-Email = null      -> aktuelle Email beibehalten
-AddressDto = null -> aktuelle Adresse beibehalten
+Lastname = null   -> bisherigen Nachnamen beibehalten
+Email = null      -> bisherige Email beibehalten
+AddressDto = null -> bisherige Adresse beibehalten
 ```
 
 Nur angegebene Werte werden geändert.
@@ -636,18 +752,18 @@ null       -> keine Änderung
 "Meier"   -> gültige Änderung
 ```
 
-Diese Unterscheidung ist für die Semantik partieller Updates wichtig.
+Diese Unterscheidung ist wichtig für die Semantik partieller Updates.
 
-Die Tests sollten daher beide Fälle abdecken:
+Die Tests sollten deshalb beide Fälle abdecken:
 
 ```text
-Feld fehlt oder ist null           -> keine Änderung
-Feld ist angegeben, aber ungültig  -> Validierungsfehler
+Feld fehlt oder ist null          -> keine Änderung
+Feld ist angegeben, aber ungültig -> Validierungsfehler
 ```
 
 ## Tests für Catalog-Beziehungen
 
-Teil 3 ergänzt Beziehungen, die explizit getestet werden müssen.
+Teil 3 ergänzt Beziehungen, die ausdrücklich getestet werden müssen.
 
 ## Book zu BookItem
 
@@ -668,7 +784,7 @@ die InventoryNumber muss eindeutig sein
 ein neues BookItem startet mit dem Status Available
 das Hinzufügen eines BookItems aktualisiert das Book-Aggregate
 die Beziehung wird durch EF Core persistiert
-ReadModels zeigen die Gesamtzahl und die verfügbaren BookItems
+ReadModels zeigen die Anzahl aller und verfügbarer BookItems
 ```
 
 ## Book zu Author
@@ -686,17 +802,17 @@ Book n --- m Author
 Die Tests sollten prüfen:
 
 ```text
-ein bestehender Author kann einem bestehenden Book zugeordnet werden
-derselbe Author kann demselben Book nicht doppelt zugeordnet werden
+ein vorhandener Author kann einem vorhandenen Book zugeordnet werden
+derselbe Author kann demselben Book nicht zweimal zugeordnet werden
 das Zuordnen eines Authors aktualisiert das Book-Aggregate
 die Beziehung wird über die BookAuthorJoin-Tabelle persistiert
 ReadModels geben Authors in stabiler Reihenfolge zurück
-Books können anhand einer AuthorId ausgewählt werden
+Books können anhand einer Author-ID ausgewählt werden
 ```
 
 Die technische Join-Tabelle wird nicht als eigenes Domain-Konzept getestet.
 
-Sie wird über das Persistenzverhalten getestet.
+Sie wird über das Persistence-Verhalten getestet.
 
 Die didaktische Regel lautet:
 
@@ -722,8 +838,8 @@ Repository- und UseCase-Tests prüfen:
 ```text
 das Aggregate existiert weiterhin
 IsActive ist false
-die Änderung ist persistiert
-UpdatedAt ist aktualisiert
+die Änderung wird persistiert
+UpdatedAt wird aktualisiert
 ```
 
 ReadModel Tests prüfen:
@@ -741,9 +857,9 @@ PATCH /authors/{id}/deactivate liefert 200 OK
 normale GET-Endpunkte liefern deaktivierte Ressourcen nicht mehr zurück
 ```
 
-Diese Trennung macht die Designentscheidung in den Tests sichtbar.
+Diese Trennung macht die Designentscheidung in Tests sichtbar.
 
-## Warum unterschiedliche Testarten?
+## Warum verschiedene Testarten?
 
 Jede Testart beantwortet eine andere Frage.
 
@@ -752,25 +868,28 @@ Domain Test:
 Funktioniert die fachliche Regel?
 
 UseCase Mock Test:
-Ruft der Application Workflow die richtigen Ports auf und behandelt er Fehler korrekt?
+Ruft der Application Workflow die richtigen Ports auf und behandelt Fehler korrekt?
 
 Application Integration Test:
-Funktioniert der UseCase mit echter Persistenz?
+Funktioniert der UseCase mit echter Persistence?
 
 Infrastructure Test:
 Speichert, lädt und projiziert EF Core die Daten korrekt?
 
 Controller-/API-Test:
 Verhält sich die API von außen korrekt?
+
+Manuelle HTTP-Datei:
+Können Studierende das API-Verhalten nach einem Datenbank-Reset manuell reproduzieren und nachvollziehen?
 ```
 
-Zusammen bilden diese Tests eine lehrorientierte Teststrategie.
+Zusammen bilden diese Tests eine didaktisch orientierte Testing-Strategie.
 
 ## Warum die Tests in Teil 3 wichtig sind
 
 Teil 3 ergänzt ein zweites fachliches Modul.
 
-Das erwartete Ergebnis lautet:
+Das erwartete Ergebnis ist:
 
 ```text
 Die Architektur wächst.
@@ -780,7 +899,7 @@ Das neue Verhalten ist durch Tests abgesichert.
 
 Die Testsuite ist das Sicherheitsnetz für diese Erweiterung.
 
-Wenn nach dem Hinzufügen des Catalog-Moduls alle Tests grün bleiben, gibt das Vertrauen, dass:
+Wenn nach dem Ergänzen des Catalog-Moduls alle Tests grün bleiben, gibt das Vertrauen, dass:
 
 ```text
 Readers weiterhin funktioniert
@@ -790,12 +909,12 @@ Infrastructure Ports aus mehreren Modulen korrekt implementiert
 das API-Projekt alle Module korrekt verdrahtet
 ```
 
-Der aktuelle Stand lautet:
+Das aktuelle Ergebnis ist:
 
 ```text
 155 Tests
-0 failed
-0 skipped
+0 fehlgeschlagen
+0 übersprungen
 ```
 
 ## Empfohlener Workflow
@@ -806,7 +925,7 @@ Während der Entwicklung:
 dotnet test
 ```
 
-Bei API-Änderungen zusätzlich die Anwendung starten und Swagger prüfen:
+Bei API-Änderungen sollte zusätzlich die Anwendung gestartet und Swagger geprüft werden:
 
 ```bash
 dotnet run --project CampusLibraryApi
@@ -818,7 +937,7 @@ Swagger ist im Development-Modus erreichbar unter:
 https://localhost:8010/swagger
 ```
 
-Bei Catalog-Änderungen ist Swagger besonders nützlich, um Folgendes zu prüfen:
+Für Catalog-Änderungen ist Swagger besonders hilfreich, um folgende Punkte zu prüfen:
 
 ```text
 Authors-Endpunkte
@@ -827,6 +946,14 @@ DTO-Schemas
 ProblemDetails-Antworten
 BookItemStatus-Darstellung
 BookSearchField-Darstellung
+```
+
+Für manuelle API-Tests wird die Datenbank zurückgesetzt und danach ausgeführt:
+
+```text
+Authors.http
+Books.http
+Readers.http
 ```
 
 ## Version
@@ -857,18 +984,20 @@ Die Testsuite soll Studierenden helfen, folgende Themen zu verstehen:
 ```text
 Trennung von Testebenen
 Domain Testing ohne Infrastructure
-mockbasiertes Testen von UseCases
+Mock-basierte UseCase Tests
 Integration Testing mit SQLite
 Controller Testing über HTTP
-Wiederverwendung von Testdaten über Seed-Objekte
-Nutzen von Fake Clocks
-Testen partieller Updates
-Tests als Schutz bei Architektur-Refactorings
-Tests als Schutz bei Architektur-Erweiterungen
-End-to-End-Tests trotz modularem Monolithen
-Testen von Beziehungen über Domain und Infrastructure hinweg
-Unterschied zwischen ReadModels und Repositories
-Unterschied zwischen Deactivation und Delete
+Wiederverwendung von Testdaten durch Seed-Objekte
+warum Fake Clocks nützlich sind
+wie partielle Updates getestet werden sollten
+wie Tests architektonische Refactorings schützen
+wie Tests architektonische Erweiterungen schützen
+wie ein modularer Monolith trotzdem end-to-end getestet werden kann
+wie Beziehungen über Domain und Infrastructure hinweg getestet werden können
+wie sich ReadModels von Repositories unterscheiden
+wie sich Deactivation von Deletion unterscheidet
+wie Katalogsuche nach Author-Nachname zufällige Treffer vermeidet
+wie manuelle HTTP-Dateien API-Verhalten nach einem Datenbank-Reset reproduzierbar machen
 ```
 
 Die Tests sind daher nicht nur ein Sicherheitsnetz, sondern auch Teil des Lernmaterials.
@@ -880,9 +1009,11 @@ Jede Testebene hat ihren eigenen Zweck:
 ```text
 Domain Tests schützen fachliche Regeln.
 UseCase Tests schützen Application Workflows.
-Infrastructure Tests schützen Persistenzverhalten.
-Controller Tests schützen die HTTP API.
-End-to-End-Tests schützen die Gesamtkomposition.
+Infrastructure Tests schützen Persistence-Verhalten.
+Controller-/API-Tests schützen die HTTP-API.
+HttpClient-Tests schützen den öffentlichen HTTP-Vertrag.
+Manuelle HTTP-Dateien machen API-Verhalten für Studierende sichtbar und reproduzierbar.
+End-to-End-Tests schützen die vollständige Komposition.
 ```
 
 Für Teil 3 ist der wichtigste Lehrpunkt:
@@ -890,19 +1021,33 @@ Für Teil 3 ist der wichtigste Lehrpunkt:
 ```text
 Eine modulare Erweiterung ist erfolgreich, wenn die Architektur wächst,
 das bestehende Verhalten stabil bleibt
-und das neue Verhalten durch Tests nachgewiesen wird.
+und das neue Verhalten durch Tests bewiesen wird.
 ```
 
 Eine weitere wichtige Regel lautet:
 
 ```text
-Repository Tests weisen nach, dass Aggregates gespeichert und geladen werden können.
-ReadModel Tests weisen nach, was die Anwendung nach außen zeigt.
+Repository Tests beweisen, dass Aggregates gespeichert und geladen werden können.
+ReadModel Tests beweisen, was die Anwendung nach außen zeigt.
 ```
 
-Für Catalog ist das besonders bei Deactivation sichtbar:
+Für Catalog wird das besonders bei Deactivation sichtbar:
 
 ```text
 Repositories dürfen inaktive Aggregates weiterhin laden.
-ReadModels verbergen inaktive Daten in normalen Queries.
+ReadModels blenden inaktive Daten in normalen Queries aus.
+```
+
+Für die Katalogsuche ist die wichtigste Regel:
+
+```text
+AuthorLastName sucht anhand des Author-Nachnamens.
+Firstname wird nicht durchsucht, weil dadurch zufällige Treffer entstehen würden.
+```
+
+Für manuelle API-Tests ist die wichtigste Regel:
+
+```text
+Seed.cs definiert stabile Beispieldaten.
+Die .http-Dateien erzeugen diese Daten über die öffentliche API.
 ```
