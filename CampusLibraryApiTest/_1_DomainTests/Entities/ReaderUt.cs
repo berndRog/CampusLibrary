@@ -229,4 +229,21 @@ public sealed class ReaderUt {
          city: "Suderburg",
          country: "DE"
       ).GetValueOrThrow();
+   
+   [Fact]
+   public void Deactivate_ok() {
+      // Arrange
+      var reader = CreateReader().GetValueOrThrow();
+
+      // Act
+      var result = reader.Deactivate(
+         updatedAt: UpdatedAt
+      );
+
+      // Assert
+      result.IsSuccess.Should().BeTrue();
+
+      reader.IsActive.Should().BeFalse();
+      reader.UpdatedAt.Should().Be(UpdatedAt);
+   }
 }

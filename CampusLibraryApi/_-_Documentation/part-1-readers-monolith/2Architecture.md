@@ -19,15 +19,16 @@ The goal of Part 1 is not yet to split the solution into multiple projects. That
 
 The architecture of Part 1 is intended to make the following concepts visible in teaching:
 
-* how to structure a Web API monolith internally
-* how to separate Web, BuildingBlocks, Core, and Infrastructure code
-* how to model a first domain module
-* how to distinguish write-oriented use cases from read-oriented read models
-* how to keep domain logic out of controllers
-* how to use DDD fundamentals such as Entity, Aggregate Root, Value Object, and Domain Error
-* how to use EF Core as a technical persistence mechanism
-* how to use ports to decouple Core from Infrastructure
-* how to prepare the codebase for a later modular-monolith project split
+- how to structure a Web API monolith internally
+- how to separate Web, BuildingBlocks, Core, and Infrastructure code
+- how to model a first domain module
+- how to distinguish write-oriented use cases from read-oriented read models
+- how to keep domain logic out of controllers
+- how to use DDD fundamentals such as Entity, Aggregate Root, Value Object, and Domain Error
+- how to use EF Core as a technical persistence mechanism
+- how to use ports to decouple Core from Infrastructure
+- how to model soft delete behavior with a domain operation
+- how to prepare the codebase for a later modular-monolith project split
 
 Part 1 therefore answers this question:
 
@@ -80,7 +81,7 @@ CampusLibraryApi
 │     │  └─ UseCases
 │     │     ├─ ReaderUcCreate.cs
 │     │     ├─ ReaderUcUpdate.cs
-│     │     ├─ ReaderUcDelete.cs
+│     │     ├─ ReaderUcDeactivate.cs
 │     │     └─ ReaderUseCases.cs
 │     │
 │     └─ _3_Domain
@@ -141,7 +142,7 @@ _3_Core
 _4_Infrastructure
 ```
 
-This makes the transition to Part 2 easier. The students first learn the architectural boundaries inside one project. Later, the same boundaries can be moved into separate projects.
+This makes the transition to Part 2 easier. Students first learn the architectural boundaries inside one project. Later, the same boundaries can be moved into separate projects.
 
 ## The First Domain Module: Readers
 
@@ -151,33 +152,37 @@ The `Readers` module manages the domain concept of a library reader. A reader is
 
 The module currently contains:
 
-* `Reader` as Aggregate Root
-* `EmailVo` as Value Object
-* `AddressVo` as Value Object
-* `ReaderErrors` as domain errors
-* `ReaderCreateDto`
-* `ReaderUpdateDto`
-* `ReaderDto`
-* `ReaderUcCreate` as write use case
-* `ReaderUcUpdate` as write use case for partial updates
-* `ReaderUcDelete` as write use case
-* `ReaderUseCases` as facade for write use cases
-* `IReaderRepository` for the write side
-* `IReaderReadModel` for the read side
-* `IReadersDbContext` as restricted DbContext port
-* `ReaderRepositoryEf` as EF Core repository
-* `ReaderReadModelEf` as EF Core read model
+- `Reader` as Aggregate Root
+- `EmailVo` as Value Object
+- `AddressVo` as Value Object
+- `ReaderErrors` as domain errors
+- `ReaderCreateDto`
+- `ReaderUpdateDto`
+- `ReaderDto`
+- `ReaderUcCreate` as write use case
+- `ReaderUcUpdate` as write use case for partial updates
+- `ReaderUcDeactivate` as write use case for soft delete behavior
+- `ReaderUseCases` as facade for write use cases
+- `IReaderRepository` for the write side
+- `IReaderReadModel` for the read side
+- `IReadersDbContext` as restricted DbContext port
+- `ReaderRepositoryEf` as EF Core repository
+- `ReaderReadModelEf` as EF Core read model
 
 The current HTTP API supports:
 
 ```text
 GET    /camplib/v1/readers
+GET    /camplib/v1/readers/with-inactive
 GET    /camplib/v1/readers/{id}
+GET    /camplib/v1/readers/{id}/with-inactive
 GET    /camplib/v1/readers/email?email=...
 POST   /camplib/v1/readers
 PUT    /camplib/v1/readers/{id}
 DELETE /camplib/v1/readers/{id}
 ```
+
+`DELETE /camplib/v1/readers/{id}` triggers a deactivation. It does not physically remove the reader from the database.
 
 ## Layer Overview
 
@@ -208,26 +213,27 @@ It should not contain domain logic.
 
 Typical controller responsibilities are:
 
-* define routes
-* receive DTOs
-* call read models for GET requests
-* call use cases for write requests
-* translate `Result` errors into HTTP responses
-* return DTOs or `ProblemDetails`
+- define routes
+- receive DTOs
+- call read models for GET requests
+- call use cases for write requests
+- translate `Result` errors into HTTP responses
+- return DTOs or `ProblemDetails`
 
-The controller does not decide whether an email address is valid. It does not decide whether a reader can be created. These decisions belong to value objects, aggregates, and use cases.
+The controller does not decide whether an email address is valid. It does not decide whether a reader can be created, updated or deactivated. These decisions belong to value objects, aggregates, and use cases.
 
 ## _2_BuildingBlocks
 
 The BuildingBlocks area contains common building blocks used by the application.
+
 It contains concepts such as:
 
-* `Result`
-* `Error`
-* `Entity`
-* `AggregateRoot`
-* `IClock`
-* `IUnitOfWork`
+- `Result`
+- `Error`
+- `Entity`
+- `AggregateRoot`
+- `IClock`
+- `IUnitOfWork`
 
 These are not part of one specific domain module. They are reusable building blocks for the whole API.
 
@@ -257,38 +263,29 @@ The Domain layer contains the domain model.
 
 For the Readers module, this includes:
 
-* `Reader`
-* `EmailVo`
-* `AddressVo`
-* `ReaderErrors`
+- `Reader`
+- `EmailVo`
+- `AddressVo`
+- `ReaderErrors`
 
 The Domain layer contains business rules and domain validation.
 
 It does not know:
 
-* controllers
-* EF Core
-* HTTP
-* Swagger
-* database details
-* dependency injection
+- controllers
+- EF Core
+- HTTP
+- Swagger
+- database details
+- dependency injection
 
 The Domain layer should be understandable without knowing how the data is stored or how HTTP requests are received.
-
-Example:
-
-```text
-_3_Core/Readers/_3_Domain/Entities/Reader.cs
-_3_Core/Readers/_3_Domain/ValueObjects/EmailVo.cs
-_3_Core/Readers/_3_Domain/ValueObjects/AddressVo.cs
-_3_Core/Readers/_3_Domain/Errors/ReaderErrors.cs
-```
 
 ## Reader as Aggregate Root
 
 `Reader` is the Aggregate Root of the Readers module.
 
-It owns the consistency rules for reader profile data.
+It owns the consistency rules for reader profile data and reader lifecycle state.
 
 The aggregate is created through a factory method:
 
@@ -300,6 +297,7 @@ It is changed through domain methods, for example:
 
 ```text
 Reader.UpdateProfile(...)
+Reader.Deactivate(...)
 ```
 
 This avoids uncontrolled changes through public setters.
@@ -333,6 +331,7 @@ Example:
 ReaderErrors.InvalidEmail
 ReaderErrors.EmailAlreadyInUse
 ReaderErrors.ReaderNotFound
+ReaderErrors.IsAlreadyDeactivated
 ```
 
 Expected domain failures are returned through `Result`, not thrown as exceptions.
@@ -345,17 +344,17 @@ The Application layer coordinates use cases.
 
 It contains:
 
-* DTOs
-* use cases
-* mapping helpers
-* use case facade
+- DTOs
+- use cases
+- mapping helpers
+- use case facade
 
 Examples:
 
 ```text
 ReaderUcCreate
 ReaderUcUpdate
-ReaderUcDelete
+ReaderUcDeactivate
 ReaderUseCases
 ```
 
@@ -363,13 +362,13 @@ Use cases are responsible for the workflow. They coordinate several steps, but t
 
 Typical responsibilities of a use case are:
 
-* validate basic input
-* load aggregates
-* create value objects
-* check uniqueness rules through repositories
-* call domain methods
-* save changes through `IUnitOfWork`
-* return DTOs
+- validate basic input
+- load aggregates
+- create value objects
+- check uniqueness rules through repositories
+- call domain methods
+- save changes through `IUnitOfWork`
+- return DTOs or errors
 
 ## _3_Core/Readers/_1_Ports
 
@@ -463,17 +462,43 @@ PUT /camplib/v1/readers/{id}
 → UnitOfWorkEf
 ```
 
-Example for delete:
+Example for deactivate:
 
 ```text
 DELETE /camplib/v1/readers/{id}
 → ReadersController
-→ ReaderUseCases.DeleteAsync
-→ ReaderUcDelete
+→ ReaderUseCases.DeactivateAsync
+→ ReaderUcDeactivate
+→ Reader.Deactivate(...)
 → IReaderRepository
 → ReaderRepositoryEf
 → UnitOfWorkEf
 ```
+
+## Soft Delete and `IsActive`
+
+The reader lifecycle uses soft delete behavior.
+
+A reader is not physically deleted from the database. Instead, `Reader.Deactivate(...)` sets `IsActive` to `false`.
+
+This means:
+
+```text
+Deactivate = domain operation
+Inactive   = state after deactivation
+DELETE     = HTTP verb used to trigger the operation
+```
+
+Normal read model queries return only active readers.
+
+Special read model queries include inactive readers:
+
+```text
+FindByIdWithInactiveAsync
+SelectAllWithInactiveAsync
+```
+
+This preserves historical information for later modules such as `Loans`, while still giving normal clients a clean active-reader view.
 
 ## Read Side
 
@@ -490,7 +515,6 @@ Read models typically use:
 
 ```csharp
 .AsNoTracking()
-.Select(...)
 ```
 
 Example:
@@ -506,7 +530,9 @@ GET /camplib/v1/readers
 
 The read side does not load the aggregate to return a list of DTOs. It projects database data directly into DTOs.
 
-This keeps read operations simple and efficient.
+Normal read methods return only active readers. Methods with `WithInactive` in the name return active and inactive readers.
+
+This keeps read operations simple, efficient, and explicit.
 
 ## Partial Updates
 
@@ -583,13 +609,13 @@ The Infrastructure area contains technical implementations.
 
 This includes:
 
-* EF Core configurations
-* `AppDbContext`
-* repositories
-* read models
-* `UnitOfWorkEf`
-* seed data
-* later security implementations
+- EF Core configurations
+- `AppDbContext`
+- repositories
+- read models
+- `UnitOfWorkEf`
+- seed data
+- later security implementations
 
 The Infrastructure layer may know EF Core.
 
@@ -622,11 +648,12 @@ The repository is used by write use cases.
 
 It works with aggregates and supports operations such as:
 
-* add reader
-* find reader by id
-* find reader by email
-* check subject uniqueness
-* remove reader
+- add reader
+- find reader by id
+- find reader by email
+- check subject uniqueness
+
+The repository no longer removes readers for the normal lifecycle. Deactivation is performed by changing the aggregate state and saving it through the UnitOfWork.
 
 ## Read Model Implementation
 
@@ -647,6 +674,8 @@ IReaderReadModel
 The read model is used by GET endpoints.
 
 It returns DTOs directly and should not contain domain behavior.
+
+It contains separate query methods for normal active-reader views and views that include inactive readers.
 
 ## DbContext Access
 
@@ -720,15 +749,15 @@ The purpose of `Program.cs` is to configure and start the application.
 
 Typical responsibilities are:
 
-* create the builder
-* register controllers
-* register the Readers module
-* register infrastructure
-* register Swagger and API versioning
-* build the application
-* enable Swagger in development
-* map controllers
-* run the application
+- create the builder
+- register controllers
+- register the Readers module
+- register infrastructure
+- register Swagger and API versioning
+- build the application
+- enable Swagger in development
+- map controllers
+- run the application
 
 `Program.cs` is not a place for domain logic.
 
@@ -777,7 +806,8 @@ Reader domain behavior
 Email and address validation
 Create use case
 Update use case
-Delete use case
+Deactivate use case
+Soft delete behavior through IsActive
 Repository behavior
 Read model projections
 HTTP controller behavior
@@ -786,7 +816,7 @@ HTTP controller behavior
 The latest known test status for Part 1 is:
 
 ```text
-63 tests
+72 tests
 0 failed
 ```
 
@@ -816,26 +846,6 @@ CampusLibrary.BuildingBlocks
 CampusLibrary.Readers
 CampusLibrary.Infrastructure
 CampusLibrary.ApiTest
-```
-
-In that step, `_2_Shared` should likely be renamed to `BuildingBlocks`.
-
-Reason:
-
-* `_2_Shared` currently contains common building blocks inside the API project.
-* Later, there may be a real shared library for cross-application concerns such as logging.
-* That future shared library should not be confused with domain/application building blocks.
-
-A later cross-application logging project could be named:
-
-```text
-Campus.Observability
-```
-
-or:
-
-```text
-Campus.Logging
 ```
 
 ## Rules for Extending Part 1
@@ -890,14 +900,17 @@ Controllers contain no domain logic. They translate HTTP requests into calls to 
 4. Core contains the domain and application logic.
 5. Domain does not know Web, Infrastructure, EF Core, or Swagger.
 6. Use cases write domain state.
-7. Read models read data directly as DTO projections.
-8. Repositories are used on the write side.
-9. Read models are used on the read side.
-10. Infrastructure implements Core ports.
-11. EF Core configuration belongs to Infrastructure.
-12. `Program.cs` wires modules together but contains no domain logic.
-13. Additional modules should follow the same structure as `Readers`.
-14. AuthN/AuthZ will be added later without changing the basic structure.
+7. Deactivation is a write use case and changes domain state.
+8. Read models read data directly as DTO projections.
+9. Normal read model queries return only active readers.
+10. `WithInactive` read model queries return active and inactive readers.
+11. Repositories are used on the write side.
+12. Read models are used on the read side.
+13. Infrastructure implements Core ports.
+14. EF Core configuration belongs to Infrastructure.
+15. `Program.cs` wires modules together but contains no domain logic.
+16. Additional modules should follow the same structure as `Readers`.
+17. AuthN/AuthZ will be added later without changing the basic structure.
 
 ## Didactic Rule of Thumb
 
@@ -914,5 +927,9 @@ For Part 1, another rule is important:
 
 > First learn the boundaries inside one project. Then move the boundaries into separate projects.
 
-```
+For the current reader lifecycle:
+
+```text
+Deactivate changes state.
+Read models decide visibility.
 ```

@@ -62,10 +62,13 @@ internal sealed class ConfigReader : IEntityTypeConfiguration<Reader> {
       });
       builder.Navigation(c => c.AddressVo).IsRequired();
 
+      builder.Property(r => r.IsActive)
+         .HasColumnName("IsActive").HasColumnOrder(8)
+         .IsRequired();
       
       builder.Property(r => r.Subject)
          .HasMaxLength(200)
-         .HasColumnName("Subject").HasColumnOrder(8)
+         .HasColumnName("Subject").HasColumnOrder(9)
          .IsRequired();
       builder.HasIndex(r => r.Subject).IsUnique();
       
