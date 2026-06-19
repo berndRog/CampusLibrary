@@ -28,7 +28,7 @@ public sealed class ReaderController(
 ) : ControllerBase {
 
    /// <summary>
-   ///    Returns all readers.
+   ///    Returns all active readers.
    /// </summary>
    /// <param name="ct">Cancellation token.</param>
    /// <returns>A list of reader resources.</returns>
@@ -201,34 +201,121 @@ public sealed class ReaderController(
    }
 
    /// <summary>
-   ///    Deletes an existing reader.
+   ///    Deactivates an existing reader.
    /// </summary>
    /// <param name="id">Reader unique id.</param>
    /// <param name="ct">Cancellation token.</param>
    /// <returns>No content on success.</returns>
-   // Delete an existing reader through the write-side use case.
-   [HttpDelete("readers/{id:guid}", Name = nameof(DeleteAsync))]
+   // Deactivate an existing reader through the write-side use case.
+   // This is a soft delete: the reader remains stored,
+   // but is hidden from normal read model queries.
+   [HttpDelete("readers/{id:guid}", Name = nameof(DeactivateAsync))]
    [ProducesResponseType(StatusCodes.Status204NoContent)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
-   public async Task<IActionResult> DeleteAsync(
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
+   public async Task<IActionResult> DeactivateAsync(
       [FromRoute] Guid id,
       CancellationToken ct
    ) {
-      var result = await readerUseCases.DeleteAsync(id, ct);
+      var result = await readerUseCases.DeactivateAsync(
+         id,
+         ct
+      );
 
       if (result.IsSuccess)
          return NoContent();
 
-      var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+      var problem = DomainProblemDetailsFactory.FromDomainError(
+         result.Error,
+         HttpContext
+      );
 
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),
          WebErrorStatus.Unauthorized => Unauthorized(problem),
          WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
          WebErrorStatus.NotFound => NotFound(problem),
+         WebErrorStatus.Conflict => Conflict(problem),
+         _ => BadRequest(problem)
+      };
+   }
+   
+   /// <summary>
+   ///    Returns one reader by id, including inactive readers.
+   /// </summary>
+   /// <param name="id">Reader unique id.</param>
+   /// <param name="ct">Cancellation token.</param>
+   /// <returns>The requested reader resource, even if it is inactive.</returns>
+   // Query one reader by id through the read model, including inactive readers.
+   // This endpoint is intended for administrative or internal views.
+   [HttpGet("readers/{id:guid}/with-inactive", Name = nameof(GetByIdWithInactiveAsync))]
+   [Produces("application/json")]
+   [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
+   public async Task<ActionResult<ReaderDto>> GetByIdWithInactiveAsync(
+      [FromRoute] Guid id,
+      CancellationToken ct
+   ) {
+      var result = await readerReadModel.FindByIdWithInactiveAsync(
+         id,
+         ct
+      );
+
+      if (result.IsSuccess)
+         return Ok(result.Value);
+
+      var problem = DomainProblemDetailsFactory.FromDomainError(
+         result.Error,
+         HttpContext
+      );
+
+      return result.Error.Status switch {
+         WebErrorStatus.BadRequest => BadRequest(problem),
+         WebErrorStatus.Unauthorized => Unauthorized(problem),
+         WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
+         WebErrorStatus.NotFound => NotFound(problem),
+         _ => BadRequest(problem)
+      };
+   }
+   
+   /// <summary>
+   ///    Returns all readers, including inactive readers.
+   /// </summary>
+   /// <param name="ct">Cancellation token.</param>
+   /// <returns>A list of reader resources, including inactive readers.</returns>
+   // Query all readers through the read model, including inactive readers.
+   // This endpoint is intended for administrative or internal views.
+   [HttpGet("readers/with-inactive", Name = nameof(GetAllWithInactiveAsync))]
+   [Produces("application/json")]
+   [ProducesResponseType<IReadOnlyList<ReaderDto>>(StatusCodes.Status200OK)]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
+   public async Task<ActionResult<IReadOnlyList<ReaderDto>>> GetAllWithInactiveAsync(
+      CancellationToken ct
+   ) {
+      var result = await readerReadModel.SelectAllWithInactiveAsync(
+         ct
+      );
+
+      if (result.IsSuccess)
+         return Ok(result.Value);
+
+      var problem = DomainProblemDetailsFactory.FromDomainError(
+         result.Error,
+         HttpContext
+      );
+
+      return result.Error.Status switch {
+         WebErrorStatus.BadRequest => BadRequest(problem),
+         WebErrorStatus.Unauthorized => Unauthorized(problem),
+         WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
          _ => BadRequest(problem)
       };
    }
@@ -254,7 +341,7 @@ Schreibende Endpunkte verwenden die UseCase-Fassade:
 
 - CreateAsync      -> IReaderUseCases.CreateAsync
 - UpdateAsync      -> IReaderUseCases.UpdateAsync
-- DeleteAsync      -> IReaderUseCases.DeleteAsync
+- DeactivateAsync  -> IReaderUseCases.DeactivatedAsync
 
 Die Fallunterscheidung im Controller ist bewusst explizit gehalten.
 Dadurch sehen Studierende direkt, welcher DomainError.Status zu welcher

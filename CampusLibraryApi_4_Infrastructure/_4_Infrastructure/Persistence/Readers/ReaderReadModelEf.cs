@@ -17,30 +17,33 @@ internal sealed class ReaderReadModelEf(
    IReaderDbContext dbContext
 ) : IReaderReadModel {
    
-   // Find a reader DTO by technical identifier.
-   public async Task<Result<ReaderDto>> FindByIdAsync(Guid id, CancellationToken ct) {
+   // Find active reader DTO by technical identifier.
+   public async Task<Result<ReaderDto>> FindByIdAsync(
+      Guid id, 
+      CancellationToken ct
+   ) {
       var reader = await dbContext.Readers
          .AsNoTracking()
-         .Where(r => r.Id == id)
-         .Select(ReaderMappings.ToReaderDtoExpr)
-         .SingleOrDefaultAsync(ct);
+         .SingleOrDefaultAsync(r => r.Id == id && r.IsActive, ct);
 
       return reader is null
          ? Result<ReaderDto>.Failure(ReaderErrors.ReaderNotFound)
-         : Result<ReaderDto>.Success(reader);
+         : Result<ReaderDto>.Success(reader.ToReaderDto());
    }
 
-   // Find a reader DTO by technical identity subject.
-   public async Task<Result<ReaderDto>> FindBySubjectAsync(string subject, CancellationToken ct) {
+   // Find active reader DTO by technical identity subject.
+   public async Task<Result<ReaderDto>> FindBySubjectAsync(
+      string subject, 
+      CancellationToken ct
+   ) {
       var reader = await dbContext.Readers
          .AsNoTracking()
-         .Where(r => r.Subject == subject)
-         .Select(ReaderMappings.ToReaderDtoExpr)
-         .SingleOrDefaultAsync(ct);
+         .SingleOrDefaultAsync(r => 
+            r.Subject == subject && r.IsActive,ct);
 
       return reader is null
          ? Result<ReaderDto>.Failure(ReaderErrors.ReaderNotFound)
-         : Result<ReaderDto>.Success(reader);
+         : Result<ReaderDto>.Success(reader.ToReaderDto());
    }
 
    // Find a reader DTO by email address.
@@ -57,25 +60,57 @@ internal sealed class ReaderReadModelEf(
 
       var reader = await dbContext.Readers
          .AsNoTracking()
-         .Where(r => r.EmailVo == emailVo)
-         .Select(ReaderMappings.ToReaderDtoExpr)
-         .SingleOrDefaultAsync(ct);
+         .SingleOrDefaultAsync(r => 
+            r.EmailVo == emailVo && r.IsActive, ct);
 
       return reader is null
          ? Result<ReaderDto>.Failure(ReaderErrors.ReaderNotFound)
-         : Result<ReaderDto>.Success(reader);
+         : Result<ReaderDto>.Success(reader.ToReaderDto());
    }
 
-   // Return all readers ordered for display.
+   // Return all active readers ordered for display.
    public async Task<Result<IReadOnlyList<ReaderDto>>> SelectAllAsync(CancellationToken ct) {
+      var readers = await dbContext.Readers
+         .AsNoTracking()
+         .Where(r => r.IsActive)
+         .OrderBy(r => r.Lastname)
+         .ThenBy(r => r.Firstname)
+         .ToListAsync(ct);
+      
+      var readerDtos = readers
+         .Select(r => r.ToReaderDto())
+         .ToList();
+
+      return Result<IReadOnlyList<ReaderDto>>.Success(readerDtos);
+   }
+
+   // Find active reader DTO by technical identifier.
+   public async Task<Result<ReaderDto>> FindByIdWithInactiveAsync(
+      Guid id, 
+      CancellationToken ct = default
+   ) {
+      var reader = await dbContext.Readers
+         .AsNoTracking()
+         .SingleOrDefaultAsync(r => r.Id == id, ct);
+
+      return reader is null
+         ? Result<ReaderDto>.Failure(ReaderErrors.ReaderNotFound)
+         : Result<ReaderDto>.Success(reader.ToReaderDto());
+   }
+   
+   // Return all readers ordered for display.
+   public async Task<Result<IReadOnlyList<ReaderDto>>> SelectAllWithInactiveAsync(CancellationToken ct) {
       var readers = await dbContext.Readers
          .AsNoTracking()
          .OrderBy(r => r.Lastname)
          .ThenBy(r => r.Firstname)
-         .Select(ReaderMappings.ToReaderDtoExpr)
          .ToListAsync(ct);
+      
+      var readerDtos = readers
+         .Select(r => r.ToReaderDto())
+         .ToList();
 
-      return Result<IReadOnlyList<ReaderDto>>.Success(readers);
+      return Result<IReadOnlyList<ReaderDto>>.Success(readerDtos);
    }
 }
 

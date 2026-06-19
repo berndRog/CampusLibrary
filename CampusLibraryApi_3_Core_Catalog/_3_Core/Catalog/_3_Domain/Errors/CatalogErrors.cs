@@ -28,6 +28,13 @@ public static class CatalogErrors {
          "The book was not found."
       );
 
+   public static readonly DomainError AuthorsAreRequired = 
+      new(
+         WebErrorStatus.BadRequest,
+         "Catalog: Book Author(s) Is/Are Required",
+         "At least one author is required."
+   );
+   
    public static readonly DomainError TitleIsRequired =
       new(
          WebErrorStatus.BadRequest,

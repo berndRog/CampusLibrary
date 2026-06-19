@@ -4,13 +4,13 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using AwesomeAssertions;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
-using CampusLibraryApi._3_Core.Catalog._1_Ports;
 using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Catalog._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Catalog._3_Domain.Enums;
 using CampusLibraryApiTest.TestController;
 using CampusLibraryApiTest.TestInfrastructure;
 using Microsoft.Extensions.DependencyInjection;
+
 namespace CampusLibraryApiTest._4_WebTests;
 
 public sealed class BooksControllerE2eT : TestBaseEndToEnd {
@@ -32,6 +32,7 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
    public async Task GetByIdAsync_ok() {
       // Arrange
       Guid bookId = default;
+      string authorsText = string.Empty;
 
       await Factory.WithScopeAsync(async sp => {
          var repository = sp.GetRequiredService<IBookRepository>();
@@ -39,24 +40,38 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
          var seed = sp.GetRequiredService<TestSeed>();
 
          var book = seed.Book1();
+
          bookId = book.Id;
+         authorsText = book.AuthorsText;
 
          repository.Add(book);
-         await unitOfWork.SaveAllChangesAsync("Book1 inserted", _ct);
+
+         await unitOfWork.SaveAllChangesAsync(
+            "Book1 inserted",
+            _ct
+         );
+
          unitOfWork.ClearChangeTracker();
       });
 
       // Act
-      var response = await Client
-         .GetAsync($"{_url}/books/{bookId}", _ct);
+      var response = await Client.GetAsync(
+         $"{_url}/books/{bookId}",
+         _ct
+      );
       
       var actualBookDto = await response.Content
-         .ReadFromJsonAsync<BookDetailDto>(_jsonOptions, _ct);
+         .ReadFromJsonAsync<BookDetailDto>(
+            _jsonOptions,
+            _ct
+         );
 
       // Assert
       response.StatusCode.Should().Be(HttpStatusCode.OK);
+
       actualBookDto.Should().NotBeNull();
       actualBookDto!.Id.Should().Be(bookId);
+      actualBookDto.AuthorsText.Should().Be(authorsText);
       actualBookDto.Title.Should().Be("Clean Code");
       actualBookDto.Isbn.Should().Be("9780132350884");
       actualBookDto.IsActive.Should().BeTrue();
@@ -87,25 +102,40 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
          foreach (var book in books)
             repository.Add(book);
 
-         await unitOfWork.SaveAllChangesAsync("Books inserted", _ct);
+         await unitOfWork.SaveAllChangesAsync(
+            "Books inserted",
+            _ct
+         );
+
          unitOfWork.ClearChangeTracker();
       });
 
       // Act
-      var response = await Client
-         .GetAsync($"{_url}/books", _ct);
+      var response = await Client.GetAsync(
+         $"{_url}/books",
+         _ct
+      );
       
       var actualBookDtos = await response.Content
-         .ReadFromJsonAsync<List<BookListItemDto>>(_jsonOptions, _ct);
+         .ReadFromJsonAsync<List<BookListItemDto>>(
+            _jsonOptions,
+            _ct
+         );
 
       // Assert
       response.StatusCode.Should().Be(HttpStatusCode.OK);
+
       actualBookDtos.Should().NotBeNull();
+
       actualBookDtos!
          .Select(b => b.Id)
          .OrderBy(id => id)
          .Should()
          .BeEquivalentTo(expectedBookIds);
+
+      actualBookDtos
+         .Should()
+         .OnlyContain(b => !string.IsNullOrWhiteSpace(b.AuthorsText));
    }
 
    [Fact]
@@ -121,6 +151,7 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
             Title: book.Title,
             Subtitle: book.Subtitle,
             Isbn: book.IsbnVo.Value,
+            AuthorsText: book.AuthorsText,
             Id: book.Id.ToString()
          );
 
@@ -128,17 +159,25 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
       });
 
       // Act
-      var response = await Client
-         .PostAsJsonAsync($"{_url}/books", dto, _ct);
+      var response = await Client.PostAsJsonAsync(
+         $"{_url}/books",
+         dto,
+         _ct
+      );
       
       var actualBookDto = await response.Content
-         .ReadFromJsonAsync<BookDto>(_jsonOptions, _ct);
+         .ReadFromJsonAsync<BookDto>(
+            _jsonOptions,
+            _ct
+         );
 
       // Assert
       response.StatusCode.Should().Be(HttpStatusCode.Created);
       response.Headers.Location.Should().NotBeNull();
+
       actualBookDto.Should().NotBeNull();
       actualBookDto!.Id.Should().Be(Guid.Parse(dto.Id!));
+      actualBookDto.AuthorsText.Should().Be(dto.AuthorsText);
       actualBookDto.Title.Should().Be(dto.Title);
       actualBookDto.Subtitle.Should().Be(dto.Subtitle);
       actualBookDto.Isbn.Should().Be(dto.Isbn);
@@ -160,7 +199,12 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
          bookId = book.Id;
 
          repository.Add(book);
-         await unitOfWork.SaveAllChangesAsync("Book1 inserted", _ct);
+
+         await unitOfWork.SaveAllChangesAsync(
+            "Book1 inserted",
+            _ct
+         );
+
          unitOfWork.ClearChangeTracker();
       });
 
@@ -170,14 +214,21 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
       );
 
       // Act
-      var response = await Client
-         .PostAsJsonAsync($"{_url}/books/{bookId}/items", dto, _ct);
+      var response = await Client.PostAsJsonAsync(
+         $"{_url}/books/{bookId}/items",
+         dto,
+         _ct
+      );
       
       var actualBookItemDto = await response.Content
-         .ReadFromJsonAsync<BookItemDto>(_jsonOptions, _ct);
+         .ReadFromJsonAsync<BookItemDto>(
+            _jsonOptions,
+            _ct
+         );
 
       // Assert
       response.StatusCode.Should().Be(HttpStatusCode.OK);
+
       actualBookItemDto.Should().NotBeNull();
       actualBookItemDto!.Id.Should().Be(Guid.Parse(dto.Id!));
       actualBookItemDto.BookId.Should().Be(bookId);
@@ -186,72 +237,13 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
    }
 
    [Fact]
-   public async Task AssignAuthorAsync_ok() {
-      // Arrange
-      Guid bookId = default;
-      Guid authorId = default;
-
-      await Factory.WithScopeAsync(async sp => {
-         var bookRepository = sp.GetRequiredService<IBookRepository>();
-         var authorRepository = sp.GetRequiredService<IAuthorRepository>();
-         var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
-         var seed = sp.GetRequiredService<TestSeed>();
-
-         var book = seed.Book1();
-         var author = seed.Author1();
-
-         bookId = book.Id;
-         authorId = author.Id;
-
-         bookRepository.Add(book);
-         authorRepository.Add(author);
-         await unitOfWork.SaveAllChangesAsync("Book1 and Author1 inserted", _ct);
-         unitOfWork.ClearChangeTracker();
-      });
-
-      var dto = new BookAssignAuthorDto(
-         AuthorId: authorId
-      );
-
-      // Act
-      var responseAssign = await Client
-         .PostAsJsonAsync($"{_url}/books/{bookId}/authors", dto, _ct);
-      
-      var responseGet = await Client
-         .GetAsync($"{_url}/books/{bookId}", _ct);
-      
-      var actualBookDetailDto = await responseGet.Content
-         .ReadFromJsonAsync<BookDetailDto>(_jsonOptions, _ct);
-
-      // Assert
-      responseAssign.StatusCode.Should().Be(HttpStatusCode.OK);
-      responseGet.StatusCode.Should().Be(HttpStatusCode.OK);
-      actualBookDetailDto.Should().NotBeNull();
-      actualBookDetailDto!.Authors
-         .Select(a => a.Id)
-         .Should()
-         .Contain(authorId);
-   }
-
-   [Fact]
    public async Task SearchAsync_by_author_last_name_ok() {
       // Arrange
-      var authorMartin = new AuthorCreateDto(
-         Firstname: "Robert C.",
-         Lastname: "Martin",
-         Id: "a0000001-0000-0000-0000-000000000000"
-      );
-
-      var authorFowler = new AuthorCreateDto(
-         Firstname: "Martin",
-         Lastname: "Fowler",
-         Id: "a0000003-0000-0000-0000-000000000000"
-      );
-
       var bookCleanCode = new BookCreateDto(
          Title: "Clean Code",
          Subtitle: "A Handbook of Agile Software Craftsmanship",
          Isbn: "9780132350884",
+         AuthorsText: "Robert C. Martin",
          Id: "b0000001-0000-0000-0000-000000000000"
       );
 
@@ -259,59 +251,48 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
          Title: "Refactoring",
          Subtitle: "Improving the Design of Existing Code",
          Isbn: "9780201485677",
+         AuthorsText: "Martin Fowler",
          Id: "b0000003-0000-0000-0000-000000000000"
       );
 
-      var createAuthorMartinResponse = await Client
-         .PostAsJsonAsync($"{_url}/authors", authorMartin, _ct);
-      var createAuthorFowlerResponse = await Client
-         .PostAsJsonAsync($"{_url}/authors", authorFowler, _ct);
-      var createCleanCodeResponse = await Client
-         .PostAsJsonAsync($"{_url}/books", bookCleanCode, _ct);
-      var createRefactoringResponse = await Client
-         .PostAsJsonAsync($"{_url}/books", bookRefactoring, _ct);
+      var createCleanCodeResponse = await Client.PostAsJsonAsync(
+         $"{_url}/books",
+         bookCleanCode,
+         _ct
+      );
 
-      createAuthorMartinResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-      createAuthorFowlerResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+      var createRefactoringResponse = await Client.PostAsJsonAsync(
+         $"{_url}/books",
+         bookRefactoring,
+         _ct
+      );
+
       createCleanCodeResponse.StatusCode.Should().Be(HttpStatusCode.Created);
       createRefactoringResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
-      var assignMartinResponse = await Client.PostAsJsonAsync(
-         $"{_url}/books/{bookCleanCode.Id}/authors",
-         new BookAssignAuthorDto(
-            AuthorId: Guid.Parse(authorMartin.Id!)
-         ),
-         _ct
-      );
-
-      var assignFowlerResponse = await Client.PostAsJsonAsync(
-         $"{_url}/books/{bookRefactoring.Id}/authors",
-         new BookAssignAuthorDto(
-            AuthorId: Guid.Parse(authorFowler.Id!)
-         ),
-         _ct
-      );
-
-      assignMartinResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-      assignFowlerResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-
       // Act
-      var response = await Client
-         .GetAsync($"{_url}/books/search?searchField=AuthorLastName&searchText=Martin", _ct);
+      var response = await Client.GetAsync(
+         $"{_url}/books/search?searchField=AuthorLastName&searchText=Martin",
+         _ct
+      );
       
       var actualBookDtos = await response.Content
-         .ReadFromJsonAsync<List<BookListItemDto>>(_jsonOptions, _ct);
+         .ReadFromJsonAsync<List<BookListItemDto>>(
+            _jsonOptions,
+            _ct
+         );
 
       // Assert
       response.StatusCode.Should().Be(HttpStatusCode.OK);
+
       actualBookDtos.Should().NotBeNull();
+
       actualBookDtos!
          .Select(b => b.Id)
          .Should()
-         .BeEquivalentTo([
-            Guid.Parse(bookCleanCode.Id!)
-         ]);
-      actualBookDtos!
+         .Contain(Guid.Parse(bookCleanCode.Id!));
+
+      actualBookDtos
          .Select(b => b.Id)
          .Should()
          .NotContain(Guid.Parse(bookRefactoring.Id!));
@@ -331,25 +312,40 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
          bookId = book.Id;
 
          repository.Add(book);
-         await unitOfWork.SaveAllChangesAsync("Book4 inserted", _ct);
+
+         await unitOfWork.SaveAllChangesAsync(
+            "Book4 inserted",
+            _ct
+         );
+
          unitOfWork.ClearChangeTracker();
       });
 
       // Act
-      var responseDeactivate = await Client
-         .PatchAsync($"{_url}/books/{bookId}/deactivate", null, _ct);
+      var responseDeactivate = await Client.PatchAsync(
+         $"{_url}/books/{bookId}/deactivate",
+         null,
+         _ct
+      );
       
       var actualBookDto = await responseDeactivate.Content
-         .ReadFromJsonAsync<BookDto>(_jsonOptions, _ct);
+         .ReadFromJsonAsync<BookDto>(
+            _jsonOptions,
+            _ct
+         );
 
-      var responseGet = await Client
-         .GetAsync($"{_url}/books/{bookId}", _ct);
+      var responseGet = await Client.GetAsync(
+         $"{_url}/books/{bookId}",
+         _ct
+      );
 
       // Assert
       responseDeactivate.StatusCode.Should().Be(HttpStatusCode.OK);
+
       actualBookDto.Should().NotBeNull();
       actualBookDto!.Id.Should().Be(bookId);
       actualBookDto.IsActive.Should().BeFalse();
+
       responseGet.StatusCode.Should().Be(HttpStatusCode.NotFound);
    }
 }

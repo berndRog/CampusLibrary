@@ -21,8 +21,8 @@ public sealed class Reader : AggregateRoot {
    public string Lastname { get; private set; } = string.Empty;
    public EmailVo EmailVo { get; private set; } = null!;
    public AddressVo AddressVo { get; private set; } = null!;
+   // is reader active or deactivated?
    public bool IsActive { get; private set; } = true;
-   
    // Technical identity subject from the Identity Server.
    public string Subject { get; private set; } = string.Empty;
 
@@ -137,6 +137,18 @@ public sealed class Reader : AggregateRoot {
       if (emailVo is not null) EmailVo = emailVo;
       if (addressVo is not null) AddressVo = addressVo;
 
+      return Result.Success();
+   }
+   
+   public Result Deactivate(
+      DateTime updatedAt
+   ) {
+      if (!IsActive)
+         return Result.Failure(ReaderErrors.IsAlreadyDeactivated);
+
+      IsActive = false;
+      Touch(updatedAt: updatedAt);
+      
       return Result.Success();
    }
 }

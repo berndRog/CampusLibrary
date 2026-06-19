@@ -1,7 +1,40 @@
 @baseUrl = https://localhost:8010/camplib/v1
 
-### 
-# create reader 1
+### ============================================================
+### Readers API
+### Seed-based manual API test
+### ============================================================
+###
+### Important:
+### The database should be deleted/reset before running this file.
+### This file creates reproducible Reader demo data through the public API.
+###
+### Current Readers behavior:
+### - Normal read endpoints return only active readers.
+### - Deactivate does not physically delete a reader.
+### - Deactivated readers are hidden from normal read model queries.
+### - Deactivated readers remain visible through with-inactive endpoints.
+###
+### Run the destructive deactivation block near the end.
+### ============================================================
+
+@reader1Id = 10000000-0000-0000-0000-000000000000
+@reader2Id = 20000000-0000-0000-0000-000000000000
+@unknownReaderId = 99999999-9999-9999-9999-999999999999
+
+@reader1Subject = reader-001
+@reader2Subject = reader-002
+@reader3Subject = reader-003
+
+@reader1Email = e.mustermann@t-online.de
+@reader2Email = m.mustermann@gmail.com
+@reader3Email = a.arndt@t-online.de
+
+
+### 1. Create seed readers =====================================================
+
+### Create reader 1: Erika Mustermann
+### Expected: 201 Created
 POST {{baseUrl}}/readers
 Content-Type: application/json
 Accept: application/json
@@ -9,19 +42,20 @@ Accept: application/json
 {
   "firstname": "Erika",
   "lastname": "Mustermann",
-  "email": "e.mustermann@t-online.de",
+  "email": "{{reader1Email}}",
   "addressDto": {
     "street": "Hauptstr. 12",
     "postalCode": "29556",
     "city": "Suderburg",
     "country": "DE"
   },
-  "subject": "reader-001",
-  "id": "10000000-0000-0000-0000-000000000000"
+  "subject": "{{reader1Subject}}",
+  "id": "{{reader1Id}}"
 }
 
-###
-# create reader 2
+
+### Create reader 2: Max Mustermann
+### Expected: 201 Created
 POST {{baseUrl}}/readers
 Content-Type: application/json
 Accept: application/json
@@ -29,19 +63,20 @@ Accept: application/json
 {
   "firstname": "Max",
   "lastname": "Mustermann",
-  "email": "m.mustermann@gmail.com",
+  "email": "{{reader2Email}}",
   "addressDto": {
     "street": "Hauptstr. 12",
     "postalCode": "29556",
     "city": "Suderburg",
     "country": "DE"
   },
-  "subject": "reader-002",
-  "id": "20000000-0000-0000-0000-000000000000"
+  "subject": "{{reader2Subject}}",
+  "id": "{{reader2Id}}"
 }
 
-###
-#
+
+### Create reader 3 with generated id: Arne Arndt
+### Expected: 201 Created
 POST {{baseUrl}}/readers
 Content-Type: application/json
 Accept: application/json
@@ -49,53 +84,137 @@ Accept: application/json
 {
   "firstname": "Arne",
   "lastname": "Arndt",
-  "email": "a.arndt@t-online.de",
+  "email": "{{reader3Email}}",
   "addressDto": {
     "street": "Neuperverstr. 29",
     "postalCode": "29410",
     "city": "Salzwedel",
     "country": "DE"
   },
-  "subject": "reader-003",
+  "subject": "{{reader3Subject}}",
   "id": null
 }
 
 
-### 
-# Reader: Get all
+### 2. Verify active readers ==================================================
+
+### Get all active readers
+### Expected: 200 OK with reader 1, reader 2 and reader 3
 GET {{baseUrl}}/readers
 Accept: application/json
 
 
-###
-#Reader: Get by Id
-GET {{baseUrl}}/readers/10000000-0000-0000-0000-000000000000
-Accept: application/json
-
-###
-#Reader: Get by Id
-GET {{baseUrl}}/readers/20000000-0000-0000-0000-000000000000
+### Get all readers including inactive readers
+### Expected: 200 OK with reader 1, reader 2 and reader 3
+GET {{baseUrl}}/readers/with-inactive
 Accept: application/json
 
 
-###
-# Reader: Get reader 1 by Email
-GET {{baseUrl}}/readers/email?email=e.mustermann@t-online.de
+### Get active reader 1 by id
+### Expected: 200 OK
+GET {{baseUrl}}/readers/{{reader1Id}}
 Accept: application/json
 
-###
-# Reader: Get reader 2 by Email
-GET {{baseUrl}}/readers/email?email=m.mustermann@gmail.com
+
+### Get active reader 2 by id
+### Expected: 200 OK
+GET {{baseUrl}}/readers/{{reader2Id}}
 Accept: application/json
 
-### ---------------------------------------------------------------------------
-# Negative Test: Create duplicate subject
+
+### Get reader 1 by id including inactive readers
+### Expected: 200 OK
+GET {{baseUrl}}/readers/{{reader1Id}}/with-inactive
+Accept: application/json
+
+
+### Get reader 1 by email
+### Expected: 200 OK
+GET {{baseUrl}}/readers/email?email={{reader1Email}}
+Accept: application/json
+
+
+### Get reader 2 by email
+### Expected: 200 OK
+GET {{baseUrl}}/readers/email?email={{reader2Email}}
+Accept: application/json
+
+
+### 3. Update reader ===========================================================
+
+### Update reader 1
+### Expected: 200 OK
+PUT {{baseUrl}}/readers/{{reader1Id}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "lastname": "Meier",
+  "email": "e.meier@gmx.de",
+  "addressDto": {
+    "street": "Neue Straße 5",
+    "postalCode": "30123",
+    "city": "Hannover",
+    "country": "DE"
+  }
+}
+
+
+### Get updated active reader 1 by id
+### Expected: 200 OK with lastname Meier and email e.meier@gmx.de
+GET {{baseUrl}}/readers/{{reader1Id}}
+Accept: application/json
+
+
+### Get updated reader 1 by new email
+### Expected: 200 OK
+GET {{baseUrl}}/readers/email?email=e.meier@gmx.de
+Accept: application/json
+
+
+### Get reader 1 by old email
+### Expected: 404 Not Found
+GET {{baseUrl}}/readers/email?email={{reader1Email}}
+Accept: application/json
+
+
+### 4. Negative read tests before deactivation =================================
+
+### Get unknown reader by id
+### Expected: 404 Not Found
+GET {{baseUrl}}/readers/{{unknownReaderId}}
+Accept: application/json
+
+
+### Get unknown reader by id including inactive readers
+### Expected: 404 Not Found
+GET {{baseUrl}}/readers/{{unknownReaderId}}/with-inactive
+Accept: application/json
+
+
+### Get reader by unknown email
+### Expected: 404 Not Found
+GET {{baseUrl}}/readers/email?email=unknown@example.com
+Accept: application/json
+
+
+### Get reader by invalid email
+### Expected: 400 Bad Request
+GET {{baseUrl}}/readers/email?email=invalid-email
+Accept: application/json
+
+
+### 5. Conflict tests ==========================================================
+
+### Create reader with duplicate subject
+### Existing subject: reader-002
+### Expected: 409 Conflict
 POST {{baseUrl}}/readers
 Content-Type: application/json
 Accept: application/json
 
 {
-  "subject": "reader-002",
+  "subject": "{{reader2Subject}}",
   "firstname": "Erika",
   "lastname": "Meier",
   "email": "duplicate.subject@example.com",
@@ -103,111 +222,191 @@ Accept: application/json
     "street": "Neue Straße 1",
     "postalCode": "11111",
     "city": "Teststadt",
-    "country": "Germany"
+    "country": "DE"
   },
   "id": null
 }
 
 
-###
-# Negative Test: Create duplicate email
-
-POST {{baseUrl}}/readers
-Content-Type: application/json
-Accept: application/json
-
-{
-  "subject": "reader-003",
-  "firstname": "Erika",
-  "lastname": "Meier",
-  "email": "{{readerEmail}}",
-  "addressDto": {
-    "street": "Neue Straße 1",
-    "postalCode": "11111",
-    "city": "Teststadt",
-    "country": "Germany"
-  },
-  "id": null
-}
-
-
-### ---------------------------------------------------------------------------
-### Negative Test: Get by unknown Id
-### ---------------------------------------------------------------------------
-# Erwartung:
-# - 404 Not Found
-
-GET {{baseUrl}}/readers/99999999-9999-9999-9999-999999999999
-Accept: application/json
-
-
-### ---------------------------------------------------------------------------
-### Negative Test: Get by unknown Email
-### ---------------------------------------------------------------------------
-# Erwartung:
-# - 404 Not Found
-
-GET {{baseUrl}}/readers/email?email=unknown@example.com
-Accept: application/json
-
-
-### ---------------------------------------------------------------------------
-### Negative Test: Get by invalid Email
-### ---------------------------------------------------------------------------
-# Erwartung:
-# - 400 Bad Request
-# Falls der Controller DomainError.Status korrekt auf HTTP abbildet.
-# Wenn aktuell noch hart NotFound(...) verwendet wird, kommt hier vermutlich falsch 404.
-
-GET {{baseUrl}}/readers/email?email=invalid-email
-Accept: application/json
-
-
-### ---------------------------------------------------------------------------
-### Negative Test: Create invalid firstname
-### ---------------------------------------------------------------------------
-# Erwartung:
-# - 400 Bad Request
-
+### Create reader with duplicate email
+### Existing email: m.mustermann@gmail.com
+### Expected: 409 Conflict
 POST {{baseUrl}}/readers
 Content-Type: application/json
 Accept: application/json
 
 {
   "subject": "reader-004",
-  "firstname": "A",
-  "lastname": "Mustermann",
-  "email": "reader004@example.com",
+  "firstname": "Erika",
+  "lastname": "Meier",
+  "email": "{{reader2Email}}",
   "addressDto": {
-    "street": "Musterstraße 12",
-    "postalCode": "12345",
-    "city": "Musterstadt",
-    "country": "Germany"
+    "street": "Neue Straße 1",
+    "postalCode": "11111",
+    "city": "Teststadt",
+    "country": "DE"
   },
   "id": null
 }
 
 
-### ---------------------------------------------------------------------------
-### Negative Test: Create invalid Id
-### ---------------------------------------------------------------------------
-# Erwartung:
-# - 400 Bad Request
+### 6. Validation tests ========================================================
 
+### Create reader with invalid firstname
+### Expected: 400 Bad Request
 POST {{baseUrl}}/readers
 Content-Type: application/json
 Accept: application/json
 
 {
   "subject": "reader-005",
-  "firstname": "Max",
+  "firstname": "A",
   "lastname": "Mustermann",
   "email": "reader005@example.com",
   "addressDto": {
     "street": "Musterstraße 12",
     "postalCode": "12345",
     "city": "Musterstadt",
-    "country": "Germany"
+    "country": "DE"
+  },
+  "id": null
+}
+
+
+### Create reader with invalid id
+### Expected: 400 Bad Request
+POST {{baseUrl}}/readers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "subject": "reader-006",
+  "firstname": "Max",
+  "lastname": "Mustermann",
+  "email": "reader006@example.com",
+  "addressDto": {
+    "street": "Musterstraße 12",
+    "postalCode": "12345",
+    "city": "Musterstadt",
+    "country": "DE"
   },
   "id": "not-a-guid"
 }
+
+
+### Create reader with invalid email
+### Expected: 400 Bad Request
+POST {{baseUrl}}/readers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "subject": "reader-007",
+  "firstname": "Max",
+  "lastname": "Mustermann",
+  "email": "not-an-email",
+  "addressDto": {
+    "street": "Musterstraße 12",
+    "postalCode": "12345",
+    "city": "Musterstadt",
+    "country": "DE"
+  },
+  "id": null
+}
+
+
+### Update reader with invalid lastname
+### Expected: 400 Bad Request
+PUT {{baseUrl}}/readers/{{reader2Id}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "lastname": "",
+  "email": null,
+  "addressDto": null
+}
+
+
+### Update unknown reader
+### Expected: 404 Not Found
+PUT {{baseUrl}}/readers/{{unknownReaderId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "lastname": "Unknown",
+  "email": null,
+  "addressDto": null
+}
+
+
+### Update reader with duplicate email
+### Existing email: e.meier@gmx.de
+### Expected: 409 Conflict
+PUT {{baseUrl}}/readers/{{reader2Id}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "lastname": null,
+  "email": "e.meier@gmx.de",
+  "addressDto": null
+}
+
+
+### 7. Destructive deactivation tests =========================================
+### Run these last.
+### They change the database state.
+
+
+### Deactivate reader 1
+### Expected:
+### - 204 No Content
+### - Reader remains stored in the database.
+### - Reader disappears from normal read model queries.
+### - Reader is still visible through with-inactive endpoints.
+DELETE {{baseUrl}}/readers/{{reader1Id}}
+Accept: application/json
+
+
+### Get deactivated reader 1 by normal id endpoint
+### Expected: 404 Not Found
+GET {{baseUrl}}/readers/{{reader1Id}}
+Accept: application/json
+
+
+### Get deactivated reader 1 including inactive readers
+### Expected: 200 OK with isActive = false
+GET {{baseUrl}}/readers/{{reader1Id}}/with-inactive
+Accept: application/json
+
+
+### Get all active readers after deactivation
+### Expected: 200 OK without reader 1
+GET {{baseUrl}}/readers
+Accept: application/json
+
+
+### Get all readers including inactive readers after deactivation
+### Expected: 200 OK with reader 1 and isActive = false
+GET {{baseUrl}}/readers/with-inactive
+Accept: application/json
+
+
+### Deactivate already inactive reader
+### Expected: 409 Conflict
+DELETE {{baseUrl}}/readers/{{reader1Id}}
+Accept: application/json
+
+
+### Deactivate unknown reader
+### Expected: 404 Not Found
+DELETE {{baseUrl}}/readers/{{unknownReaderId}}
+Accept: application/json
+
+
+### Deactivate invalid id
+### Expected: 404 Not Found by routing because "not-a-guid" does not match {id:guid}
+DELETE {{baseUrl}}/readers/not-a-guid
+Accept: application/json

@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._2_BuildingBlocks._2_Application.Utils;
@@ -10,12 +11,14 @@ using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
+[assembly: InternalsVisibleTo("CampusLibraryApiTest")]
+
 namespace CampusLibraryApi._3_Core.Readers._2_Application.UseCases;
 
 // Use case for creating a new Reader aggregate.
 // Coordinates validation, value object creation, uniqueness checks and persistence.
 // This is a command-side application service and therefore returns a Result.
-public sealed class ReaderUcCreate(
+internal sealed class ReaderUcCreate(
    IReaderRepository repository,
    IUnitOfWork unitOfWork,
    IClock clock,

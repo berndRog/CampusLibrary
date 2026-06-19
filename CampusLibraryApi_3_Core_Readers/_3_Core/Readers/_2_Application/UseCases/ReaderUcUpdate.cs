@@ -13,7 +13,7 @@ namespace CampusLibraryApi._3_Core.Readers._2_Application.UseCases;
 // Use case for updating mutable Reader profile data.
 // Coordinates aggregate loading, value object creation, uniqueness checks and persistence.
 // This is a command-side application service and therefore returns a Result.
-public sealed class ReaderUcUpdate(
+internal sealed class ReaderUcUpdate(
    IReaderRepository repository,
    IUnitOfWork unitOfWork,
    IClock clock,

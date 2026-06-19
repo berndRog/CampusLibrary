@@ -13,9 +13,7 @@ public interface IReaderDbContext {
 
    // Add multiple readers to the persistence context.
    void AddRange(IEnumerable<Reader> readers);
-   
-   // Remove a reader from the persistence context
-   void Remove(Reader reader);
+
 }
 
 /*

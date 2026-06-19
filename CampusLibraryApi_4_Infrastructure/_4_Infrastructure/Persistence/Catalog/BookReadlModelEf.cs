@@ -24,15 +24,21 @@ internal sealed class BookReadModelEf(
 
       var book = await dbContext.Books
          .AsNoTracking()
-         .Include(b => b.Authors)
          .Include(b => b.BookItems)
          .AsSplitQuery()
-         .SingleOrDefaultAsync(b => b.Id == id && b.IsActive, ct);
+         .SingleOrDefaultAsync(
+            predicate: b => b.Id == id && b.IsActive,
+            cancellationToken: ct
+         );
 
       if (book is null)
          return Result<BookDetailDto>.Failure(CatalogErrors.BookNotFound);
 
-      return Result<BookDetailDto>.Success(ToBookDetailDto(book));
+      return Result<BookDetailDto>.Success(
+         ToBookDetailDto(
+            book: book
+         )
+      );
    }
 
    public async Task<Result<IReadOnlyList<BookListItemDto>>> SelectAllAsync(
@@ -40,12 +46,13 @@ internal sealed class BookReadModelEf(
    ) {
       var books = await dbContext.Books
          .AsNoTracking()
-         .Include(b => b.Authors)
          .Include(b => b.BookItems)
          .AsSplitQuery()
          .Where(b => b.IsActive)
          .OrderBy(b => b.Title)
-         .ToListAsync(ct);
+         .ToListAsync(
+            cancellationToken: ct
+         );
 
       var bookDtos = books
          .Select(ToBookListItemDto)
@@ -66,22 +73,43 @@ internal sealed class BookReadModelEf(
 
       IQueryable<Book> query = dbContext.Books
          .AsNoTracking()
-         .Include(b => b.Authors)
          .Include(b => b.BookItems)
          .AsSplitQuery()
          .Where(b => b.IsActive);
 
+      if (search.SearchField == BookSearchField.AuthorLastName) {
+
+         var candidates = await query
+            .Where(b => EF.Functions.Like(
+               b.AuthorsText,
+               pattern
+            ))
+            .OrderBy(b => b.Title)
+            .ToListAsync(
+               cancellationToken: ct
+            );
+
+         var authorMatches = candidates
+            .Where(b => ContainsAuthorLastname(
+               authorsText: b.AuthorsText,
+               searchText: normalizedSearchText
+            ))
+            .Select(ToBookListItemDto)
+            .ToList();
+
+         return Result<IReadOnlyList<BookListItemDto>>.Success(authorMatches);
+      }
+
       query = search.SearchField switch {
          BookSearchField.Title =>
-            query.Where(b => EF.Functions.Like(b.Title, pattern)),
-
-         BookSearchField.AuthorLastName =>
-            query.Where(b =>
-               b.Authors.Any(a =>
-                  EF.Functions.Like(a.Lastname, pattern))),
+            query.Where(b => EF.Functions.Like(
+               b.Title,
+               pattern
+            )),
 
          BookSearchField.Isbn =>
-            query.Where(b => b.IsbnVo == IsbnVo.FromPersisted(normalizedSearchText)),
+            query.Where(b =>
+               b.IsbnVo == IsbnVo.FromPersisted(normalizedSearchText)),
 
          _ =>
             query.Where(_ => false)
@@ -100,30 +128,6 @@ internal sealed class BookReadModelEf(
       return Result<IReadOnlyList<BookListItemDto>>.Success(bookDtos);
    }
 
-   public async Task<Result<IReadOnlyList<BookListItemDto>>> SelectByAuthorIdAsync(
-      Guid authorId,
-      CancellationToken ct = default
-   ) {
-      if (authorId == Guid.Empty)
-         return Result<IReadOnlyList<BookListItemDto>>.Failure(CatalogErrors.InvalidAuthorId);
-
-      var books = await dbContext.Books
-         .AsNoTracking()
-         .Include(b => b.Authors)
-         .Include(b => b.BookItems)
-         .AsSplitQuery()
-         .Where(b => b.IsActive)
-         .Where(b => b.Authors.Any(a => a.Id == authorId))
-         .OrderBy(b => b.Title)
-         .ToListAsync(ct);
-
-      var bookDtos = books
-         .Select(ToBookListItemDto)
-         .ToList();
-
-      return Result<IReadOnlyList<BookListItemDto>>.Success(bookDtos);
-   }
-
    private static BookListItemDto ToBookListItemDto(
       Book book
    ) =>
@@ -132,11 +136,7 @@ internal sealed class BookReadModelEf(
          Title: book.Title,
          Subtitle: book.Subtitle,
          Isbn: book.IsbnVo.Value,
-         Authors: book.Authors
-            .OrderBy(a => a.Lastname)
-            .ThenBy(a => a.Firstname)
-            .Select(a => a.DisplayName)
-            .ToList(),
+         AuthorsText: book.AuthorsText,
          TotalBookItems: book.BookItems.Count,
          AvailableBookItems: book.BookItems.Count(bi =>
             bi.Status == BookItemStatus.Available)
@@ -150,11 +150,7 @@ internal sealed class BookReadModelEf(
          Title: book.Title,
          Subtitle: book.Subtitle,
          Isbn: book.IsbnVo.Value,
-         Authors: book.Authors
-            .OrderBy(a => a.Lastname)
-            .ThenBy(a => a.Firstname)
-            .Select(author => author.ToAuthorDto())
-            .ToList(),
+         AuthorsText: book.AuthorsText,
          BookItems: book.BookItems
             .OrderBy(bi => bi.InventoryNumber)
             .Select(bookItem => bookItem.ToBookItemDto())
@@ -166,6 +162,59 @@ internal sealed class BookReadModelEf(
          CreatedAt: book.CreatedAt,
          UpdatedAt: book.UpdatedAt
       );
+
+   private static bool ContainsAuthorLastname(
+      string authorsText,
+      string searchText
+   ) {
+      if (string.IsNullOrWhiteSpace(authorsText))
+         return false;
+
+      if (string.IsNullOrWhiteSpace(searchText))
+         return false;
+
+      var normalizedSearchText = Normalize(
+         value: searchText
+      );
+
+      return ExtractAuthorLastnames(
+            authorsText: authorsText
+         )
+         .Any(lastname =>
+            Normalize(
+               value: lastname
+            ).Contains(normalizedSearchText));
+   }
+
+   private static IEnumerable<string> ExtractAuthorLastnames(
+      string authorsText
+   ) {
+      if (string.IsNullOrWhiteSpace(authorsText))
+         yield break;
+
+      var authorTokens = authorsText.Split(
+         separator: ',',
+         options: StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+      );
+
+      foreach (var authorToken in authorTokens) {
+
+         var nameParts = authorToken.Split(
+            separator: ' ',
+            options: StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+         );
+
+         if (nameParts.Length == 0)
+            continue;
+
+         yield return nameParts[^1];
+      }
+   }
+
+   private static string Normalize(
+      string value
+   ) =>
+      value.Trim().ToLowerInvariant();
 }
 
 /*
@@ -179,12 +228,25 @@ für Anzeige und Suche optimiert sind. Dadurch bleibt das Domain-Modell geschüt
 und wird nicht direkt an Controller oder Clients weitergegeben.
 
 FindByIdAsync liefert ein BookDetailDto für Detailansichten.
-SelectAllAsync, SearchAsync und SelectByAuthorIdAsync liefern BookListItemDto
-für Listen und Trefferanzeigen.
+SelectAllAsync und SearchAsync liefern BookListItemDto für Listen und
+Trefferanzeigen.
 
-Die Autoren eines Buches werden im ReadModel sortiert, nicht in der Domain.
-Das ist eine Anzeigeentscheidung: In der Liste sollen Autoren alphabetisch nach
-Nachname und danach nach Vorname erscheinen.
+Autorinnen und Autoren werden in dieser reduzierten Catalog-Version nicht als
+eigene Domain Entity modelliert. Stattdessen enthält Book einen
+kommaseparierten Autorentext, zum Beispiel:
+
+   "Robert C. Martin"
+   "Martin Fowler, Kent Beck"
+
+Die Suche nach Autorennamen interpretiert diesen Text bewusst einfach:
+Kommata trennen einzelne Autorinnen und Autoren. Innerhalb eines Autor-Tokens
+gilt der letzte Namensbestandteil als Nachname. Eine Suche nach
+AuthorLastName prüft deshalb nur diese extrahierten Nachnamen.
+
+Diese Vereinfachung reduziert den Stoff im Catalog-Modul. Die Studierenden
+sehen weiterhin, wie eine Suche über ein ReadModel funktioniert, müssen aber
+keine zusätzliche Author-Entity, keine m:n-Zuordnung und keine Join-Tabelle
+verstehen.
 
 Die Anzahl der Exemplare wird ebenfalls hier berechnet:
 
@@ -198,4 +260,9 @@ Damit wird sichtbar:
 - ReadModel: projiziert Daten für Anzeige, Suche und Listen.
 - UseCase: verändert Zustand.
 - Controller: verwendet Schnittstellen, keine konkreten Klassen.
+
+Die eigentliche fachlich wichtige m:n-Beziehung wird später im Loans-Modul
+behandelt. Dort ist die Beziehung zwischen Reader und BookItem nicht nur eine
+Struktur, sondern ein fachlicher Vorgang mit Ausleihdatum, Rückgabefrist,
+Rückgabe, Verlängerung und Status.
 */

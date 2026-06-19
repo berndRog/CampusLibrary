@@ -30,56 +30,21 @@ internal sealed class ConfigBook(
 
       builder.Navigation(b => b.BookItems)
          .UsePropertyAccessMode(PropertyAccessMode.Field);
-
-      // Book <-> Author [m:n]
-      // Book.Authors is the domain-facing navigation.
-      // BookAuthorJoin is an infrastructure join type for the table "BookAuthors"
-      // and makes the composite key BookId + AuthorId explicit.
-      builder.HasMany(b => b.Authors)
-         .WithMany()
-         .UsingEntity<BookAuthorJoin>(
-            right => right
-               .HasOne(ba => ba.Author)
-               .WithMany()
-               .HasForeignKey(ba => ba.AuthorId)
-               .OnDelete(DeleteBehavior.Restrict),
-            left => left
-               .HasOne(ba => ba.Book)
-               .WithMany()
-               .HasForeignKey(ba => ba.BookId)
-               .OnDelete(DeleteBehavior.Cascade),
-            join => {
-               join.ToTable("BookAuthors");
-
-               join.HasKey(ba => new {
-                  ba.BookId,
-                  ba.AuthorId
-               });
-
-               join.Property(ba => ba.BookId)
-                  .HasColumnName("BookId")
-                  .HasColumnOrder(0)
-                  .IsRequired();
-
-               join.Property(ba => ba.AuthorId)
-                  .HasColumnName("AuthorId")
-                  .HasColumnOrder(1)
-                  .IsRequired();
-            }
-         );
-
-      builder.Navigation(b => b.Authors)
-         .UsePropertyAccessMode(PropertyAccessMode.Field);
       
       // Properties
+      builder.Property(b => b.AuthorsText)
+         .HasMaxLength(300)
+         .HasColumnName("Authors").HasColumnOrder(1)
+         .IsRequired();
+      
       builder.Property(b => b.Title)
          .HasMaxLength(200)
-         .HasColumnName("Title").HasColumnOrder(1)
+         .HasColumnName("Title").HasColumnOrder(2)
          .IsRequired();
 
       builder.Property(b => b.Subtitle)
          .HasMaxLength(200)
-         .HasColumnName("Subtitle").HasColumnOrder(2)
+         .HasColumnName("Subtitle").HasColumnOrder(3)
          .IsRequired(false);
 
       // ISBN value object
@@ -89,25 +54,27 @@ internal sealed class ConfigBook(
             value => IsbnVo.FromPersisted(value)
          )
          .HasMaxLength(13)
-         .HasColumnName("Isbn").HasColumnOrder(3)
+         .HasColumnName("Isbn").HasColumnOrder(4)
          .IsRequired();
 
       builder.HasIndex(b => b.IsbnVo)
          .IsUnique();
 
+      builder.Property(a => a.IsActive)
+         .HasColumnName("IsActive").HasColumnOrder(5)
+         .IsRequired();
+      
       // Audit timestamps
       builder.Property(b => b.CreatedAt)
          .HasConversion(utcDtConv)
-         .HasColumnName("CreatedAt").HasColumnOrder(4)
+         .HasColumnName("CreatedAt").HasColumnOrder(6)
          .IsRequired();
 
       builder.Property(b => b.UpdatedAt)
          .HasConversion(utcDtConv)
-         .HasColumnName("UpdatedAt").HasColumnOrder(5)
+         .HasColumnName("UpdatedAt").HasColumnOrder(7)
          .IsRequired();
       
-      builder.Property(a => a.IsActive)
-         .HasColumnName("IsActive")
-         .HasColumnOrder(6).IsRequired();
+
    }
 }

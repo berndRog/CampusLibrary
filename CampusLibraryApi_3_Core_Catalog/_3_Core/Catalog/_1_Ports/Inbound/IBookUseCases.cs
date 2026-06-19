@@ -19,14 +19,7 @@ public interface IBookUseCases {
       BookItemAddDto? dto,
       CancellationToken ct = default
    );
-
-   // Assigns an existing Author to an existing Book.
-   Task<Result<BookDto>> AssignAuthorAsync(
-      Guid bookId,
-      BookAssignAuthorDto? dto,
-      CancellationToken ct = default
-   );
-
+   
    // Deactivates a Book without physically deleting it from the database.
    Task<Result<BookDto>> DeactivateAsync(
       Guid bookId,

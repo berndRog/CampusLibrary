@@ -30,9 +30,13 @@ public sealed class BookUcCreate(
       if (idResult.IsFailure)
          return Result<BookDto>.Failure(idResult.Error);
 
-      // Create the aggregate first, so ISBN validation and title trimming are applied.
+      
+      
+      // Create the aggregate first, so ISBN validation, title trimming
+      // and author text validation are applied.
       var bookResult = Book.Create(
          id: idResult.Value,
+         authorsText: dto.AuthorsText,
          title: dto.Title,
          subtitle: dto.Subtitle,
          isbn: dto.Isbn,

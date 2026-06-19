@@ -2,6 +2,7 @@ using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._2_BuildingBlocks._2_Application.Utils;
 using CampusLibraryApi._2_BuildingBlocks._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Catalog._3_Domain.Errors;
+using CampusLibraryApi._3_Core.Catalog._3_Domain.Services;
 using CampusLibraryApi._3_Core.Catalog._3_Domain.ValueObjects;
 
 namespace CampusLibraryApi._3_Core.Catalog._3_Domain.Entities;
@@ -15,6 +16,7 @@ public sealed class Book : AggregateRoot {
    // public Guid Id { get; protected set; }
    // public DateTime CreatedAt { get; protected set; }
    // public DateTime UpdatedAt { get; protected set; }
+   public string AuthorsText { get; private set; } = string.Empty;
    public string Title { get; private set; } = string.Empty;
    public string? Subtitle { get; private set; }
    public IsbnVo IsbnVo { get; private set; } = null!;
@@ -25,12 +27,6 @@ public sealed class Book : AggregateRoot {
    private readonly List<BookItem> _bookItems = [];
    public IReadOnlyCollection<BookItem> BookItems => _bookItems.AsReadOnly();
 
-   // Book <-> Author [m:n]
-   // Authors are assigned directly to the book.
-   // EF Core maps this relationship to a join table behind the scenes.
-   private readonly List<Author> _authors = [];
-   public IReadOnlyCollection<Author> Authors => _authors.AsReadOnly();
-
    //--- constructors ----------------------------------------------------------
    // Required by EF Core.
    private Book() {
@@ -38,11 +34,13 @@ public sealed class Book : AggregateRoot {
    // Domain ctor
    private Book(
       Guid id,
+      string authorsText,
       string title,
       string? subtitle,
       IsbnVo isbnVo
    ) {
       Id = id;
+      AuthorsText = authorsText;
       Title = title;
       Subtitle = subtitle;
       IsbnVo = isbnVo;
@@ -53,17 +51,30 @@ public sealed class Book : AggregateRoot {
    // Validation errors are returned as Result failures.
    public static Result<Book> Create(
       Guid id,
+      string authorsText,
       string title,
       string? subtitle,
       string isbn,
       DateTime createdAt
    ) {
+      string normalizedAuthorsText = AuthorTextParser.NormalizeAuthorsText(
+         authorsText: authorsText
+      );
       title = title.Trim();
       subtitle = string.IsNullOrWhiteSpace(subtitle) ? null : subtitle.Trim();
+      
+      IReadOnlyList<string> authorLastnames = AuthorTextParser.ExtractLastnames(
+         authorsText: normalizedAuthorsText
+      );
       
       // A book needs a valid technical identity.
       if (id == Guid.Empty)
          return Result<Book>.Failure(CatalogErrors.BookIdRequired);
+      
+      // A book needs at least one author lastname.
+      if (authorLastnames.Count == 0)
+         return Result<Book>.Failure(CatalogErrors.AuthorsAreRequired);
+      
       // A book needs a title.
       if (string.IsNullOrWhiteSpace(title))
          return Result<Book>.Failure(CatalogErrors.TitleIsRequired);
@@ -77,6 +88,7 @@ public sealed class Book : AggregateRoot {
       // Create the aggregate with normalized string values.
       var book = new Book(
          id: id,
+         authorsText: normalizedAuthorsText,
          title:  title,
          subtitle: subtitle,
          isbnVo: isbnVo
@@ -128,29 +140,6 @@ public sealed class Book : AggregateRoot {
 
       return Result<BookItem>.Success(bookItem);
    }
-
-   // Assigns an existing author to this book.
-   // The many-to-many join table is handled by EF Core, not by a domain class.
-   public Result AssignAuthor(
-      Author author,
-      DateTime updatedAt
-   ) {
-      if (author.Id == Guid.Empty)
-         return Result.Failure(CatalogErrors.AuthorIdRequired);
-      
-      // The same author must not be assigned twice to the same book.
-      if (_authors.Any(a => a.Id == author.Id))
-         return Result.Failure(CatalogErrors.AuthorAlreadyAssigned);
-
-      _authors.Add(author);
-
-      // Mark the aggregate as updated.
-      var resultUpdated = Touch(updatedAt);
-      if (resultUpdated.IsFailure)
-         return Result.Failure(resultUpdated.Error);
-
-      return Result.Success();
-   }
    
    // Deactivate the Book
    public Result Deactivate(
@@ -166,6 +155,23 @@ public sealed class Book : AggregateRoot {
           return Result.Failure(resultUpdated.Error);
 
        return Result.Success();
+   }
+   
+   private static string NormalizeAuthorsText(
+      string? authorsText
+   ) {
+      if (string.IsNullOrWhiteSpace(authorsText))
+         return string.Empty;
+
+      string[] authorTokens = authorsText.Split(
+         separator: ',',
+         options: StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+      );
+
+      return string.Join(
+         separator: ", ",
+         values: authorTokens
+      );
    }
 }
 
@@ -245,203 +251,3 @@ Didaktisch zeigt diese Klasse mehrere zentrale DDD-Ideen:
 * ReadModel für lesende Suchanforderungen
 * testbare Zeitsteuerung über UTC-DateTime
  */
-
-/* Alt
-// Aggregate root for a book in the Catalog module.
-// Represents the bibliographic work, not a physical copy.
-// Identity and timestamps are inherited from AggregateRoot/Entity.
-public sealed class BookAlt : AggregateRoot {
-   //--- properties ------------------------------------------------------------
-
-   // Inherited from Entity / AggregateRoot:
-   // public Guid Id { get; private set; }
-   // public DateTimeOffset CreatedAt { get; private set; }
-   // public DateTimeOffset UpdatedAt { get; private set; }
-
-   public string Title { get; private set; } = string.Empty;
-   public string? Subtitle { get; private set; }
-   public IsbnVo IsbnVo { get; private set; } = null!;
-
-   // Book -> BookItem [1:n]
-   // A BookItem represents one physical copy of this book.
-   private readonly List<BookItem> _bookItems = [];
-   public IReadOnlyCollection<BookItem> BookItems => _bookItems.AsReadOnly();
-
-   // Book -> BookAuthor -> Author [m:n]
-   // BookAuthor is the join entity between Book and Author.
-   private readonly List<BookAuthor> _bookAuthors = [];
-   public IReadOnlyCollection<BookAuthor> BookAuthors => _bookAuthors.AsReadOnly();
-
-   //--- constructors ----------------------------------------------------------
-   // Required by EF Core.
-   private BookAlt() {
-   }
-
-   // Domain ctor
-   private BookAlt(
-      Guid id,
-      string title,
-      string? subtitle,
-      IsbnVo isbnVo
-   ) {
-      Id = id;
-      Title = title;
-      Subtitle = subtitle;
-      IsbnVo = isbnVo;
-   }
-
-   //--- factory methods -------------------------------------------------------
-   // Creates a new Book aggregate and initializes its timestamps.
-   // Validation errors are returned as Result failures.
-   public static Result<BookAlt> Create(
-      Guid id,
-      string title,
-      string? subtitle,
-      string isbn,
-      DateTime createdAt
-   ) {
-      // Validate
-      if (id == Guid.Empty)
-         return Result<BookAlt>.Failure(CatalogErrors.BookIdRequired);
-      if (string.IsNullOrWhiteSpace(title))
-         return Result<BookAlt>.Failure(CatalogErrors.TitleIsRequired);
-
-      // Create and validate the ISBN value object.
-      var isbnResult = IsbnVo.Create(isbn);
-      if (isbnResult.IsFailure)
-         return Result<BookAlt>.Failure(isbnResult.Error);
-
-      // Create the Book aggregate.
-      var book = new BookAlt(
-         id,
-         title.Trim(),
-         string.IsNullOrWhiteSpace(subtitle) ? null : subtitle.Trim(),
-         isbnResult.Value
-      );
-
-      // Initialize timestamps inherited from AggregateRoot.
-      var resultCreated = book.Initialize(createdAt);
-      if (resultCreated.IsFailure)
-         return Result<BookAlt>.Failure(resultCreated.Error);
-
-      return Result<BookAlt>.Success(book);
-   }
-
-   //--- domain methods --------------------------------------------------------
-   // Adds a physical copy of this book to the aggregate.
-   public Result<BookItem> AddBookItem(
-      Guid bookItemId,
-      string inventoryNumber,
-      DateTime updatedAt
-   ) {
-      if (bookItemId == Guid.Empty)
-         return Result<BookItem>.Failure(CatalogErrors.BookItemIdRequired);
-
-      // Inventory numbers must be unique within one Book aggregate.
-      if (_bookItems.Any(bi => bi.InventoryNumber == inventoryNumber))
-         return Result<BookItem>.Failure(CatalogErrors.BookItemAlreadyExists);
-
-      // Create the child entity through its factory method.
-      var resuktBookItem = BookItem.Create(
-         bookItemId,
-         this.Id,
-         inventoryNumber
-      );
-      if (resuktBookItem.IsFailure)
-         return Result<BookItem>.Failure(resuktBookItem.Error);
-      var bookItem = resuktBookItem.Value;
-
-      _bookItems.Add(bookItem);
-
-      // Mark the aggregate as updated.
-      var resultUpdated = Touch(updatedAt);
-      if (resultUpdated.IsFailure)
-         return Result<BookItem>.Failure(resultUpdated.Error);
-
-      return Result<BookItem>.Success(bookItem);
-   }
-
-   // Assigns an author to this book by creating a BookAuthor join entity.
-   public Result<BookAuthor> AssignAuthor(
-      Guid bookAuthorId,
-      Guid authorId,
-      DateTime updatedAt
-   ) {
-      if (bookAuthorId == Guid.Empty)
-         return Result<BookAuthor>.Failure(CatalogErrors.BookAuthorIdRequired);
-      if (authorId == Guid.Empty)
-         return Result<BookAuthor>.Failure(CatalogErrors.AuthorIdRequired);
-
-      // The same author must not be assigned twice to the same book.
-      if (_bookAuthors.Any(ba => ba.AuthorId == authorId))
-         return Result<BookAuthor>.Failure(CatalogErrors.AuthorAlreadyAssigned);
-
-      var bookAuthor = new BookAuthor(
-         id: bookAuthorId,
-         bookId: this.Id,
-         authorId: authorId
-      );
-      _bookAuthors.Add(bookAuthor);
-
-      // Mark the aggregate as updated.
-      var resultUpdated = Touch(updatedAt);
-      if (resultUpdated.IsFailure)
-         return Result<BookAuthor>.Failure(resultUpdated.Error);
-
-      return Result<BookAuthor>.Success(bookAuthor);
-   }
-}
-*/
-/*
-Lernziele und Didaktik
-----------------------
-
-Diese Klasse zeigt das Book als Aggregate Root des Catalog-Moduls.
-Ein Book repräsentiert das bibliografische Werk, also zum Beispiel
-"Clean Code" oder "Domain-Driven Design". Es ist nicht das einzelne
-physische Exemplar im Regal.
-
-Book ist ein Aggregate Root, weil es die Konsistenzgrenze für mehrere
-fachlich zusammengehörende Objekte bildet. Von außen soll nicht beliebig
-ein BookItem oder ein BookAuthor erzeugt und verändert werden. Stattdessen
-werden diese untergeordneten Objekte über Methoden des Book-Aggregates
-verwaltet.
-
-Zum Book-Aggregate gehören aktuell:
-
-- Book als Aggregate Root
-- BookItem als untergeordnete Entity für ein physisches Exemplar
-- BookAuthor als Join Entity zwischen Book und Author
-- IsbnVo als Value Object für die ISBN
-
-BookItem ist kein eigenes Aggregate Root, weil ein Exemplar fachlich immer
-zu einem bestimmten Book gehört. Es wird deshalb über AddBookItem am Book
-angelegt. Damit kann das Book zum Beispiel sicherstellen, dass eine
-InventoryNumber innerhalb dieses Buchs nicht doppelt vergeben wird.
-
-BookAuthor ist ebenfalls keine frei verwendete Entity, sondern beschreibt
-die Zuordnung zwischen Book und Author. Die Methode AssignAuthor verhindert,
-dass derselbe Author mehrfach demselben Book zugeordnet wird.
-
-Author ist dagegen ein eigenes fachliches Objekt und kann unabhängig von
-einem einzelnen Book existieren. Ein Author kann an mehreren Books beteiligt
-sein. Die m:n-Beziehung wird über BookAuthor modelliert.
-
-IsbnVo ist ein Value Object. Es besitzt keine eigene technische Identität,
-sondern wird über seinen Wert verglichen. Die Validierung der ISBN liegt
-direkt im Value Object und nicht im Controller oder in der Datenbank.
-
-Die Parameter createdAt und updatedAt machen das Domänenmodell testbar.
-In Tests kann ein fester Zeitpunkt oder eine FakeClock verwendet werden.
-Dadurch sind CreatedAt und UpdatedAt deterministisch prüfbar und hängen
-nicht von DateTimeOffset.Now oder der Systemzeit ab.
-
-Initialize(createdAt) wird beim Erzeugen des Aggregates verwendet.
-Touch(updatedAt) wird bei fachlichen Änderungen aufgerufen. Dadurch wird
-sichtbar, wann ein Aggregate neu entstanden ist und wann es zuletzt geändert
-wurde.
-
-Didaktisch zeigt diese Klasse damit mehrere zentrale DDD-Ideen:
-Aggregate Root, Entity, Value Object, Konsistenzgrenze, fachliche Methoden
-statt öffentlicher Setter und testbare Zeitsteuerung.
-*/

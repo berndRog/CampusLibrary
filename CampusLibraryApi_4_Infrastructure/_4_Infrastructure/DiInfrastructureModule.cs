@@ -31,12 +31,10 @@ public static class DiInfrastructureModule {
       // Repositories
       services.AddScoped<IReaderRepository, ReaderRepositoryEf>();
       services.AddScoped<IBookRepository, BookRepositoryEf>();
-      services.AddScoped<IAuthorRepository, AuthorRepositoryEf>();
       
       // ReadModels
       services.AddScoped<IReaderReadModel, ReaderReadModelEf>();
       services.AddScoped<IBookReadModel, BookReadModelEf>();
-      services.AddScoped<IAuthorReadModel, AuthorReadModelEf>();
 
       // Unit of Work
       services.AddScoped<IUnitOfWork, UnitOfWorkEf>();

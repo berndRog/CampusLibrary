@@ -147,9 +147,10 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
    #endregion
 
    [Fact]
-   public async Task DeleteAsync_ok_removes_reader_from_database() {
+   public async Task DeactivateAsync_ok_hides_reader_from_normal_queries() {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
+
       var useCases = scope.ServiceProvider.GetRequiredService<IReaderUseCases>();
       var repository = scope.ServiceProvider.GetRequiredService<IReaderRepository>();
       var readModel = scope.ServiceProvider.GetRequiredService<IReaderReadModel>();
@@ -158,33 +159,58 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
 
       // Arrange
       var reader = seed.Reader1();
+
       repository.Add(reader);
       await unitOfWork.SaveAllChangesAsync("Reader1 inserted", ct);
       unitOfWork.ClearChangeTracker();
 
       // Act
-      var resultDelete = await useCases.DeleteAsync(reader.Id, ct);
-      resultDelete.IsSuccess.Should().BeTrue();
+      var resultDeactivate = await useCases.DeactivateAsync(
+         id: reader.Id,
+         ct: ct
+      );
+
+      resultDeactivate.IsSuccess.Should().BeTrue();
+
       unitOfWork.ClearChangeTracker();
 
-      // Assert
-      var findResult = await readModel.FindByIdAsync(reader.Id, ct);
-      findResult.IsFailure.Should().BeTrue();
-   }
+      // Assert: normal read model queries no longer return inactive readers.
+      var activeFindResult = await readModel.FindByIdAsync(
+         id: reader.Id,
+         ct: ct
+      );
 
+      activeFindResult.IsFailure.Should().BeTrue();
+
+      // Assert: administrative/internal queries can still find the reader.
+      var inactiveFindResult = await readModel.FindByIdWithInactiveAsync(
+         id: reader.Id,
+         ct: ct
+      );
+
+      inactiveFindResult.IsSuccess.Should().BeTrue();
+      inactiveFindResult.Value.Id.Should().Be(reader.Id);
+      inactiveFindResult.Value.IsActive.Should().BeFalse();
+   }
+   
    [Fact]
-   public async Task DeleteAsync_unknown_reader_fails() {
+   public async Task DeactivateAsync_unknown_reader_fails() {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
+
       var useCases = scope.ServiceProvider.GetRequiredService<IReaderUseCases>();
 
       // Arrange
       var unknownId = Guid.Parse("99000000-0000-0000-0000-000000000000");
 
       // Act
-      var deleteResult = await useCases.DeleteAsync(unknownId, ct);
+      var deactivateResult = await useCases.DeactivateAsync(
+         id: unknownId,
+         ct: ct
+      );
 
       // Assert
-      deleteResult.IsFailure.Should().BeTrue();
+      deactivateResult.IsFailure.Should().BeTrue();
+      deactivateResult.Error.Should().Be(ReaderErrors.ReaderNotFound);
    }
 }

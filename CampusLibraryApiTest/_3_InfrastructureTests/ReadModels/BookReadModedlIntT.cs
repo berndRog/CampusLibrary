@@ -21,32 +21,39 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
-      var authorRepository = scope.ServiceProvider.GetRequiredService<IAuthorRepository>();
       var readModel = scope.ServiceProvider.GetRequiredService<IBookReadModel>();
       var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
 
       // Arrange
-      var authors = seed.Authors;
-      var books = seed.BooksWithAuthors(authors);
-
+      var books = seed.Books;
       var book1 = books[0];
-      authorRepository.AddRange(authors);
-      bookRepository.AddRange(books);
 
-      await unitOfWork.SaveAllChangesAsync("Books with authors inserted", ct);
+      bookRepository.AddRange(
+         books: books
+      );
+
+      await unitOfWork.SaveAllChangesAsync(
+         "Books inserted",
+         ct
+      );
+
       unitOfWork.ClearChangeTracker();
 
       // Act
-      var result = await readModel.FindByIdAsync(book1.Id, ct);
+      var result = await readModel.FindByIdAsync(
+         id: book1.Id,
+         ct: ct
+      );
 
       // Assert
       result.IsSuccess.Should().BeTrue();
 
       var actualBookDto = result.Value;
-      actualBookDto.Should().NotBeNull();
 
+      actualBookDto.Should().NotBeNull();
       actualBookDto.Id.Should().Be(book1.Id);
+      actualBookDto.AuthorsText.Should().Be(book1.AuthorsText);
       actualBookDto.Title.Should().Be(book1.Title);
       actualBookDto.Subtitle.Should().Be(book1.Subtitle);
       actualBookDto.Isbn.Should().Be(book1.IsbnVo.Value);
@@ -54,13 +61,7 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       actualBookDto.CreatedAt.Should().Be(book1.CreatedAt);
       actualBookDto.UpdatedAt.Should().Be(book1.UpdatedAt);
 
-      actualBookDto.Authors.Should().HaveCount(book1.Authors.Count);
       actualBookDto.BookItems.Should().HaveCount(book1.BookItems.Count);
-
-      actualBookDto.Authors
-         .Select(a => a.Id)
-         .Should()
-         .BeEquivalentTo(book1.Authors.Select(a => a.Id));
 
       actualBookDto.BookItems
          .Select(bi => bi.InventoryNumber)
@@ -79,7 +80,7 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var readModel = scope.ServiceProvider.GetRequiredService<IBookReadModel>();
-         
+
       // Arrange
       var unknownId = Guid.Parse("99999999-0000-0000-0000-000000000000");
 
@@ -104,14 +105,25 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
 
       // Arrange
       var book1 = seed.Book1();
+
       repository.Add(book1);
-      await unitOfWork.SaveAllChangesAsync("Book1 inserted", ct);
+
+      await unitOfWork.SaveAllChangesAsync(
+         "Book1 inserted",
+         ct
+      );
 
       var resultDeactivated = book1.Deactivate(
          updatedAt: book1.CreatedAt.AddDays(1)
       );
+
       resultDeactivated.IsSuccess.Should().BeTrue();
-      await unitOfWork.SaveAllChangesAsync("Book1 deactivated", ct);
+
+      await unitOfWork.SaveAllChangesAsync(
+         "Book1 deactivated",
+         ct
+      );
+
       unitOfWork.ClearChangeTracker();
 
       // Act
@@ -129,28 +141,19 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
-      var authorRepository = scope.ServiceProvider.GetRequiredService<IAuthorRepository>();
       var readModel = scope.ServiceProvider.GetRequiredService<IBookReadModel>();
       var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
 
       // Arrange
-      var authors = seed.Authors;
-
-      var books = seed.BooksWithAuthors(
-         authors: authors
-      );
-
-      authorRepository.AddRange(
-         authors: authors
-      );
+      var books = seed.Books;
 
       bookRepository.AddRange(
          books: books
       );
 
       await unitOfWork.SaveAllChangesAsync(
-         "Books with authors inserted",
+         "Books inserted",
          ct
       );
 
@@ -170,6 +173,7 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       result.IsSuccess.Should().BeTrue();
 
       var actualBookDtos = result.Value;
+
       actualBookDtos.Should().NotBeNull();
       actualBookDtos.Count.Should().Be(books.Count);
 
@@ -181,6 +185,9 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
          expBookIds,
          options => options.WithStrictOrdering()
       );
+
+      actualBookDtos.Should().OnlyContain(b =>
+         !string.IsNullOrWhiteSpace(b.AuthorsText));
    }
 
    [Fact]
@@ -188,30 +195,20 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
-      var authorRepository = scope.ServiceProvider.GetRequiredService<IAuthorRepository>();
       var readModel = scope.ServiceProvider.GetRequiredService<IBookReadModel>();
       var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
 
       // Arrange
-      var authors = seed.Authors;
-
-      var books = seed.BooksWithAuthors(
-         authors: authors
-      );
-
+      var books = seed.Books;
       var deactivatedBook = books[0];
-
-      authorRepository.AddRange(
-         authors: authors
-      );
 
       bookRepository.AddRange(
          books: books
       );
 
       await unitOfWork.SaveAllChangesAsync(
-         "Books with authors inserted",
+         "Books inserted",
          ct
       );
 
@@ -237,6 +234,7 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       result.IsSuccess.Should().BeTrue();
 
       var actualBookDtos = result.Value;
+
       actualBookDtos.Should().NotContain(b => b.Id == deactivatedBook.Id);
       actualBookDtos.Count.Should().Be(books.Count - 1);
    }
@@ -246,30 +244,20 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
-      var authorRepository = scope.ServiceProvider.GetRequiredService<IAuthorRepository>();
       var readModel = scope.ServiceProvider.GetRequiredService<IBookReadModel>();
       var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
 
       // Arrange
-      var authors = seed.Authors;
-
-      var books = seed.BooksWithAuthors(
-         authors: authors
-      );
-
+      var books = seed.Books;
       var book1 = books[0];
-
-      authorRepository.AddRange(
-         authors: authors
-      );
 
       bookRepository.AddRange(
          books: books
       );
 
       await unitOfWork.SaveAllChangesAsync(
-         "Books with authors inserted",
+         "Books inserted",
          ct
       );
 
@@ -290,15 +278,16 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       result.IsSuccess.Should().BeTrue();
 
       var actualBookDtos = result.Value;
+
       actualBookDtos.Should().NotBeNull();
       actualBookDtos.Should().ContainSingle(b => b.Id == book1.Id);
 
       var actualBookDto = actualBookDtos.Single(b => b.Id == book1.Id);
 
+      actualBookDto.AuthorsText.Should().Be(book1.AuthorsText);
       actualBookDto.Title.Should().Be(book1.Title);
       actualBookDto.Subtitle.Should().Be(book1.Subtitle);
       actualBookDto.Isbn.Should().Be(book1.IsbnVo.Value);
-      actualBookDto.Authors.Should().NotBeEmpty();
       actualBookDto.TotalBookItems.Should().Be(book1.BookItems.Count);
 
       actualBookDto.AvailableBookItems.Should().Be(
@@ -311,30 +300,20 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
-      var authorRepository = scope.ServiceProvider.GetRequiredService<IAuthorRepository>();
       var readModel = scope.ServiceProvider.GetRequiredService<IBookReadModel>();
       var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
 
       // Arrange
-      var authors = seed.Authors;
-
-      var books = seed.BooksWithAuthors(
-         authors: authors
-      );
-
+      var books = seed.Books;
       var book1 = books[0];
-
-      authorRepository.AddRange(
-         authors: authors
-      );
 
       bookRepository.AddRange(
          books: books
       );
 
       await unitOfWork.SaveAllChangesAsync(
-         "Books with authors inserted",
+         "Books inserted",
          ct
       );
 
@@ -355,12 +334,14 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       result.IsSuccess.Should().BeTrue();
 
       var actualBookDtos = result.Value;
+
       actualBookDtos.Should().NotBeNull();
       actualBookDtos.Should().ContainSingle();
 
       var actualBookDto = actualBookDtos.Single();
 
       actualBookDto.Id.Should().Be(book1.Id);
+      actualBookDto.AuthorsText.Should().Be(book1.AuthorsText);
       actualBookDto.Isbn.Should().Be(book1.IsbnVo.Value);
    }
 
@@ -369,24 +350,30 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
-      var authorRepository = scope.ServiceProvider.GetRequiredService<IAuthorRepository>();
       var readModel = scope.ServiceProvider.GetRequiredService<IBookReadModel>();
       var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
 
       // Arrange
-      var authors = seed.Authors;
-      var books = seed.BooksWithAuthors(authors);
-      var searchText = authors[0].Lastname;
+      var books = seed.Books;
+      var searchText = "Martin";
 
-      authorRepository.AddRange(authors: authors);
-      bookRepository.AddRange(books: books);
-      await unitOfWork.SaveAllChangesAsync("Books with authors inserted", ct);
+      bookRepository.AddRange(
+         books: books
+      );
+
+      await unitOfWork.SaveAllChangesAsync(
+         "Books inserted",
+         ct
+      );
+
       unitOfWork.ClearChangeTracker();
 
       var expBookIds = books
-         .Where(b => b.Authors.Any(a =>
-            a.Lastname.Contains(searchText)))
+         .Where(b => ContainsAuthorLastname(
+            authorsText: b.AuthorsText,
+            searchText: searchText
+         ))
          .Select(b => b.Id)
          .OrderBy(id => id)
          .ToList();
@@ -397,7 +384,10 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       );
 
       // Act
-      var result = await readModel.SearchAsync(search, ct);
+      var result = await readModel.SearchAsync(
+         search: search,
+         ct: ct
+      );
 
       // Assert
       result.IsSuccess.Should().BeTrue();
@@ -416,32 +406,62 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
    }
 
    [Fact]
-   public async Task SearchAsync_unknown_title_returns_empty_list() {
+   public async Task SearchAsync_by_author_lastname_does_not_match_firstname() {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
-      var authorRepository = scope.ServiceProvider.GetRequiredService<IAuthorRepository>();
       var readModel = scope.ServiceProvider.GetRequiredService<IBookReadModel>();
       var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
-         
+
       // Arrange
-      var authors = seed.Authors;
-
-      var books = seed.BooksWithAuthors(
-         authors: authors
-      );
-
-      authorRepository.AddRange(
-         authors: authors
-      );
+      var books = seed.Books;
 
       bookRepository.AddRange(
          books: books
       );
 
       await unitOfWork.SaveAllChangesAsync(
-         "Books with authors inserted",
+         "Books inserted",
+         ct
+      );
+
+      unitOfWork.ClearChangeTracker();
+
+      var search = new BookSearchDto(
+         SearchField: BookSearchField.AuthorLastName,
+         SearchText: "Robert"
+      );
+
+      // Act
+      var result = await readModel.SearchAsync(
+         search: search,
+         ct: ct
+      );
+
+      // Assert
+      result.IsSuccess.Should().BeTrue();
+      result.Value.Should().BeEmpty();
+   }
+
+   [Fact]
+   public async Task SearchAsync_unknown_title_returns_empty_list() {
+      using var scope = Root.CreateDefaultScope();
+      var ct = TestContext.Current.CancellationToken;
+      var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
+      var readModel = scope.ServiceProvider.GetRequiredService<IBookReadModel>();
+      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
+
+      // Arrange
+      var books = seed.Books;
+
+      bookRepository.AddRange(
+         books: books
+      );
+
+      await unitOfWork.SaveAllChangesAsync(
+         "Books inserted",
          ct
       );
 
@@ -461,7 +481,6 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       // Assert
       result.IsSuccess.Should().BeTrue();
       result.Value.Should().BeEmpty();
-
    }
 
    [Fact]
@@ -469,30 +488,20 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
-      var authorRepository = scope.ServiceProvider.GetRequiredService<IAuthorRepository>();
       var readModel = scope.ServiceProvider.GetRequiredService<IBookReadModel>();
       var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
 
       // Arrange
-      var authors = seed.Authors;
-
-      var books = seed.BooksWithAuthors(
-         authors: authors
-      );
-
+      var books = seed.Books;
       var deactivatedBook = books[0];
-
-      authorRepository.AddRange(
-         authors: authors
-      );
 
       bookRepository.AddRange(
          books: books
       );
 
       await unitOfWork.SaveAllChangesAsync(
-         "Books with authors inserted",
+         "Books inserted",
          ct
       );
 
@@ -525,83 +534,56 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       result.Value.Should().NotContain(b => b.Id == deactivatedBook.Id);
    }
 
-   [Fact]
-   public async Task SelectByAuthorIdAsync_ok() {
-      using var scope = Root.CreateDefaultScope();
-      var ct = TestContext.Current.CancellationToken;
-      var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
-      var authorRepository = scope.ServiceProvider.GetRequiredService<IAuthorRepository>();
-      var readModel = scope.ServiceProvider.GetRequiredService<IBookReadModel>();
-      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
+   private static bool ContainsAuthorLastname(
+      string authorsText,
+      string searchText
+   ) {
+      if (string.IsNullOrWhiteSpace(authorsText))
+         return false;
 
-      // Arrange
-      var authors = seed.Authors;
+      if (string.IsNullOrWhiteSpace(searchText))
+         return false;
 
-      var books = seed.BooksWithAuthors(
-         authors: authors
+      var normalizedSearchText = Normalize(
+         value: searchText
       );
 
-      var author = authors[0];
-
-      authorRepository.AddRange(
-         authors: authors
-      );
-
-      bookRepository.AddRange(
-         books: books
-      );
-
-      await unitOfWork.SaveAllChangesAsync(
-         "Books with authors inserted",
-         ct
-      );
-
-      unitOfWork.ClearChangeTracker();
-
-      var expBookIds = books
-         .Where(b => b.Authors.Any(a => a.Id == author.Id))
-         .Select(b => b.Id)
-         .OrderBy(id => id)
-         .ToList();
-
-      // Act
-      var result = await readModel.SelectByAuthorIdAsync(
-         authorId: author.Id,
-         ct: ct
-      );
-
-      // Assert
-      result.IsSuccess.Should().BeTrue();
-
-      var actualBookIds = result.Value
-         .Select(b => b.Id)
-         .OrderBy(id => id)
-         .ToList();
-
-      actualBookIds.Should().BeEquivalentTo(
-         expBookIds,
-         options => options.WithStrictOrdering()
-      );
+      return ExtractAuthorLastnames(
+            authorsText: authorsText
+         )
+         .Any(lastname =>
+            Normalize(
+               value: lastname
+            ).Contains(normalizedSearchText));
    }
 
-   [Fact]
-   public async Task SelectByAuthorIdAsync_unknown_author_returns_empty_list() {
-      using var scope = Root.CreateDefaultScope();
-      var ct = TestContext.Current.CancellationToken;
-      var readModel = scope.ServiceProvider.GetRequiredService<IBookReadModel>();
+   private static IEnumerable<string> ExtractAuthorLastnames(
+      string authorsText
+   ) {
+      if (string.IsNullOrWhiteSpace(authorsText))
+         yield break;
 
-      // Arrange
-      var unknownAuthorId = Guid.Parse("99999999-0000-0000-0000-000000000000");
-
-      // Act
-      var result = await readModel.SelectByAuthorIdAsync(
-         authorId: unknownAuthorId,
-         ct: ct
+      var authorTokens = authorsText.Split(
+         separator: ',',
+         options: StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
       );
 
-      // Assert
-      result.IsSuccess.Should().BeTrue();
-      result.Value.Should().BeEmpty();
+      foreach (var authorToken in authorTokens) {
+
+         var nameParts = authorToken.Split(
+            separator: ' ',
+            options: StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
+         );
+
+         if (nameParts.Length == 0)
+            continue;
+
+         yield return nameParts[^1];
+      }
    }
+
+   private static string Normalize(
+      string value
+   ) =>
+      value.Trim().ToLowerInvariant();
 }

@@ -6,26 +6,39 @@ namespace CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 // Used by the web layer to retrieve reader information without exposing
 // the domain model. Returns DTOs because this port belongs to the query side.
 public interface IReaderReadModel {
-   // Find reader by technical identifier.
+   // Find active reader by technical identifier.
    Task<Result<ReaderDto>> FindByIdAsync(
       Guid id,
       CancellationToken ct = default
    );
 
-   // Find reader by technical identity subject.
+   // Find active reader by technical identity subject.
    Task<Result<ReaderDto>> FindBySubjectAsync(
       string subject,
       CancellationToken ct
    );
 
-   // Find reader by normalized email address.
+   // Find active reader by normalized email address.
    Task<Result<ReaderDto>> FindByEmailAsync(
       string email,
       CancellationToken ct
    );
 
+   // Return all active readers as DTOs.
+   Task<Result<IReadOnlyList<ReaderDto>>> SelectAllAsync(
+      CancellationToken ct
+   );
+   
+   // Find reader by technical identifier.
+   Task<Result<ReaderDto>> FindByIdWithInactiveAsync(
+      Guid id,
+      CancellationToken ct = default
+   );
+   
    // Return all readers as DTOs.
-   Task<Result<IReadOnlyList<ReaderDto>>> SelectAllAsync(CancellationToken ct);
+   Task<Result<IReadOnlyList<ReaderDto>>> SelectAllWithInactiveAsync(
+      CancellationToken ct
+   );
 }
 
 /*

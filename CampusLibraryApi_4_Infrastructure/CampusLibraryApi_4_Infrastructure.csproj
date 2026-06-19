@@ -10,13 +10,14 @@
 
   <ItemGroup>
     <!-- Entity Framework Core -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.8">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.8"/>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9"/>
     <!-- SQLite provider for EF Core -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.8"/>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9"/>
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="[3.50.3]"/>
   </ItemGroup>
 
   <ItemGroup>

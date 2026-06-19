@@ -50,7 +50,7 @@ DTO schemas
 
 The current API contains the Reader module.
 
-A Reader represents a fachlicher Bibliotheksnutzer of the CampusLibrary domain.
+A Reader represents a domain-level library user of the CampusLibrary domain.
 
 It is not the same as a technical user account.
 
@@ -62,13 +62,15 @@ Subject
 
 ## Reader Routes
 
-### Get all readers
+### Get all active readers
 
 ```http
 GET /camplib/v1/readers
 ```
 
-Returns all readers.
+Returns all active readers.
+
+Inactive readers are not returned by this endpoint.
 
 Successful response:
 
@@ -91,12 +93,29 @@ Response body:
       "postalCode": "29556",
       "city": "Suderburg",
       "country": "DE"
-    }
+    },
+    "isActive": true
   }
 ]
 ```
 
-## Get one reader by id
+### Get all readers including inactive readers
+
+```http
+GET /camplib/v1/readers/with-inactive
+```
+
+Returns all readers, including inactive readers.
+
+This endpoint is intended for administrative or internal views.
+
+Successful response:
+
+```http
+200 OK
+```
+
+### Get one active reader by id
 
 ```http
 GET /camplib/v1/readers/{id}
@@ -107,6 +126,10 @@ Example:
 ```http
 GET /camplib/v1/readers/10000000-0000-0000-0000-000000000000
 ```
+
+Returns the reader only if the reader is active.
+
+A deactivated reader is treated as not found in this normal reader view.
 
 Successful response:
 
@@ -122,7 +145,37 @@ Possible error responses:
 404 Not Found
 ```
 
-## Get one reader by email
+### Get one reader by id including inactive readers
+
+```http
+GET /camplib/v1/readers/{id}/with-inactive
+```
+
+Example:
+
+```http
+GET /camplib/v1/readers/10000000-0000-0000-0000-000000000000/with-inactive
+```
+
+Returns the reader even if the reader is inactive.
+
+This endpoint is intended for administrative or internal views.
+
+Successful response:
+
+```http
+200 OK
+```
+
+Possible error responses:
+
+```http
+401 Unauthorized
+403 Forbidden
+404 Not Found
+```
+
+### Get one active reader by email
 
 ```http
 GET /camplib/v1/readers/email?email={email}
@@ -133,6 +186,8 @@ Example:
 ```http
 GET /camplib/v1/readers/email?email=erika.mustermann@t-online.de
 ```
+
+Returns the reader only if the reader is active.
 
 Successful response:
 
@@ -193,7 +248,8 @@ Response body:
     "postalCode": "04109",
     "city": "Leipzig",
     "country": "DE"
-  }
+  },
+  "isActive": true
 }
 ```
 
@@ -227,7 +283,7 @@ The id may be omitted in normal API usage. The use case then creates a new id.
 
 The id may be provided for teaching, testing, or deterministic seed data.
 
-Therefore, `Id` is both technically and fachlich nullable.
+Therefore, `Id` is both technically and conceptually nullable.
 
 ## Update a reader
 
@@ -314,7 +370,7 @@ Email = null      -> no change
 AddressDto = null -> no change
 ```
 
-This is technically and fachlich required.
+This is technically and conceptually required.
 
 `Firstname` is intentionally not part of the update DTO.
 
@@ -322,7 +378,7 @@ This is technically and fachlich required.
 
 The technical identity reference is not changed by normal profile updates.
 
-## Delete a reader
+## Deactivate a reader
 
 ```http
 DELETE /camplib/v1/readers/{id}
@@ -340,6 +396,24 @@ Successful response:
 204 No Content
 ```
 
+This endpoint does not physically delete the reader from the database.
+
+It triggers a soft delete:
+
+```text
+Reader.Deactivate(...)
+IsActive = false
+```
+
+After deactivation:
+
+```text
+GET /camplib/v1/readers/{id}               -> 404 Not Found
+GET /camplib/v1/readers/{id}/with-inactive -> 200 OK
+GET /camplib/v1/readers                    -> reader is not included
+GET /camplib/v1/readers/with-inactive      -> reader is included
+```
+
 Possible error responses:
 
 ```http
@@ -347,7 +421,10 @@ Possible error responses:
 401 Unauthorized
 403 Forbidden
 404 Not Found
+409 Conflict
 ```
+
+`409 Conflict` is returned when a reader is already deactivated.
 
 ## AddressDto
 
@@ -389,8 +466,8 @@ Typical categories:
 400 Bad Request   -> invalid input
 401 Unauthorized  -> authentication required
 403 Forbidden     -> access denied
-404 Not Found     -> resource not found
-409 Conflict      -> duplicate email or duplicate subject
+404 Not Found     -> resource not found or inactive in a normal active-reader view
+409 Conflict      -> duplicate email, duplicate subject, or already deactivated reader
 ```
 
 ## Read Side and Write Side
@@ -406,7 +483,9 @@ The read side is used for queries:
 
 ```text
 GET /readers
+GET /readers/with-inactive
 GET /readers/{id}
+GET /readers/{id}/with-inactive
 GET /readers/email
 ```
 
@@ -439,6 +518,7 @@ DTOs as API contracts
 Result-based error handling
 ProblemDetails responses
 partial update semantics
+soft delete through deactivation
 separation of read and write paths
 controller tests with WebApplicationFactory
 ```
