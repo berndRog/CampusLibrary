@@ -8,29 +8,14 @@ public static class ReaderMappings {
    
    public static ReaderDto ToReaderDto(this Reader reader) => new(
       Id: reader.Id,
-      Subject: reader.Subject,
       Firstname: reader.Firstname,
       Lastname: reader.Lastname,
       Email: reader.EmailVo.Value,
-      AddressDto: reader.AddressVo.ToAddressDto()
+      AddressDto: reader.AddressVo.ToAddressDto(),
+      IsActive: reader.IsActive,
+      Subject: reader.Subject
+      
    );
-   
-   // when using in EFCore Select
-   public static readonly Expression<Func<Reader, ReaderDto>> ToReaderDtoExpr =
-      reader => new ReaderDto(
-         reader.Id,
-         reader.Subject,
-         reader.Firstname,
-         reader.Lastname,
-         reader.EmailVo.Value,
-         new AddressDto(
-            reader.AddressVo.Street,
-            reader.AddressVo.PostalCode,
-            reader.AddressVo.City,
-            reader.AddressVo.Country
-         )
-      );
-   
    
    public static AddressDto ToAddressDto(this AddressVo addressVo) => new AddressDto(
       Street: addressVo.Street,
@@ -38,6 +23,4 @@ public static class ReaderMappings {
       City: addressVo.City,
       Country: addressVo.Country
    );
-
-   
 }

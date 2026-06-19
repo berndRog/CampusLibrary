@@ -159,4 +159,12 @@ public static class ReaderErrors {
          "Address: InvalidCountry",
          "The provided country is too short or too long (2–80 characters)."
       );
+   
+   
+   public static readonly DomainError IsAlreadyDeactivated =
+      new(
+         WebErrorStatus.BadRequest,
+         "Reader: Is Already Deactivated",
+         "The reader is deactivated."
+      );
 }

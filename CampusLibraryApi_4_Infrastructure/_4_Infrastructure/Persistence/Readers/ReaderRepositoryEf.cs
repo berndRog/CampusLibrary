@@ -48,9 +48,6 @@ internal sealed class ReaderRepositoryEf(
    public void AddRange(IEnumerable<Reader> readers) =>
       dbContext.AddRange(readers);
 
-   // Mark aggregate as deleted in the EF Core change tracker.
-   public void Remove(Reader reader) =>
-      dbContext.Remove(reader);
 }
 
 /*

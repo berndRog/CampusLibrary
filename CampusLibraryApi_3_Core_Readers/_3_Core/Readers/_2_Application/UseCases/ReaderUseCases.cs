@@ -6,10 +6,10 @@ namespace CampusLibraryApi._3_Core.Readers._2_Application.UseCases;
 
 // Facade for all Reader write use cases.
 // Controllers depend on this facade instead of depending on every single use case.
-public sealed class ReaderUseCases(
+internal sealed class ReaderUseCases(
    ReaderUcCreate createUc,
    ReaderUcUpdate updateUc,
-   ReaderUcDelete deleteUc
+   ReaderUcDeactivate deactivatedUc
 ) : IReaderUseCases {
 
    public Task<Result<ReaderDto>> CreateAsync(
@@ -30,13 +30,11 @@ public sealed class ReaderUseCases(
       ct: ct
    );
 
-   public Task<Result> DeleteAsync(
+   public Task<Result> DeactivateAsync(
       Guid id,
       CancellationToken ct
-   ) => deleteUc.ExecuteAsync(
-      id: id,
-      ct: ct
-   );
+   ) => deactivatedUc.ExecuteAsync(id, ct);
+
 }
 
 /*
