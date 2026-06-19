@@ -5,26 +5,18 @@ using CampusLibraryApi._3_Core.Catalog._3_Domain.Enums;
 namespace CampusLibraryApi._3_Core.Catalog._2_Application.Mappings;
 
 public static class CatalogMappings {
-
-   public static AuthorDto ToAuthorDto(this Author author) =>
+   
+   public static BookDto ToBookDto(this Book book) =>
       new(
-         Id: author.Id,
-         Firstname: author.Firstname,
-         Lastname: author.Lastname,
-         DisplayName: author.DisplayName,
-         IsActive: author.IsActive
+         Id: book.Id,
+         AuthorsText: book.AuthorsText,
+         Title: book.Title,
+         Subtitle: book.Subtitle,
+         Isbn: book.IsbnVo.Value,
+         BookItemCount: book.BookItems.Count,
+         IsActive: book.IsActive
       );
-
-   public static BookDto ToBookDto(this Book bookAlt) =>
-      new(
-         Id: bookAlt.Id,
-         Title: bookAlt.Title,
-         Subtitle: bookAlt.Subtitle,
-         Isbn: bookAlt.IsbnVo.Value,
-         BookItemCount: bookAlt.BookItems.Count,
-         IsActive: bookAlt.IsActive
-      );
-
+   
    public static BookItemDto ToBookItemDto(this BookItem bookItem) =>
       new(
          Id: bookItem.Id,

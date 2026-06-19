@@ -7,7 +7,6 @@ namespace CampusLibraryApi._3_Core.Catalog._2_Application.UseCases;
 public sealed class BookUseCases(
    BookUcCreate bookUcCreate,
    BookUcAddBookItem bookUcAddBookItem,
-   BookUcAssignAuthor bookUcAssignAuthor,
    BookUcDeactivate bookUcDeactivate
 ) : IBookUseCases {
 
@@ -28,17 +27,7 @@ public sealed class BookUseCases(
          bookItemAddDto: dto,
          ct: ct
       );
-
-   public async Task<Result<BookDto>> AssignAuthorAsync(
-      Guid bookId,
-      BookAssignAuthorDto? dto,
-      CancellationToken ct = default
-   ) => await bookUcAssignAuthor.ExecuteAsync(
-         bookId: bookId,
-         bookAssignAuthorDto: dto,
-         ct: ct
-      );
-
+   
    public async Task<Result<BookDto>> DeactivateAsync(
       Guid bookId,
       CancellationToken ct = default

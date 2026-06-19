@@ -112,48 +112,6 @@ public sealed class Seed(
    ];
    #endregion
 
-   #region -------------- Test Authors (Aggregates) ------------------------------------------
-   public const string Author1Id = "a0000001-0000-0000-0000-000000000000";
-   public const string Author2Id = "a0000002-0000-0000-0000-000000000000";
-   public const string Author3Id = "a0000003-0000-0000-0000-000000000000";
-   public const string Author4Id = "a0000004-0000-0000-0000-000000000000";
-   public const string Author5Id = "a0000005-0000-0000-0000-000000000000";
-
-   public Author Author1() => CreateAuthor(
-      id: Author1Id,
-      firstname: "Robert C.",
-      lastname: "Martin"
-   );
-
-   public Author Author2() => CreateAuthor(
-      id: Author2Id,
-      firstname: "Eric",
-      lastname: "Evans"
-   );
-
-   public Author Author3() => CreateAuthor(
-      id: Author3Id,
-      firstname: "Martin",
-      lastname: "Fowler"
-   );
-
-   public Author Author4() => CreateAuthor(
-      id: Author4Id,
-      firstname: "Erich",
-      lastname: "Gamma"
-   );
-
-   public Author Author5() => CreateAuthor(
-      id: Author5Id,
-      firstname: "Kent",
-      lastname: "Beck"
-   );
-
-   public IReadOnlyList<Author> Authors => [
-      Author1(), Author2(), Author3(), Author4(), Author5()
-   ];
-   #endregion
-
    #region -------------- Test Books (Aggregates) ------------------------------------------
    public const string Book1Id = "b0000001-0000-0000-0000-000000000000";
    public const string Book2Id = "b0000002-0000-0000-0000-000000000000";
@@ -162,6 +120,7 @@ public sealed class Seed(
 
    public Book Book1() => CreateBook(
       id: Book1Id,
+      authorsText: "Robert C. Martin",
       title: "Clean Code",
       subtitle: "A Handbook of Agile Software Craftsmanship",
       isbn: "9780132350884"
@@ -169,6 +128,7 @@ public sealed class Seed(
 
    public Book Book2() => CreateBook(
       id: Book2Id,
+      authorsText: "Eric Evans",
       title: "Domain-Driven Design",
       subtitle: "Tackling Complexity in the Heart of Software",
       isbn: "9780321125217"
@@ -176,6 +136,7 @@ public sealed class Seed(
 
    public Book Book3() => CreateBook(
       id: Book3Id,
+      authorsText: "Martin Fowler, Kent Beck",
       title: "Refactoring",
       subtitle: "Improving the Design of Existing Code",
       isbn: "9780201485677"
@@ -183,39 +144,28 @@ public sealed class Seed(
 
    public Book Book4() => CreateBook(
       id: Book4Id,
+      authorsText: "Erich Gamma, Richard Helm, Ralph Johnson, John Vlissides",
       title: "Design Patterns",
       subtitle: "Elements of Reusable Object-Oriented Software",
       isbn: "9780201633610"
    );
 
-   // Convenience property for simple tests.
-   // For EF seeding prefer BooksWithAuthors(authors), so the same Author instances
-   // are used for Authors and for the Book.Authors navigation.
    public IReadOnlyList<Book> Books {
       get {
-         var authors = Authors;
-         return BooksWithAuthors(authors);
+         var books = new List<Book> {
+            Book1(), Book2(), Book3(), Book4()
+         };
+
+         AddItemsToBooks(
+            books: books
+         );
+
+         return books;
       }
    }
-
-   // Use this method when Authors and Books are added to the same DbContext.
-   // This avoids creating duplicate Author instances with the same keys.
-   public IReadOnlyList<Book> BooksWithAuthors(
-      IReadOnlyList<Author> authors
-   ) {
-      var books = new List<Book> {
-         Book1(), Book2(), Book3(), Book4()
-      };
-      AddAuthorsAndItemsToBooks(
-         books: books,
-         authors: authors
-      );
-
-      return books;
-   }
    #endregion
-   
-   #region -------------- Test Bookitems  ---------------------------------------------------
+
+   #region -------------- Test BookItems ---------------------------------------------------
    public const string BookItem1Id = "be000001-0000-0000-0000-000000000000";
    public const string BookItem2Id = "be000002-0000-0000-0000-000000000000";
    public const string BookItem3Id = "be000003-0000-0000-0000-000000000000";
@@ -223,13 +173,7 @@ public sealed class Seed(
    public const string BookItem5Id = "be000005-0000-0000-0000-000000000000";
    public const string BookItem6Id = "be000006-0000-0000-0000-000000000000";
    #endregion
-   
-   #region -------------- Test Bookitems  ---------------------------------------------------
-   public const string BookAuthor1Id = "ba000001-0000-0000-0000-000000000000";
-   public const string BookAuthor2Id = "ba000002-0000-0000-0000-000000000000";
-   public const string BookAuthor3Id = "ba000003-0000-0000-0000-000000000000";
-   #endregion
-   
+
    #region -------------- Helper Methods ----------------------------------------------------
    private Reader CreateReader(
       string id,
@@ -243,6 +187,7 @@ public sealed class Seed(
       var resultEmail = EmailVo.Create(email);
       if (resultEmail.IsFailure)
          throw new Exception($"Invalid email in Seed: {email}");
+
       var emailVo = resultEmail.Value;
 
       // Resolve the stable seed id.
@@ -250,7 +195,6 @@ public sealed class Seed(
          id,
          ReaderErrors.InvalidId
       );
-
       if (resultId.IsFailure)
          throw new Exception($"Invalid reader id in Seed: {id}");
 
@@ -271,35 +215,9 @@ public sealed class Seed(
       return result.Value;
    }
 
-   private Author CreateAuthor(
-      string id,
-      string firstname,
-      string lastname
-   ) {
-      // Resolve the stable seed id.
-      var resultId = EntityId.Resolve(
-         id,
-         CatalogErrors.InvalidAuthorId
-      );
-      if (resultId.IsFailure)
-         throw new Exception($"Invalid author id in Seed: {id}");
-
-      // Create the Author aggregate through its factory method.
-      var result = Author.Create(
-         id: resultId.Value,
-         firstname: firstname,
-         lastname: lastname,
-         createdAt: clock.UtcNow
-      );
-
-      if (result.IsFailure)
-         throw new Exception($"Invalid author in Seed: {firstname} {lastname}");
-
-      return result.Value;
-   }
-
    private Book CreateBook(
       string id,
+      string authorsText,
       string title,
       string? subtitle,
       string isbn
@@ -313,8 +231,10 @@ public sealed class Seed(
          throw new Exception($"Invalid book id in Seed: {id}");
 
       // Create the Book aggregate through its factory method.
+      // AuthorsText is validated and normalized inside the domain factory.
       var result = Book.Create(
          id: resultId.Value,
+         authorsText: authorsText,
          title: title,
          subtitle: subtitle,
          isbn: isbn,
@@ -327,17 +247,10 @@ public sealed class Seed(
       return result.Value;
    }
 
-   private void AddAuthorsAndItemsToBooks(
-      List<Book> books,
-      IReadOnlyList<Author> authors
+   private void AddItemsToBooks(
+      List<Book> books
    ) {
-      // Book 1: Clean Code -> Robert C. Martin
-      AddAuthorToBook(
-         book: books[0],
-         authors: authors,
-         authorId: Author1Id
-      );
-
+      // Book 1: Clean Code
       AddBookItemToBook(
          book: books[0],
          bookItemId: BookItem1Id,
@@ -350,51 +263,21 @@ public sealed class Seed(
          inventoryNumber: "CL-BOOK-0002"
       );
 
-      // Book 2: Domain-Driven Design -> Eric Evans
-      AddAuthorToBook(
-         book: books[1],
-         authors: authors,
-         authorId: Author2Id
-      );
-
+      // Book 2: Domain-Driven Design
       AddBookItemToBook(
          book: books[1],
          bookItemId: BookItem3Id,
          inventoryNumber: "CL-BOOK-0003"
       );
 
-      // Book 3: Refactoring -> Martin Fowler, Kent Beck
-      AddAuthorToBook(
-         book: books[2],
-         authors: authors,
-         authorId: Author3Id
-      );
-
-      AddAuthorToBook(
-         book: books[2],
-         authors: authors,
-         authorId: Author5Id
-      );
-
+      // Book 3: Refactoring
       AddBookItemToBook(
          book: books[2],
          bookItemId: BookItem4Id,
          inventoryNumber: "CL-BOOK-0004"
       );
 
-      // Book 4: Design Patterns -> Erich Gamma, Martin Fowler
-      AddAuthorToBook(
-         book: books[3],
-         authors: authors,
-         authorId: Author4Id
-      );
-
-      AddAuthorToBook(
-         book: books[3],
-         authors: authors,
-         authorId: Author3Id
-      );
-
+      // Book 4: Design Patterns
       AddBookItemToBook(
          book: books[3],
          bookItemId: BookItem5Id,
@@ -406,37 +289,6 @@ public sealed class Seed(
          bookItemId: BookItem6Id,
          inventoryNumber: "CL-BOOK-0006"
       );
-   }
-
-   private void AddAuthorToBook(
-      Book book,
-      IReadOnlyList<Author> authors,
-      string authorId
-   ) {
-      // Resolve the id of the assigned Author.
-      var resultAuthorId = EntityId.Resolve(
-         authorId,
-         CatalogErrors.InvalidAuthorId
-      );
-      if (resultAuthorId.IsFailure)
-         throw new Exception($"Invalid author id in Seed: {authorId}");
-
-      var author = authors.SingleOrDefault(a => a.Id == resultAuthorId.Value);
-
-      if (author is null)
-         throw new Exception($"Author not found in Seed: {authorId}");
-
-      // The Book aggregate controls the author assignment.
-      // EF Core maps the m:n relationship to a join table behind the scenes.
-      var result = book.AssignAuthor(
-         author: author,
-         updatedAt: clock.UtcNow.Add(TimeSpan.FromHours(6))
-      );
-
-      if (result.IsFailure)
-         throw new Exception(
-            $"Invalid author assignment in Seed: Book={book.Id}, Author={authorId}"
-         );
    }
 
    private void AddBookItemToBook(
@@ -477,40 +329,39 @@ Die Reader-Daten bleiben unverändert. Dadurch kann geprüft werden, dass das
 neue Catalog-Modul keine bestehenden Tests oder bestehende Funktionalität
 beschädigt.
 
-Für Catalog werden Authors und Books getrennt erzeugt. Damit wird sichtbar,
-dass Author ein eigenständiges fachliches Objekt ist, während Book das zentrale
-Aggregate im Catalog-Modul bildet.
+Für Catalog werden Books und BookItems erzeugt. Ein Book beschreibt das
+bibliografische Werk, zum Beispiel "Clean Code" oder "Domain-Driven Design".
+Ein BookItem beschreibt ein konkretes physisches Exemplar dieses Buchs.
 
-Die Beziehung Book -> BookItem zeigt eine 1:n-Beziehung. Ein Book beschreibt
-das bibliografische Werk, während BookItem ein konkretes Exemplar dieses Buchs
-repräsentiert.
+Autorinnen und Autoren werden in dieser reduzierten Catalog-Version bewusst
+nicht als eigene Domain Entity modelliert. Stattdessen enthält Book einen
+kommaseparierten Autorentext, zum Beispiel:
 
-Die Beziehung Book <-> Author zeigt eine m:n-Beziehung. Da diese Zuordnung
-aktuell keine eigene fachliche Bedeutung und keine eigenen Attribute besitzt,
-wird keine eigene Domain-Klasse BookAuthor modelliert. Stattdessen enthält
-Book direkt eine Liste von Authors. EF Core bildet daraus später eine
-Join-Tabelle.
+   "Robert C. Martin"
+   "Martin Fowler, Kent Beck"
 
-BookItems werden nicht direkt erzeugt, sondern über AddBookItem am
-Book-Aggregate hinzugefügt. Dadurch bleibt die fachliche Konsistenzgrenze des
-Aggregates auch bei Testdaten erhalten.
+Damit bleibt der Catalog-Teil didaktisch schlank. Die Autorennamen sind für
+Anzeige und Suche relevant, besitzen im aktuellen Lernziel aber keine eigene
+Fachlichkeit, keine eigene Lebensdauer und keine eigenen Geschäftsregeln.
 
-Authors werden ebenfalls nicht über eine BookAuthor-Klasse verbunden. Die
-Methode AssignAuthor am Book-Aggregate stellt sicher, dass derselbe Author
-nicht mehrfach demselben Book zugeordnet wird.
+Die Beziehung Book -> BookItem zeigt weiterhin eine echte 1:n-Beziehung.
+Ein Book kann mehrere BookItems besitzen. Die BookItems werden nicht direkt
+erzeugt, sondern über AddBookItem am Book-Aggregate hinzugefügt. Dadurch
+bleibt die fachliche Konsistenzgrenze des Aggregates auch bei Testdaten
+erhalten.
 
-Didaktisch wichtig ist die Unterscheidung zwischen einer reinen technischen
-m:n-Verbindung und einem fachlichen Vorgang. Book-Author ist hier nur eine
-Zuordnung. Ein späterer Loan zwischen Reader und BookItem wäre dagegen ein
-eigener fachlicher Vorgang mit Ausleihdatum, Rückgabefrist, Rückgabedatum und
-Status.
+Didaktisch wichtig ist die bewusste Reduktion: Nicht jede fachliche
+Information muss als eigene Entity modelliert werden. Autorennamen werden
+hier als Text behandelt, weil der Schwerpunkt in Teil 3 auf Book, BookItem
+und der Vorbereitung der Ausleihe liegt.
 
-Die Methode BooksWithAuthors(authors) ist beim EF-Seeding hilfreich, weil sie
-dieselben Author-Instanzen verwendet, die auch separat in den DbContext
-eingefügt werden können. Dadurch entstehen keine doppelten Author-Objekte mit
-derselben Id im ChangeTracker.
+Die eigentliche fachlich wichtige m:n-Beziehung wird später im Loans-Modul
+behandelt: Ein Reader leiht ein BookItem aus. Diese Beziehung besitzt mit
+Loan eigene Fachlichkeit, zum Beispiel Ausleihdatum, Rückgabefrist,
+Rückgabedatum, Verlängerungen und Status. Deshalb wird Loan später als
+eigenes Modell eingeführt.
 
 Didaktisch wichtig ist die Trennung zwischen Seed-Daten und Fachlogik:
 Der Seed erzeugt Beispieldaten. Die Regeln bleiben aber im Domänenmodell,
-also in Book, Author, BookItem und IsbnVo.
+also in Book, BookItem und IsbnVo.
 */

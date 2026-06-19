@@ -64,22 +64,25 @@ internal sealed class ConfigReader(
       });
       builder.Navigation(c => c.AddressVo).IsRequired();
 
+      builder.Property(r => r.IsActive)
+         .HasColumnName("IsActive").HasColumnOrder(8)
+         .IsRequired();
       
       builder.Property(r => r.Subject)
          .HasMaxLength(200)
-         .HasColumnName("Subject").HasColumnOrder(8)
+         .HasColumnName("Subject").HasColumnOrder(9)
          .IsRequired();
       builder.HasIndex(r => r.Subject).IsUnique();
       
       // Audit timestamps
       builder.Property(b => b.CreatedAt)
          .HasConversion(utcDtConv)
-         .HasColumnName("CreatedAt").HasColumnOrder(9)
+         .HasColumnName("CreatedAt").HasColumnOrder(10)
          .IsRequired();
 
       builder.Property(b => b.UpdatedAt)
          .HasConversion(utcDtConv)
-         .HasColumnName("UpdatedAt").HasColumnOrder(10)
+         .HasColumnName("UpdatedAt").HasColumnOrder(11)
          .IsRequired();
       
    }

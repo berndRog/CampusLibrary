@@ -40,24 +40,6 @@ public sealed class TestSeed {
       Reader1(), Reader2(), Reader3(), Reader4(), Reader5(), Reader6()
    ];
    #endregion
-
-   #region -------------- Test Authors (Entities) ------------------------------------------
-   public string Author1Id => Seed.Author1Id;
-   public string Author2Id => Seed.Author1Id;
-   public string Author3Id => Seed.Author1Id;
-   public string Author4Id => Seed.Author1Id;
-   public string Author5Id => Seed.Author1Id;
-
-   public Author Author1() => _seed.Author1();
-   public Author Author2() => _seed.Author2();
-   public Author Author3() => _seed.Author3();
-   public Author Author4() => _seed.Author4();
-   public Author Author5() => _seed.Author5();
-   
-   public IReadOnlyList<Author> Authors => [
-      Author1(), Author2(), Author3(), Author4(), Author5()
-   ];
-   #endregion
    
    #region -------------- Test Books (Entities) ------------------------------------------
    public string Book1Id => Seed.Book1Id;
@@ -69,6 +51,8 @@ public sealed class TestSeed {
    public Book Book2() => _seed.Book2();
    public Book Book3() => _seed.Book3();
    public Book Book4() => _seed.Book4();
+   
+   public IReadOnlyList<Book> Books  => _seed.Books;
    #endregion
    
    #region -------------- Test BookItems (Entities) -----------------------------------------
@@ -80,15 +64,4 @@ public sealed class TestSeed {
    public string BookItem6Id => Seed.BookItem6Id;
    #endregion
    
-   #region -------------- Test BookAuthors --------------------------------------------------
-   public string BookAuthor1Id => Seed.BookAuthor1Id;
-   public string BookAuthor2Id => Seed.BookAuthor2Id;
-   public string BookAuthor3Id => Seed.BookAuthor3Id;
-
-   #endregion
-   
-   public IReadOnlyList<Book> BooksWithAuthors(
-      IReadOnlyList<Author> authors
-   ) => _seed.BooksWithAuthors(authors);
-
 }

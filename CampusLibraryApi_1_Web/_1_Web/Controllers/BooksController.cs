@@ -118,7 +118,7 @@ public sealed class BooksController(
          _ => BadRequest(problem)
       };
    }
-
+/*
    /// <summary>
    ///    Returns all active books assigned to one author.
    /// </summary>
@@ -148,7 +148,7 @@ public sealed class BooksController(
          _ => BadRequest(problem)
       };
    }
-
+*/
    /// <summary>
    ///    Creates a new book.
    /// </summary>
@@ -215,43 +215,6 @@ public sealed class BooksController(
       CancellationToken ct
    ) {
       var result = await bookUseCases.AddBookItemAsync(bookId, dto, ct);
-      if (result.IsSuccess)
-         return Ok(result.Value);
-
-      var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
-      return result.Error.Status switch {
-         WebErrorStatus.BadRequest => BadRequest(problem),
-         WebErrorStatus.Unauthorized => Unauthorized(problem),
-         WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
-         WebErrorStatus.NotFound => NotFound(problem),
-         WebErrorStatus.Conflict => Conflict(problem),
-         _ => BadRequest(problem)
-      };
-   }
-
-   /// <summary>
-   ///    Assigns an existing author to an existing book.
-   /// </summary>
-   /// <param name="bookId">Book unique id.</param>
-   /// <param name="dto">Author assignment data.</param>
-   /// <param name="ct">Cancellation token.</param>
-   /// <returns>The updated book resource.</returns>
-   // Assign an existing Author through the write-side use case facade.
-   [HttpPost("books/{bookId:guid}/authors", Name = nameof(AssignAuthorAsync))]
-   [Consumes("application/json")]
-   [Produces("application/json")]
-   [ProducesResponseType<BookDto>(StatusCodes.Status200OK)]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
-   public async Task<ActionResult<BookDto>> AssignAuthorAsync(
-      [FromRoute] Guid bookId,
-      [FromBody] BookAssignAuthorDto dto,
-      CancellationToken ct
-   ) {
-      var result = await bookUseCases.AssignAuthorAsync(bookId, dto, ct);
       if (result.IsSuccess)
          return Ok(result.Value);
 

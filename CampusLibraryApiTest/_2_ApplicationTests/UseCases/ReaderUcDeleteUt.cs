@@ -10,14 +10,18 @@ using Moq;
 
 namespace CampusLibraryApiTest._2_ApplicationTests.UseCases;
 
-public sealed class ReaderUcDeleteUt {
+public sealed class ReaderUcDeactivateUt {
    private static readonly DateTime CreatedAt =
       new(2025, 01, 01, 00, 00, 00, DateTimeKind.Utc);
+
+   private static readonly DateTime UpdatedAt =
+      new(2025, 01, 02, 00, 00, 00, DateTimeKind.Utc);
 
    [Fact]
    public async Task ExecuteAsync_ok() {
       // Arrange
       var ct = TestContext.Current.CancellationToken;
+
       var reader = CreateReader(
          id: Guid.Parse("10000000-0000-0000-0000-000000000000"),
          firstname: "Erika",
@@ -34,24 +38,39 @@ public sealed class ReaderUcDeleteUt {
 
       var unitOfWork = new Mock<IUnitOfWork>();
       unitOfWork
-         .Setup(u => u.SaveAllChangesAsync("ReaderUcDelete", ct))
+         .Setup(u => u.SaveAllChangesAsync("ReaderUcDeactivate", ct))
          .ReturnsAsync(1);
 
-      var uc = CreateUseCase(repository, unitOfWork);
+      var clock = new Mock<IClock>();
+      clock
+         .Setup(c => c.UtcNow)
+         .Returns(UpdatedAt);
+
+      var uc = CreateUseCase(
+         repository: repository,
+         unitOfWork: unitOfWork,
+         clock: clock
+      );
 
       // Act
-      var result = await uc.ExecuteAsync(reader.Id, ct);
+      var result = await uc.ExecuteAsync(
+         id: reader.Id,
+         ct: ct
+      );
 
       // Assert
       result.IsSuccess.Should().BeTrue();
 
+      reader.IsActive.Should().BeFalse();
+      reader.UpdatedAt.Should().Be(UpdatedAt);
+
       repository.Verify(
-         r => r.Remove(reader),
+         r => r.FindByIdAsync(reader.Id, ct),
          Times.Once
       );
 
       unitOfWork.Verify(
-         u => u.SaveAllChangesAsync("ReaderUcDelete", ct),
+         u => u.SaveAllChangesAsync("ReaderUcDeactivate", ct),
          Times.Once
       );
    }
@@ -68,18 +87,27 @@ public sealed class ReaderUcDeleteUt {
          .ReturnsAsync((Reader?)null);
 
       var unitOfWork = new Mock<IUnitOfWork>();
-      var uc = CreateUseCase(repository, unitOfWork);
+      var clock = new Mock<IClock>();
+
+      var uc = CreateUseCase(
+         repository: repository,
+         unitOfWork: unitOfWork,
+         clock: clock
+      );
 
       // Act
-      var result = await uc.ExecuteAsync(readerId, ct);
+      var result = await uc.ExecuteAsync(
+         id: readerId,
+         ct: ct
+      );
 
       // Assert
       result.IsFailure.Should().BeTrue();
       result.Error.Should().Be(ReaderErrors.ReaderNotFound);
 
       repository.Verify(
-         r => r.Remove(It.IsAny<Reader>()),
-         Times.Never
+         r => r.FindByIdAsync(readerId, ct),
+         Times.Once
       );
 
       unitOfWork.Verify(
@@ -92,12 +120,22 @@ public sealed class ReaderUcDeleteUt {
    public async Task ExecuteAsync_empty_id_fails() {
       // Arrange
       var ct = TestContext.Current.CancellationToken;
+
       var repository = new Mock<IReaderRepository>();
       var unitOfWork = new Mock<IUnitOfWork>();
-      var uc = CreateUseCase(repository, unitOfWork);
+      var clock = new Mock<IClock>();
+
+      var uc = CreateUseCase(
+         repository: repository,
+         unitOfWork: unitOfWork,
+         clock: clock
+      );
 
       // Act
-      var result = await uc.ExecuteAsync(Guid.Empty, ct);
+      var result = await uc.ExecuteAsync(
+         id: Guid.Empty,
+         ct: ct
+      );
 
       // Assert
       result.IsFailure.Should().BeTrue();
@@ -108,9 +146,65 @@ public sealed class ReaderUcDeleteUt {
          Times.Never
       );
 
-      repository.Verify(
-         r => r.Remove(It.IsAny<Reader>()),
+      unitOfWork.Verify(
+         u => u.SaveAllChangesAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()),
          Times.Never
+      );
+   }
+
+   [Fact]
+   public async Task ExecuteAsync_already_deactivated_reader_fails() {
+      // Arrange
+      var ct = TestContext.Current.CancellationToken;
+
+      var reader = CreateReader(
+         id: Guid.Parse("10000000-0000-0000-0000-000000000000"),
+         firstname: "Erika",
+         lastname: "Mustermann",
+         email: "erika.mustermann@example.com",
+         subject: "subject-001",
+         createdAt: CreatedAt
+      );
+
+      var deactivateResult = reader.Deactivate(
+         updatedAt: UpdatedAt
+      );
+
+      deactivateResult.IsSuccess.Should().BeTrue();
+
+      var repository = new Mock<IReaderRepository>();
+      repository
+         .Setup(r => r.FindByIdAsync(reader.Id, ct))
+         .ReturnsAsync(reader);
+
+      var unitOfWork = new Mock<IUnitOfWork>();
+
+      var clock = new Mock<IClock>();
+      clock
+         .Setup(c => c.UtcNow)
+         .Returns(UpdatedAt);
+
+      var uc = CreateUseCase(
+         repository: repository,
+         unitOfWork: unitOfWork,
+         clock: clock
+      );
+
+      // Act
+      var result = await uc.ExecuteAsync(
+         id: reader.Id,
+         ct: ct
+      );
+
+      // Assert
+      result.IsFailure.Should().BeTrue();
+      result.Error.Should().Be(ReaderErrors.IsAlreadyDeactivated);
+
+      reader.IsActive.Should().BeFalse();
+
+      repository.Verify(
+         r => r.FindByIdAsync(reader.Id, ct),
+         Times.Once
       );
 
       unitOfWork.Verify(
@@ -119,13 +213,15 @@ public sealed class ReaderUcDeleteUt {
       );
    }
 
-   private static ReaderUcDelete CreateUseCase(
+   private static ReaderUcDeactivate CreateUseCase(
       Mock<IReaderRepository> repository,
-      Mock<IUnitOfWork> unitOfWork
+      Mock<IUnitOfWork> unitOfWork,
+      Mock<IClock> clock
    ) => new(
       repository: repository.Object,
       unitOfWork: unitOfWork.Object,
-      logger: Mock.Of<ILogger<ReaderUcDelete>>()
+      clock: clock.Object,
+      logger: Mock.Of<ILogger<ReaderUcDeactivate>>()
    );
 
    private static Reader CreateReader(
@@ -137,6 +233,7 @@ public sealed class ReaderUcDeleteUt {
       DateTime createdAt
    ) {
       var emailVo = EmailVo.Create(email).GetValueOrThrow();
+
       var addressVo = AddressVo.Create(
          street: "Hauptstr. 23",
          postalCode: "29556",

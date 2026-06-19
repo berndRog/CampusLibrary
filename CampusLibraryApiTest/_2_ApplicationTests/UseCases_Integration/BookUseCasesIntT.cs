@@ -10,9 +10,6 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CampusLibraryApiTest._2_ApplicationTests.UseCases_Integration;
 
 public sealed class BookUseCasesIntT : TestBaseIntegration {
-   //private const string BookItem1Id = "be000101-0000-0000-0000-000000000000";
-   //private const string BookItem2Id = "be000102-0000-0000-0000-000000000000";
-   private const string BookItem3Id = "be000103-0000-0000-0000-000000000000";
 
    public BookUseCasesIntT() {
       DbName = nameof(BookUseCasesIntT);
@@ -28,7 +25,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       var useCases = scope.ServiceProvider.GetRequiredService<IBookUseCases>();
       var readModel = scope.ServiceProvider.GetRequiredService<IBookReadModel>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
-         
+
       // Arrange
       var book1 = seed.Book1();
 
@@ -36,6 +33,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
          Title: book1.Title,
          Subtitle: book1.Subtitle,
          Isbn: book1.IsbnVo.Value,
+         AuthorsText: book1.AuthorsText,
          Id: book1.Id.ToString()
       );
 
@@ -58,12 +56,50 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       resultFind.IsSuccess.Should().BeTrue();
 
       var actualBookDetailDto = resultFind.Value;
+
       actualBookDetailDto.Id.Should().Be(createdBookDto.Id);
+      actualBookDetailDto.AuthorsText.Should().Be(createdBookDto.AuthorsText);
       actualBookDetailDto.Title.Should().Be(createdBookDto.Title);
       actualBookDetailDto.Subtitle.Should().Be(createdBookDto.Subtitle);
       actualBookDetailDto.Isbn.Should().Be(createdBookDto.Isbn);
       actualBookDetailDto.IsActive.Should().BeTrue();
-         
+   }
+
+   [Fact]
+   public async Task CreateAsync_without_authors_text_fails_and_does_not_insert_book() {
+      using var scope = Root.CreateDefaultScope();
+      var ct = TestContext.Current.CancellationToken;
+      var useCases = scope.ServiceProvider.GetRequiredService<IBookUseCases>();
+      var readModel = scope.ServiceProvider.GetRequiredService<IBookReadModel>();
+      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
+
+      // Arrange
+      var book1 = seed.Book1();
+
+      var dto = new BookCreateDto(
+         Title: book1.Title,
+         Subtitle: book1.Subtitle,
+         Isbn: book1.IsbnVo.Value,
+         AuthorsText: "  ,  ,  ",
+         Id: book1.Id.ToString()
+      );
+
+      // Act
+      var resultCreate = await useCases.CreateAsync(
+         dto: dto,
+         ct: ct
+      );
+
+      // Assert
+      resultCreate.IsFailure.Should().BeTrue();
+      resultCreate.Error.Should().Be(CatalogErrors.AuthorsAreRequired);
+
+      var resultFind = await readModel.FindByIdAsync(
+         id: book1.Id,
+         ct: ct
+      );
+
+      resultFind.IsFailure.Should().BeTrue();
    }
 
    [Fact]
@@ -74,12 +110,13 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       var repository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
       var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
-         
+
       // Arrange
       var book1 = seed.Book1();
       var book2 = seed.Book2();
 
       repository.Add(book1);
+
       await unitOfWork.SaveAllChangesAsync(
          "Book1 inserted",
          ct
@@ -91,6 +128,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
          Title: book2.Title,
          Subtitle: book2.Subtitle,
          Isbn: book1.IsbnVo.Value,
+         AuthorsText: book2.AuthorsText,
          Id: book2.Id.ToString()
       );
 
@@ -103,7 +141,6 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       // Assert
       resultCreate.IsFailure.Should().BeTrue();
       resultCreate.Error.Should().Be(CatalogErrors.BookAlreadyExists);
-       
    }
    #endregion
 
@@ -117,11 +154,17 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       var readModel = scope.ServiceProvider.GetRequiredService<IBookReadModel>();
       var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
-   
+
       // Arrange
       var book1 = seed.Book1();
+
       repository.Add(book1);
-      await unitOfWork.SaveAllChangesAsync("Book1 inserted", ct);
+
+      await unitOfWork.SaveAllChangesAsync(
+         "Book1 inserted",
+         ct
+      );
+
       unitOfWork.ClearChangeTracker();
 
       var dto = new BookItemAddDto(
@@ -135,7 +178,9 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
          dto: dto,
          ct: ct
       );
+
       resultAddBookItem.IsSuccess.Should().BeTrue();
+
       unitOfWork.ClearChangeTracker();
 
       // Assert
@@ -154,7 +199,6 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
 
       actualBookDetailDto.TotalBookItems.Should().Be(1);
       actualBookDetailDto.AvailableBookItems.Should().Be(1);
-        
    }
 
    [Fact]
@@ -165,7 +209,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       var repository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
       var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
-       
+
       // Arrange
       var book1 = seed.Book1();
       var book2 = seed.Book2();
@@ -175,10 +219,16 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
          inventoryNumber: "CL-UC-BOOK-0001",
          updatedAt: book1.CreatedAt.AddDays(1)
       );
+
       resultExistingBookItem.IsSuccess.Should().BeTrue();
-      
+
       repository.AddRange([book1, book2]);
-      await unitOfWork.SaveAllChangesAsync("Book1 and Book2 inserted", ct);
+
+      await unitOfWork.SaveAllChangesAsync(
+         "Book1 and Book2 inserted",
+         ct
+      );
+
       unitOfWork.ClearChangeTracker();
 
       var dto = new BookItemAddDto(
@@ -196,7 +246,6 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       // Assert
       resultAddBookItem.IsFailure.Should().BeTrue();
       resultAddBookItem.Error.Should().Be(CatalogErrors.BookItemAlreadyExists);
-     
    }
 
    [Fact]
@@ -205,7 +254,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       var ct = TestContext.Current.CancellationToken;
       var useCases = scope.ServiceProvider.GetRequiredService<IBookUseCases>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
-       
+
       // Arrange
       var unknownBookId = Guid.Parse("99000000-0000-0000-0000-000000000000");
 
@@ -224,156 +273,6 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       // Assert
       resultAddBookItem.IsFailure.Should().BeTrue();
       resultAddBookItem.Error.Should().Be(CatalogErrors.BookNotFound);
-         
-   }
-   #endregion
-
-   #region BookUcAssignAuthor
-   [Fact]
-   public async Task AssignAuthorAsync_ok_persists_book_author_relationship() {
-      using var scope = Root.CreateDefaultScope();
-      var ct = TestContext.Current.CancellationToken;
-      var useCases = scope.ServiceProvider.GetRequiredService<IBookUseCases>();
-      var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
-      var authorRepository = scope.ServiceProvider.GetRequiredService<IAuthorRepository>();
-      var readModel = scope.ServiceProvider.GetRequiredService<IBookReadModel>();
-      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
-    
-      // Arrange
-      var book1 = seed.Book1();
-      var author1 = seed.Author1();
-
-      authorRepository.Add(author1);
-      bookRepository.Add(book1);
-
-      await unitOfWork.SaveAllChangesAsync(
-         "Book1 and Author1 inserted",
-         ct
-      );
-      unitOfWork.ClearChangeTracker();
-
-      var dto = new BookAssignAuthorDto(author1.Id);
-
-      // Act
-      var resultAssignAuthor = await useCases.AssignAuthorAsync(
-         bookId: book1.Id,
-         dto: dto,
-         ct: ct
-      );
-
-      resultAssignAuthor.IsSuccess.Should().BeTrue();
-
-      unitOfWork.ClearChangeTracker();
-
-      // Assert
-      var resultFind = await readModel.FindByIdAsync(
-         id: book1.Id,
-         ct: ct
-      );
-
-      resultFind.IsSuccess.Should().BeTrue();
-
-      var actualBookDetailDto = resultFind.Value;
-
-      actualBookDetailDto.Authors
-         .Should()
-         .ContainSingle(a => a.Id == author1.Id);
-   
-   }
-
-   [Fact]
-   public async Task AssignAuthorAsync_duplicate_author_fails() {
-      using var scope = Root.CreateDefaultScope();
-      var ct = TestContext.Current.CancellationToken;
-      var useCases = scope.ServiceProvider.GetRequiredService<IBookUseCases>();
-      var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
-      var authorRepository = scope.ServiceProvider.GetRequiredService<IAuthorRepository>();
-      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
-      
-      // Arrange
-      var book1 = seed.Book1();
-      var author1 = seed.Author1();
-
-      var resultAssigned = book1.AssignAuthor(author1, book1.CreatedAt.AddDays(1));
-      resultAssigned.IsSuccess.Should().BeTrue();
-
-      authorRepository.Add(author1);
-      bookRepository.Add(book1);
-
-      await unitOfWork.SaveAllChangesAsync("Book1 with Author1 inserted", ct);
-      unitOfWork.ClearChangeTracker();
-
-      var dto = new BookAssignAuthorDto(author1.Id);
-
-      // Act
-      var resultAssignAuthor = await useCases.AssignAuthorAsync(
-         bookId: book1.Id,
-         dto: dto,
-         ct: ct
-      );
-
-      // Assert
-      resultAssignAuthor.IsFailure.Should().BeTrue();
-      resultAssignAuthor.Error.Should().Be(CatalogErrors.AuthorAlreadyAssigned);
-         
-   }
-
-   [Fact]
-   public async Task AssignAuthorAsync_unknown_author_fails() {
-      using var scope = Root.CreateDefaultScope();
-      var ct = TestContext.Current.CancellationToken;
-      var useCases = scope.ServiceProvider.GetRequiredService<IBookUseCases>();
-      var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
-      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
-         
-      // Arrange
-      var book1 = seed.Book1();
-      var unknownAuthorId = Guid.Parse("99000000-0000-0000-0000-000000000000");
-
-      bookRepository.Add(book1);
-      await unitOfWork.SaveAllChangesAsync("Book1 inserted", ct);
-      unitOfWork.ClearChangeTracker();
-      
-      var dto = new BookAssignAuthorDto(unknownAuthorId);
-
-      // Act
-      var resultAssignAuthor = await useCases.AssignAuthorAsync(
-         bookId: book1.Id,
-         dto: dto,
-         ct: ct
-      );
-
-      // Assert
-      resultAssignAuthor.IsFailure.Should().BeTrue();
-      resultAssignAuthor.Error.Should().Be(CatalogErrors.AuthorNotFound);
-         
-   }
-
-   [Fact]
-   public async Task AssignAuthorAsync_unknown_book_fails() {
-      using var scope = Root.CreateDefaultScope();
-      var ct = TestContext.Current.CancellationToken;
-      var useCases = scope.ServiceProvider.GetRequiredService<IBookUseCases>();
-         
-      // Arrange
-      var unknownBookId = Guid.Parse("99000000-0000-0000-0000-000000000000");
-
-      var dto = new BookAssignAuthorDto(AuthorId: Guid.Parse("a0000001-0000-0000-0000-000000000000"));
-
-      // Act
-      var resultAssignAuthor = await useCases.AssignAuthorAsync(
-         bookId: unknownBookId,
-         dto: dto,
-         ct: ct
-      );
-
-      // Assert
-      resultAssignAuthor.IsFailure.Should().BeTrue();
-      resultAssignAuthor.Error.Should().Be(CatalogErrors.BookNotFound);
-         
    }
    #endregion
 
@@ -387,7 +286,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       var readModel = scope.ServiceProvider.GetRequiredService<IBookReadModel>();
       var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
-    
+
       // Arrange
       var book1 = seed.Book1();
 
@@ -426,7 +325,6 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       );
 
       resultFind.IsFailure.Should().BeTrue();
-    
    }
 
    [Fact]
@@ -434,7 +332,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var useCases = scope.ServiceProvider.GetRequiredService<IBookUseCases>();
-      
+
       // Arrange
       var unknownBookId = Guid.Parse("99000000-0000-0000-0000-000000000000");
 
@@ -447,7 +345,6 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       // Assert
       resultDeactivate.IsFailure.Should().BeTrue();
       resultDeactivate.Error.Should().Be(CatalogErrors.BookNotFound);
-      
    }
    #endregion
 }

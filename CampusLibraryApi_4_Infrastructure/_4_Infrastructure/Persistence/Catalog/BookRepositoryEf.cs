@@ -15,7 +15,6 @@ internal sealed class BookRepositoryEf(
    ) =>
       await dbContext.Books
          .Include(b => b.BookItems)
-         .Include(b => b.Authors)
          .FirstOrDefaultAsync(b => b.Id == id, ct);
 
    public async Task<bool> ExistsByIsbnAsync(

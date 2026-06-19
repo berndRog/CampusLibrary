@@ -3,32 +3,51 @@ using CampusLibraryApi._3_Core.Catalog._2_Application.Dtos;
 
 namespace CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 
-// Read model interface for querying book data.
-// Used by the web layer to retrieve catalog information without exposing
-// the domain model. Returns DTOs because this port belongs to the query side.
+// Read model port for catalog book queries.
+// 
+// This interface belongs to the query side of the Catalog module.
+// It returns DTOs optimized for reading, searching and displaying books.
+// It does not expose Book aggregates to controllers or clients.
 public interface IBookReadModel {
 
-   // Find one book by technical identifier.
+   // Finds one active book by its technical id.
+   //
+   // Returns a detail DTO including book metadata, author text,
+   // book items, item counts and lifecycle information.
+   //
+   // If the id is empty or no active book exists for the given id,
+   // a failure result is returned.
    Task<Result<BookDetailDto>> FindByIdAsync(
       Guid id,
       CancellationToken ct = default
    );
 
-   // Return all active books as list items.
+   // Selects all active books.
+   //
+   // Returns list item DTOs optimized for overview screens.
+   // The result includes title, subtitle, ISBN, author text and
+   // the number of total and available book items.
    Task<Result<IReadOnlyList<BookListItemDto>>> SelectAllAsync(
       CancellationToken ct = default
    );
 
-   // Search active books by exactly one criterion,
-   // for example title, author name or ISBN.
+   // Searches active books by one selected search field.
+   //
+   // Supported search fields are defined by BookSearchDto / BookSearchField,
+   // for example:
+   //
+   // - Title
+   // - AuthorLastName
+   // - Isbn
+   //
+   // AuthorLastName does not search an Author entity. In the simplified
+   // Catalog model, authors are stored as a comma-separated text on Book.
+   // The concrete read model implementation interprets this text for
+   // author searches.
+   //
+   // If the search text is empty, an empty list is returned.
    Task<Result<IReadOnlyList<BookListItemDto>>> SearchAsync(
       BookSearchDto search,
-      CancellationToken ct = default
-   );
-
-   // Select all active books assigned to one author.
-   Task<Result<IReadOnlyList<BookListItemDto>>> SelectByAuthorIdAsync(
-      Guid authorId,
       CancellationToken ct = default
    );
 }
@@ -37,21 +56,36 @@ public interface IBookReadModel {
 Lernziele und Didaktik
 ----------------------
 
-Dieses ReadModel bildet die Query-Seite für Bücher im Catalog-Modul.
+Diese Schnittstelle ist der lesende Port für Book-Abfragen im Catalog-Modul.
 
-Die Methoden liefern keine Book-Aggregates zurück, sondern BookListItemDto.
-Dieses DTO ist für die Anzeige optimiert und enthält zum Beispiel Titel,
-Untertitel, ISBN, Autoren sowie die Anzahl der Exemplare.
+Sie gehört zur Query-Seite der Anwendung. Controller arbeiten nicht direkt mit
+EF Core und erhalten auch keine Book-Aggregates. Stattdessen fragen sie über
+dieses Interface DTOs ab, die für Anzeige und Suche vorbereitet sind.
 
-Die Suche ist bewusst als ReadModel modelliert und nicht als Domain-Methode.
-Die Domain entscheidet, welche fachlichen Regeln innerhalb eines Aggregates
-gelten. Das ReadModel entscheidet, wie Daten für Listen, Suchen und Anzeigen
-zusammengestellt werden.
+Die Schnittstelle enthält bewusst nur lesende Operationen:
 
-Alle Methoden liefern Result<T>. Dadurch bleibt die Fehlerbehandlung im
-Application-Layer einheitlich mit den vorhandenen Reader-ReadModels und den
-UseCases.
+- FindByIdAsync für Detailansichten
+- SelectAllAsync für Listenansichten
+- SearchAsync für Suchanfragen
 
-Die Sortierung der Autoren eines Buches gehört ebenfalls auf die Query-Seite:
-zuerst nach Nachname, danach nach Vorname.
+Schreibende Operationen wie Buch anlegen, Buch ändern, Buch deaktivieren oder
+Exemplar hinzufügen gehören nicht in das ReadModel, sondern in Use Cases.
+
+In dieser reduzierten Catalog-Version gibt es keine eigene Author-Entity mehr.
+Autorinnen und Autoren werden als kommaseparierter Text im Book gespeichert.
+Deshalb gibt es auch keine Methode SelectByAuthorIdAsync mehr. Eine Suche nach
+Autor erfolgt stattdessen über SearchAsync mit dem Suchfeld AuthorLastName.
+
+Didaktisch bleibt dadurch die Trennung sichtbar:
+
+- Domain: schützt fachliche Regeln innerhalb des Aggregates.
+- UseCase: verändert Zustand.
+- Repository: lädt Aggregate für Änderungen.
+- ReadModel: liefert Daten für Anzeige und Suche.
+- Controller: verwendet Schnittstellen und kennt keine konkrete Persistenz.
+
+Die komplexere fachliche Beziehung wird später im Loans-Modul behandelt.
+Dort entsteht mit Loan ein eigener fachlicher Vorgang zwischen Reader und
+BookItem. Im Catalog-Modul bleiben Autoren dagegen bewusst einfache Textdaten,
+damit der Stoffumfang reduziert wird.
 */

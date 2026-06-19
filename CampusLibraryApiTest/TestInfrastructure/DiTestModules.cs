@@ -38,33 +38,19 @@ public static class DiTestModules {
       // Repositories
       services.AddScoped<IReaderRepository, ReaderRepositoryEf>();
       services.AddScoped<IBookRepository, BookRepositoryEf>();
-      services.AddScoped<IAuthorRepository, AuthorRepositoryEf>();
-      
+
       // ReadModels
       services.AddScoped<IReaderReadModel, ReaderReadModelEf>();
       services.AddScoped<IBookReadModel, BookReadModelEf>();
-      services.AddScoped<IAuthorReadModel, AuthorReadModelEf>();
-
       
-      // Readmodels
-      services.AddScoped<IReaderReadModel, ReaderReadModelEf>();
-
-      // Repositories
-      services.AddScoped<IReaderRepository, ReaderRepositoryEf>();
-
       // Reader UseCases
       services.AddScoped<IReaderUseCases, ReaderUseCases>();
       services.AddScoped<ReaderUcCreate>();
       services.AddScoped<ReaderUcUpdate>();
-      services.AddScoped<ReaderUcDelete>();
+      services.AddScoped<ReaderUcDeactivate>();
       
-      services.AddScoped<AuthorUcCreate>();
-      services.AddScoped<AuthorUcDeactivate>();
-      services.AddScoped<IAuthorUseCases, AuthorUseCases>();
-
       services.AddScoped<BookUcCreate>();
       services.AddScoped<BookUcAddBookItem>();
-      services.AddScoped<BookUcAssignAuthor>();
       services.AddScoped<BookUcDeactivate>();
       services.AddScoped<IBookUseCases, BookUseCases>();
       

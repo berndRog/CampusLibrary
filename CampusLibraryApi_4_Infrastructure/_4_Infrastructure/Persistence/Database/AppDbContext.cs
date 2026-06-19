@@ -12,7 +12,6 @@ public sealed class AppDbContext(
 ) : DbContext(options) {
 
    public DbSet<Reader> Readers => Set<Reader>();
-   public DbSet<Author> Authors => Set<Author>();
    public DbSet<Book> Books => Set<Book>();
    public DbSet<BookItem> BookItems => Set<BookItem>();
    
@@ -23,7 +22,6 @@ public sealed class AppDbContext(
       var nullUtcDtConv = new NullableUtcDateTimeConverter();
 
       modelBuilder.ApplyConfiguration(new ConfigReader(utcDtConv));
-      modelBuilder.ApplyConfiguration(new ConfigAuthor(utcDtConv));
       modelBuilder.ApplyConfiguration(new ConfigBook(utcDtConv));
       modelBuilder.ApplyConfiguration(new ConfigBookItem());
       

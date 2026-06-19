@@ -17,6 +17,7 @@ public sealed class BookUt {
       // Act
       var result = Book.Create(
          id: book1.Id,
+         authorsText: book1.AuthorsText,
          title: book1.Title,
          subtitle: book1.Subtitle,
          isbn: book1.IsbnVo.Value,
@@ -29,6 +30,7 @@ public sealed class BookUt {
       var actualBook1 = result.Value;
 
       actualBook1.Id.Should().Be(book1.Id);
+      actualBook1.AuthorsText.Should().Be(book1.AuthorsText);
       actualBook1.Title.Should().Be(book1.Title);
       actualBook1.Subtitle.Should().Be(book1.Subtitle);
       actualBook1.IsbnVo.Should().Be(book1.IsbnVo);
@@ -36,17 +38,17 @@ public sealed class BookUt {
       actualBook1.UpdatedAt.Should().Be(book1.UpdatedAt);
 
       actualBook1.BookItems.Should().BeEmpty();
-      actualBook1.Authors.Should().BeEmpty();
    }
 
    [Fact]
-   public void Create_WithTitleAndSubtitle_ShouldTrimValues() {
+   public void Create_WithTitleSubtitleAndAuthorsText_ShouldTrimValues() {
       // Arrange
       var book1 = _seed.Book1();
 
       // Act
       var result = Book.Create(
          id: book1.Id,
+         authorsText: "   Robert C. Martin   ",
          title: "   Clean Code   ",
          subtitle: "   A Handbook of Agile Software Craftsmanship   ",
          isbn: book1.IsbnVo.Value,
@@ -59,11 +61,120 @@ public sealed class BookUt {
       var actualBook1 = result.Value;
 
       actualBook1.Id.Should().Be(book1.Id);
+      actualBook1.AuthorsText.Should().Be("Robert C. Martin");
       actualBook1.Title.Should().Be(book1.Title);
       actualBook1.Subtitle.Should().Be(book1.Subtitle);
       actualBook1.IsbnVo.Should().Be(book1.IsbnVo);
       actualBook1.CreatedAt.Should().Be(book1.CreatedAt);
       actualBook1.UpdatedAt.Should().Be(book1.CreatedAt);
+   }
+
+   [Fact]
+   public void Create_WithMultipleAuthors_ShouldNormalizeAuthorsText() {
+      // Arrange
+      var book1 = _seed.Book1();
+
+      // Act
+      var result = Book.Create(
+         id: book1.Id,
+         authorsText: "   Robert C. Martin   ,   Martin Fowler   ,  Kent Beck  ",
+         title: book1.Title,
+         subtitle: book1.Subtitle,
+         isbn: book1.IsbnVo.Value,
+         createdAt: book1.CreatedAt
+      );
+
+      // Assert
+      result.IsSuccess.Should().BeTrue();
+
+      var actualBook1 = result.Value;
+
+      actualBook1.AuthorsText.Should().Be(
+         "Robert C. Martin, Martin Fowler, Kent Beck"
+      );
+   }
+
+   [Fact]
+   public void Create_WithLastnameOnlyAuthor_ShouldReturnSuccess() {
+      // Arrange
+      var book1 = _seed.Book1();
+
+      // Act
+      var result = Book.Create(
+         id: book1.Id,
+         authorsText: "Martin",
+         title: book1.Title,
+         subtitle: book1.Subtitle,
+         isbn: book1.IsbnVo.Value,
+         createdAt: book1.CreatedAt
+      );
+
+      // Assert
+      result.IsSuccess.Should().BeTrue();
+
+      var actualBook1 = result.Value;
+
+      actualBook1.AuthorsText.Should().Be("Martin");
+   }
+
+   [Fact]
+   public void Create_WithoutAuthorsText_ShouldReturnFailure() {
+      // Arrange
+      var book1 = _seed.Book1();
+
+      // Act
+      var result = Book.Create(
+         id: book1.Id,
+         authorsText: "",
+         title: book1.Title,
+         subtitle: book1.Subtitle,
+         isbn: book1.IsbnVo.Value,
+         createdAt: book1.CreatedAt
+      );
+
+      // Assert
+      result.IsFailure.Should().BeTrue();
+      result.Error.Should().Be(CatalogErrors.AuthorsAreRequired);
+   }
+
+   [Fact]
+   public void Create_WithWhitespaceAuthorsText_ShouldReturnFailure() {
+      // Arrange
+      var book1 = _seed.Book1();
+
+      // Act
+      var result = Book.Create(
+         id: book1.Id,
+         authorsText: "   ",
+         title: book1.Title,
+         subtitle: book1.Subtitle,
+         isbn: book1.IsbnVo.Value,
+         createdAt: book1.CreatedAt
+      );
+
+      // Assert
+      result.IsFailure.Should().BeTrue();
+      result.Error.Should().Be(CatalogErrors.AuthorsAreRequired);
+   }
+
+   [Fact]
+   public void Create_WithOnlyCommaSeparatedEmptyAuthors_ShouldReturnFailure() {
+      // Arrange
+      var book1 = _seed.Book1();
+
+      // Act
+      var result = Book.Create(
+         id: book1.Id,
+         authorsText: "  ,  ,  ,  ",
+         title: book1.Title,
+         subtitle: book1.Subtitle,
+         isbn: book1.IsbnVo.Value,
+         createdAt: book1.CreatedAt
+      );
+
+      // Assert
+      result.IsFailure.Should().BeTrue();
+      result.Error.Should().Be(CatalogErrors.AuthorsAreRequired);
    }
 
    [Fact]
@@ -74,6 +185,7 @@ public sealed class BookUt {
       // Act
       var result = Book.Create(
          id: book1.Id,
+         authorsText: book1.AuthorsText,
          title: book1.Title,
          subtitle: "   ",
          isbn: book1.IsbnVo.Value,
@@ -82,6 +194,7 @@ public sealed class BookUt {
 
       // Assert
       result.IsSuccess.Should().BeTrue();
+
       var actualBook1 = result.Value;
 
       actualBook1.Subtitle.Should().BeNull();
@@ -97,6 +210,7 @@ public sealed class BookUt {
       // Act
       var result = Book.Create(
          id: book1.Id,
+         authorsText: book1.AuthorsText,
          title: " ",
          subtitle: book1.Subtitle,
          isbn: book1.IsbnVo.Value,
@@ -116,6 +230,7 @@ public sealed class BookUt {
       // Act
       var result = Book.Create(
          id: Guid.Empty,
+         authorsText: book1.AuthorsText,
          title: book1.Title,
          subtitle: book1.Subtitle,
          isbn: book1.IsbnVo.Value,
@@ -135,6 +250,7 @@ public sealed class BookUt {
       // Act
       var result = Book.Create(
          id: book1.Id,
+         authorsText: book1.AuthorsText,
          title: book1.Title,
          subtitle: book1.Subtitle,
          isbn: "9780132350885",
@@ -206,6 +322,7 @@ public sealed class BookUt {
       result.Error.Should().Be(CatalogErrors.BookItemAlreadyExists);
 
       book1.BookItems.Should().ContainSingle();
+      book1.UpdatedAt.Should().Be(updatedAt);
    }
 
    [Fact]
@@ -225,6 +342,7 @@ public sealed class BookUt {
       result.Error.Should().Be(CatalogErrors.BookItemInventoryNumberIsRequired);
 
       book1.BookItems.Should().BeEmpty();
+      book1.UpdatedAt.Should().Be(book1.CreatedAt);
    }
 
    [Fact]
@@ -244,59 +362,52 @@ public sealed class BookUt {
       result.Error.Should().Be(CatalogErrors.BookItemIdRequired);
 
       book1.BookItems.Should().BeEmpty();
+      book1.UpdatedAt.Should().Be(book1.CreatedAt);
    }
 
    [Fact]
-   public void AssignAuthor_ShouldAddAuthorAndUpdateBook() {
+   public void Deactivate_ShouldSetIsActiveToFalseAndUpdateBook() {
       // Arrange
       var book1 = _seed.Book1();
-      var author1 = _seed.Author1();
 
       var updatedAt = book1.CreatedAt.AddDays(1);
 
       // Act
-      var result = book1.AssignAuthor(
-         author: author1,
+      var result = book1.Deactivate(
          updatedAt: updatedAt
       );
 
       // Assert
       result.IsSuccess.Should().BeTrue();
 
-      book1.Authors.Should().ContainSingle();
-      book1.Authors.Should().Contain(a => a.Id == author1.Id);
-
+      book1.IsActive.Should().BeFalse();
       book1.CreatedAt.Should().Be(_seed.Book1().CreatedAt);
       book1.UpdatedAt.Should().Be(updatedAt);
    }
 
    [Fact]
-   public void AssignAuthor_WithSameAuthorTwice_ShouldReturnFailure() {
+   public void Deactivate_WhenBookIsAlreadyInactive_ShouldReturnSuccessWithoutUpdatingBookAgain() {
       // Arrange
       var book1 = _seed.Book1();
-      var author1 = _seed.Author1();
 
-      var updatedAt = book1.CreatedAt.AddDays(1);
+      var firstUpdatedAt = book1.CreatedAt.AddDays(1);
+      var secondUpdatedAt = book1.CreatedAt.AddDays(2);
 
-      var firstResult = book1.AssignAuthor(
-         author: author1,
-         updatedAt: updatedAt
+      var firstResult = book1.Deactivate(
+         updatedAt: firstUpdatedAt
       );
 
       firstResult.IsSuccess.Should().BeTrue();
 
       // Act
-      var result = book1.AssignAuthor(
-         author: author1,
-         updatedAt: updatedAt.AddDays(1)
+      var result = book1.Deactivate(
+         updatedAt: secondUpdatedAt
       );
 
       // Assert
-      result.IsFailure.Should().BeTrue();
-      result.Error.Should().Be(CatalogErrors.AuthorAlreadyAssigned);
+      result.IsSuccess.Should().BeTrue();
 
-      book1.Authors.Should().ContainSingle();
-      book1.Authors.Should().Contain(a => a.Id == author1.Id);
-      book1.UpdatedAt.Should().Be(updatedAt);
+      book1.IsActive.Should().BeFalse();
+      book1.UpdatedAt.Should().Be(firstUpdatedAt);
    }
 }

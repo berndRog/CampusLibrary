@@ -239,7 +239,7 @@ public sealed class ReaderUseCasesMockT {
    #endregion
    
    #region ReaderUcUpdate
-      [Fact]
+   [Fact]
    public async Task UpdateAsync_ok() {
       // Arrange
       var ct = TestContext.Current.CancellationToken;
@@ -369,120 +369,8 @@ public sealed class ReaderUseCasesMockT {
    }
    #endregion
    
-   #region ReaderUcDelete
-   [Fact]
-   public async Task DeleteAsync_ok() {
-      // Arrange
-      var ct = TestContext.Current.CancellationToken;
-      var seed = new TestSeed();
-      var reader = seed.Reader1();
-
-      var repository = new Mock<IReaderRepository>();
-      repository
-         .Setup(r => r.FindByIdAsync(reader.Id, ct))
-         .ReturnsAsync(reader);
-
-      var unitOfWork = new Mock<IUnitOfWork>();
-      unitOfWork
-         .Setup(u => u.SaveAllChangesAsync("ReaderUcDelete", ct))
-         .ReturnsAsync(1);
-
-      var sut = new ReaderUcDelete(
-         repository: repository.Object,
-         unitOfWork: unitOfWork.Object,
-         logger: Mock.Of<ILogger<ReaderUcDelete>>()
-      );
-      
-      // Act
-      var result = await sut.ExecuteAsync(reader.Id, ct);
-
-      // Assert
-      result.IsSuccess.Should().BeTrue();
-
-      repository.Verify(
-         r => r.Remove(reader),
-         Times.Once
-      );
-
-      unitOfWork.Verify(
-         u => u.SaveAllChangesAsync("ReaderUcDelete", ct),
-         Times.Once
-      );
-   }
-
-   [Fact]
-   public async Task DeleteAsync_reader_not_found_fails() {
-      // Arrange
-      var ct = TestContext.Current.CancellationToken;
-      var seed = new TestSeed();
-      var reader = seed.Reader1();
-
-      var repository = new Mock<IReaderRepository>();
-      repository
-         .Setup(r => r.FindByIdAsync(reader.Id, ct))
-         .ReturnsAsync((Reader?)null);
-
-      var unitOfWork = new Mock<IUnitOfWork>();
-
-      var sut = new ReaderUcDelete(
-         repository: repository.Object,
-         unitOfWork: unitOfWork.Object,
-         logger: Mock.Of<ILogger<ReaderUcDelete>>()
-      );
-
-      // Act
-      var result = await sut.ExecuteAsync(reader.Id, ct);
-
-      // Assert
-      result.IsFailure.Should().BeTrue();
-      result.Error.Should().Be(ReaderErrors.ReaderNotFound);
-
-      repository.Verify(
-         r => r.Remove(It.IsAny<Reader>()),
-         Times.Never
-      );
-
-      unitOfWork.Verify(
-         u => u.SaveAllChangesAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()),
-         Times.Never
-      );
-   }
-
-   [Fact]
-   public async Task DeleteAsync_empty_id_fails() {
-      // Arrange
-      var ct = TestContext.Current.CancellationToken;
-      var repository = new Mock<IReaderRepository>();
-      
-      var unitOfWork = new Mock<IUnitOfWork>();
-      
-      var sut = new ReaderUcDelete(
-         repository: repository.Object,
-         unitOfWork: unitOfWork.Object,
-         logger: Mock.Of<ILogger<ReaderUcDelete>>()
-      );
-
-      // Act
-      var result = await sut.ExecuteAsync(Guid.Empty, ct);
-
-      // Assert
-      result.IsFailure.Should().BeTrue();
-      result.Error.Should().Be(ReaderErrors.InvalidId);
-
-      repository.Verify(
-         r => r.FindByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
-         Times.Never
-      );
-
-      repository.Verify(
-         r => r.Remove(It.IsAny<Reader>()),
-         Times.Never
-      );
-
-      unitOfWork.Verify(
-         u => u.SaveAllChangesAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()),
-         Times.Never
-      );
-   }
+   #region ReaderUcDeactivate
+   private static readonly DateTime UpdatedAt =
+      new(2025, 01, 02, 00, 00, 00, DateTimeKind.Utc);
    #endregion
 }

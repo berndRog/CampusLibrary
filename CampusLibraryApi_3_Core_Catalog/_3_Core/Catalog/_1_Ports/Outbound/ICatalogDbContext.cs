@@ -5,17 +5,14 @@ namespace CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 // Exposes only the persistence operations needed by this module.
 // The concrete EF Core implementation is provided by Infrastructure.
 public interface ICatalogDbContext {
-   // Query access to Author and Book aggregates.
-   IQueryable<Author> Authors { get; }
+   // Query access to the Book aggregates.
    IQueryable<Book> Books { get; }
    IQueryable<BookItem> BookItems { get; }
 
-   // Add a new author or bokk to the persistence context.
-   void Add(Author author);
+   // Add a new book to the persistence context.
    void Add(Book book);
 
-   // Add multiple authors or books to the persistence context.
-   void AddRange(IEnumerable<Author> authors);
+   // Add multiple books to the persistence context.
    void AddRange(IEnumerable<Book> books);
    
 }

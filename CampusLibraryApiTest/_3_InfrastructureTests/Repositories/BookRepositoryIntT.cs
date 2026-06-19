@@ -18,27 +18,22 @@ public sealed class BookRepositoryIntT : TestBaseIntegration {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
-      var authorRepository = scope.ServiceProvider.GetRequiredService<IAuthorRepository>();
       var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
 
       // Arrange
-      var authors = seed.Authors;
-      var books = seed.BooksWithAuthors(
-         authors: authors
-      );
-
+      var books = seed.Books;
       var book1 = books[0];
-
-      authorRepository.AddRange(
-         authors: authors
-      );
 
       bookRepository.AddRange(
          books: books
       );
 
-      await unitOfWork.SaveAllChangesAsync("Books with authors inserted", ct);
+      await unitOfWork.SaveAllChangesAsync(
+         "Books inserted",
+         ct
+      );
+
       unitOfWork.ClearChangeTracker();
 
       // Act
@@ -51,6 +46,7 @@ public sealed class BookRepositoryIntT : TestBaseIntegration {
       actualBook.Should().NotBeNull();
 
       actualBook!.Id.Should().Be(book1.Id);
+      actualBook.AuthorsText.Should().Be(book1.AuthorsText);
       actualBook.Title.Should().Be(book1.Title);
       actualBook.Subtitle.Should().Be(book1.Subtitle);
       actualBook.IsbnVo.Should().Be(book1.IsbnVo);
@@ -59,16 +55,11 @@ public sealed class BookRepositoryIntT : TestBaseIntegration {
 
       // Repository must load child entities needed by domain methods.
       actualBook.BookItems.Should().HaveCount(book1.BookItems.Count);
-      actualBook.Authors.Should().HaveCount(book1.Authors.Count);
 
       actualBook.BookItems
          .Select(bi => bi.InventoryNumber)
          .Should()
          .BeEquivalentTo(book1.BookItems.Select(bi => bi.InventoryNumber));
-
-      actualBook.Authors
-         .Select(a => a.Id)
-         .Should().BeEquivalentTo(book1.Authors.Select(a => a.Id));
    }
 
    [Fact]
@@ -103,7 +94,11 @@ public sealed class BookRepositoryIntT : TestBaseIntegration {
 
       repository.Add(book1);
 
-      await unitOfWork.SaveAllChangesAsync("Book1 inserted", ct);
+      await unitOfWork.SaveAllChangesAsync(
+         "Book1 inserted",
+         ct
+      );
+
       unitOfWork.ClearChangeTracker();
 
       // Act
@@ -126,7 +121,10 @@ public sealed class BookRepositoryIntT : TestBaseIntegration {
       var unknownIsbn = "9780131103627";
 
       // Act
-      var exists = await repository.ExistsByIsbnAsync(unknownIsbn, ct);
+      var exists = await repository.ExistsByIsbnAsync(
+         isbn: unknownIsbn,
+         ct: ct
+      );
 
       // Assert
       exists.Should().BeFalse();
@@ -153,7 +151,11 @@ public sealed class BookRepositoryIntT : TestBaseIntegration {
 
       repository.Add(book1);
 
-      await unitOfWork.SaveAllChangesAsync("Book1 with item inserted", ct);
+      await unitOfWork.SaveAllChangesAsync(
+         "Book1 with item inserted",
+         ct
+      );
+
       unitOfWork.ClearChangeTracker();
 
       // Act
@@ -183,23 +185,25 @@ public sealed class BookRepositoryIntT : TestBaseIntegration {
    }
 
    [Fact]
-   public async Task AddRange_persists_multiple_books_with_authors_and_items() {
+   public async Task AddRange_persists_multiple_books_with_items() {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
-      var authorRepository = scope.ServiceProvider.GetRequiredService<IAuthorRepository>();
       var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
 
       // Arrange
-      var authors = seed.Authors;
-      var books = seed.BooksWithAuthors(
-         authors: authors
+      var books = seed.Books;
+
+      bookRepository.AddRange(
+         books: books
       );
 
-      authorRepository.AddRange(authors);
-      bookRepository.AddRange(books);
-      var savedRows = await unitOfWork.SaveAllChangesAsync("Books inserted", ct);
+      var savedRows = await unitOfWork.SaveAllChangesAsync(
+         "Books inserted",
+         ct
+      );
+
       unitOfWork.ClearChangeTracker();
 
       // Act
@@ -226,16 +230,17 @@ public sealed class BookRepositoryIntT : TestBaseIntegration {
       actualBook3.Should().NotBeNull();
 
       actualBook1!.Id.Should().Be(books[0].Id);
+      actualBook1.AuthorsText.Should().Be(books[0].AuthorsText);
+
       actualBook2!.Id.Should().Be(books[1].Id);
+      actualBook2.AuthorsText.Should().Be(books[1].AuthorsText);
+
       actualBook3!.Id.Should().Be(books[2].Id);
+      actualBook3.AuthorsText.Should().Be(books[2].AuthorsText);
 
       actualBook1.BookItems.Should().HaveCount(books[0].BookItems.Count);
       actualBook2.BookItems.Should().HaveCount(books[1].BookItems.Count);
       actualBook3.BookItems.Should().HaveCount(books[2].BookItems.Count);
-
-      actualBook1.Authors.Should().HaveCount(books[0].Authors.Count);
-      actualBook2.Authors.Should().HaveCount(books[1].Authors.Count);
-      actualBook3.Authors.Should().HaveCount(books[2].Authors.Count);
    }
 
    [Fact]
@@ -251,12 +256,23 @@ public sealed class BookRepositoryIntT : TestBaseIntegration {
       var updatedAt = book1.CreatedAt.AddDays(1);
 
       repository.Add(book1);
-      await unitOfWork.SaveAllChangesAsync("Book1 inserted", ct);
 
-      var resultDeactivated = book1.Deactivate(updatedAt);
+      await unitOfWork.SaveAllChangesAsync(
+         "Book1 inserted",
+         ct
+      );
+
+      var resultDeactivated = book1.Deactivate(
+         updatedAt: updatedAt
+      );
+
       resultDeactivated.IsSuccess.Should().BeTrue();
 
-      await unitOfWork.SaveAllChangesAsync("Book1 deactivated", ct);
+      await unitOfWork.SaveAllChangesAsync(
+         "Book1 deactivated",
+         ct
+      );
+
       unitOfWork.ClearChangeTracker();
 
       // Act

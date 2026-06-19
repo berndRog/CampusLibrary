@@ -11,12 +11,15 @@
 ###
 ### Seed.cs is the source of the stable ids.
 ### The .http file creates the seed data through HTTP.
+###
+### Current Catalog simplification:
+### - There is no Author aggregate.
+### - There are no /authors endpoints.
+### - There is no /books/{bookId}/authors endpoint.
+### - Author names are stored directly in Book.AuthorsText.
+### - AuthorLastName search parses AuthorsText at commas and uses the
+###   last whitespace-separated token of each author as lastname.
 ### ============================================================
-@author1Id = a0000001-0000-0000-0000-000000000000
-@author2Id = a0000002-0000-0000-0000-000000000000
-@author3Id = a0000003-0000-0000-0000-000000000000
-@author4Id = a0000004-0000-0000-0000-000000000000
-@author5Id = a0000005-0000-0000-0000-000000000000
 
 @book1Id = b0000001-0000-0000-0000-000000000000
 @book2Id = b0000002-0000-0000-0000-000000000000
@@ -36,7 +39,6 @@
 @book4Isbn = 9780201633610
 
 @unknownBookId = b9999999-0000-0000-0000-000000000000
-@unknownAuthorId = a9999999-0000-0000-0000-000000000000
 
 
 ### 1. Create seed books =======================================================
@@ -47,6 +49,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
+  "authorsText": "Robert C. Martin",
   "title": "Clean Code",
   "subtitle": "A Handbook of Agile Software Craftsmanship",
   "isbn": "{{book1Isbn}}",
@@ -60,6 +63,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
+  "authorsText": "Eric Evans",
   "title": "Domain-Driven Design",
   "subtitle": "Tackling Complexity in the Heart of Software",
   "isbn": "{{book2Isbn}}",
@@ -73,6 +77,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
+  "authorsText": "Martin Fowler, Kent Beck",
   "title": "Refactoring",
   "subtitle": "Improving the Design of Existing Code",
   "isbn": "{{book3Isbn}}",
@@ -86,74 +91,16 @@ Content-Type: application/json
 Accept: application/json
 
 {
+  "authorsText": "Erich Gamma, Richard Helm, Ralph Johnson, John Vlissides",
   "title": "Design Patterns",
   "subtitle": "Elements of Reusable Object-Oriented Software",
   "isbn": "{{book4Isbn}}",
   "id": "{{book4Id}}"
 }
 
-### 2. Assign seed authors to seed books ====================================
-### Assign Robert C. Martin to Clean Code
-POST {{baseUrl}}/books/{{book1Id}}/authors
-Content-Type: application/json
-Accept: application/json
 
-{
-  "authorId": "{{author1Id}}"
-}
+### 2. Add seed BookItems to seed books =======================================
 
-
-### Assign Eric Evans to Domain-Driven Design
-POST {{baseUrl}}/books/{{book2Id}}/authors
-Content-Type: application/json
-Accept: application/json
-
-{
-  "authorId": "{{author2Id}}"
-}
-
-
-### Assign Martin Fowler to Refactoring
-POST {{baseUrl}}/books/{{book3Id}}/authors
-Content-Type: application/json
-Accept: application/json
-
-{
-  "authorId": "{{author3Id}}"
-}
-
-
-### Assign Kent Beck to Refactoring
-POST {{baseUrl}}/books/{{book3Id}}/authors
-Content-Type: application/json
-Accept: application/json
-
-{
-  "authorId": "{{author5Id}}"
-}
-
-
-### Assign Erich Gamma to Design Patterns
-POST {{baseUrl}}/books/{{book4Id}}/authors
-Content-Type: application/json
-Accept: application/json
-
-{
-  "authorId": "{{author4Id}}"
-}
-
-
-### Assign Martin Fowler to Design Patterns
-POST {{baseUrl}}/books/{{book4Id}}/authors
-Content-Type: application/json
-Accept: application/json
-
-{
-  "authorId": "{{author3Id}}"
-}
-
-
-### 3. Add seed BookItems to seed books =========================================
 ### Add BookItem 1 to Clean Code
 POST {{baseUrl}}/books/{{book1Id}}/items
 Content-Type: application/json
@@ -220,7 +167,7 @@ Accept: application/json
 }
 
 
-### 4. Verify seed books =======================================================
+### 3. Verify seed books =======================================================
 
 ### Get seed book 1: Clean Code
 GET {{baseUrl}}/books/{{book1Id}}
@@ -243,7 +190,7 @@ GET {{baseUrl}}/books
 Accept: application/json
 
 
-### 5. Search books by title ===================================================
+### 4. Search books by title ===================================================
 
 ### Search Clean Code by title
 GET {{baseUrl}}/books/search?searchField=Title&searchText=Clean
@@ -267,7 +214,8 @@ GET {{baseUrl}}/books/search?searchField=Title&searchText=NoSuchBook
 Accept: application/json
 
 
-### 6. Search books by ISBN ====================================================
+### 5. Search books by ISBN ====================================================
+
 ### Search Clean Code by ISBN
 GET {{baseUrl}}/books/search?searchField=Isbn&searchText={{book1Isbn}}
 Accept: application/json
@@ -285,74 +233,63 @@ GET {{baseUrl}}/books/search?searchField=Isbn&searchText={{book4Isbn}}
 Accept: application/json
 
 
-### 7. Search books by author name =============================================
+### 6. Search books by author lastname ========================================
 
-### Search books by Robert C. Martin
-### Expected: Clean Code
+### Search books by author lastname Martin
+### Expected: Clean Code only.
+### Reason: "Robert C. Martin" has lastname Martin.
+### "Martin Fowler" must not match because Martin is the firstname there.
 GET {{baseUrl}}/books/search?searchField=AuthorLastName&searchText=Martin
 Accept: application/json
 
 
-### Search books by Eric Evans
+### Search books by author lastname Evans
 ### Expected: Domain-Driven Design
 GET {{baseUrl}}/books/search?searchField=AuthorLastName&searchText=Evans
 Accept: application/json
 
-### Search books by Martin Fowler
-### Expected: Refactoring and Design Patterns
+
+### Search books by author lastname Fowler
+### Expected: Refactoring
 GET {{baseUrl}}/books/search?searchField=AuthorLastName&searchText=Fowler
 Accept: application/json
 
-### Search books by Erich Gamma
-### Expected: Design Patterns
-GET {{baseUrl}}/books/search?searchField=AuthorLastName&searchText=Gamma
-Accept: application/json
 
-### Search books by Kent Beck
+### Search books by author lastname Beck
 ### Expected: Refactoring
 GET {{baseUrl}}/books/search?searchField=AuthorLastName&searchText=Beck
 Accept: application/json
 
 
-### 8. Get books by author id ==================================================
-
-### Get books by author 1: Robert C. Martin
-### Expected: Clean Code
-GET {{baseUrl}}/books/by-author/{{author1Id}}
-Accept: application/json
-
-### Get books by author 2: Eric Evans
-### Expected: Domain-Driven Design
-GET {{baseUrl}}/books/by-author/{{author2Id}}
-Accept: application/json
-
-### Get books by author 3: Martin Fowler
-### Expected: Refactoring and Design Patterns
-GET {{baseUrl}}/books/by-author/{{author3Id}}
-Accept: application/json
-
-### Get books by author 4: Erich Gamma
+### Search books by author lastname Gamma
 ### Expected: Design Patterns
-GET {{baseUrl}}/books/by-author/{{author4Id}}
-Accept: application/json
-
-### Get books by author 5: Kent Beck
-### Expected: Refactoring
-GET {{baseUrl}}/books/by-author/{{author5Id}}
+GET {{baseUrl}}/books/search?searchField=AuthorLastName&searchText=Gamma
 Accept: application/json
 
 
-### 9. Negative read and search tests >========================================
+### Search books by author lastname Helm
+### Expected: Design Patterns
+GET {{baseUrl}}/books/search?searchField=AuthorLastName&searchText=Helm
+Accept: application/json
+
+
+### Search books by author lastname Johnson
+### Expected: Design Patterns
+GET {{baseUrl}}/books/search?searchField=AuthorLastName&searchText=Johnson
+Accept: application/json
+
+
+### Search books by author lastname Vlissides
+### Expected: Design Patterns
+GET {{baseUrl}}/books/search?searchField=AuthorLastName&searchText=Vlissides
+Accept: application/json
+
+
+### 7. Negative read and search tests =========================================
 
 ### Get unknown book by id
 ### Expected: 404 Not Found
 GET {{baseUrl}}/books/{{unknownBookId}}
-Accept: application/json
-
-
-### Get books by unknown author id
-### Expected: 200 OK with empty list
-GET {{baseUrl}}/books/by-author/{{unknownAuthorId}}
 Accept: application/json
 
 
@@ -362,7 +299,13 @@ GET {{baseUrl}}/books/search?searchField=Unknown&searchText=Clean
 Accept: application/json
 
 
-### 10. Conflict tests using seed data =========================================
+### Search books with empty search text
+### Expected: 200 OK with empty list
+GET {{baseUrl}}/books/search?searchField=Title&searchText=
+Accept: application/json
+
+
+### 8. Conflict tests using seed data =========================================
 
 ### Create book with existing seed id and existing seed ISBN
 ### Expected: 409 Conflict
@@ -371,6 +314,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
+  "authorsText": "Robert C. Martin",
   "title": "Clean Code",
   "subtitle": "A Handbook of Agile Software Craftsmanship",
   "isbn": "{{book1Isbn}}",
@@ -385,23 +329,11 @@ Content-Type: application/json
 Accept: application/json
 
 {
+  "authorsText": "Duplicate Author",
   "title": "Duplicate ISBN Book",
   "subtitle": null,
   "isbn": "{{book2Isbn}}",
   "id": null
-}
-
-
-### Assign existing author to existing book again
-### Seed already contains:
-### Clean Code -> Robert C. Martin
-### Expected: 409 Conflict
-POST {{baseUrl}}/books/{{book1Id}}/authors
-Content-Type: application/json
-Accept: application/json
-
-{
-  "authorId": "{{author1Id}}"
 }
 
 
@@ -418,7 +350,7 @@ Accept: application/json
 }
 
 
-### 11. Validation tests =======================================================
+### 9. Validation tests ========================================================
 
 ### Create book with invalid ISBN
 ### Expected: 400 Bad Request
@@ -427,6 +359,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
+  "authorsText": "Invalid Author",
   "title": "Invalid ISBN Book",
   "subtitle": null,
   "isbn": "invalid-isbn",
@@ -441,9 +374,40 @@ Content-Type: application/json
 Accept: application/json
 
 {
+  "authorsText": "Valid Author",
   "title": "",
   "subtitle": null,
+  "isbn": "9780131103627",
+  "id": null
+}
+
+
+### Create book with missing authorsText
+### Expected: 400 Bad Request
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+
+{
+  "authorsText": "",
+  "title": "Book Without Authors",
+  "subtitle": null,
   "isbn": "9780201616224",
+  "id": null
+}
+
+
+### Create book with only comma-separated empty authors
+### Expected: 400 Bad Request
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+
+{
+  "authorsText": "  ,  ,  ",
+  "title": "Book Without Valid Authors",
+  "subtitle": null,
+  "isbn": "9780137081073",
   "id": null
 }
 
@@ -460,28 +424,6 @@ Accept: application/json
 }
 
 
-### Assign unknown author to existing book
-### Expected: 404 Not Found
-POST {{baseUrl}}/books/{{book1Id}}/authors
-Content-Type: application/json
-Accept: application/json
-
-{
-  "authorId": "{{unknownAuthorId}}"
-}
-
-
-### Assign existing author to unknown book
-### Expected: 404 Not Found
-POST {{baseUrl}}/books/{{unknownBookId}}/authors
-Content-Type: application/json
-Accept: application/json
-
-{
-  "authorId": "{{author1Id}}"
-}
-
-
 ### Add BookItem to unknown book
 ### Expected: 404 Not Found
 POST {{baseUrl}}/books/{{unknownBookId}}/items
@@ -494,7 +436,7 @@ Accept: application/json
 }
 
 
-### 12. Destructive deactivation tests =========================================
+### 10. Destructive deactivation tests ========================================
 ### Run these last.
 ### They change the database state.
 
@@ -514,6 +456,12 @@ Accept: application/json
 ### Search deactivated seed book by title
 ### Expected: 200 OK without Design Patterns
 GET {{baseUrl}}/books/search?searchField=Title&searchText=Patterns
+Accept: application/json
+
+
+### Search deactivated seed book by author lastname
+### Expected: 200 OK without Design Patterns
+GET {{baseUrl}}/books/search?searchField=AuthorLastName&searchText=Gamma
 Accept: application/json
 
 
