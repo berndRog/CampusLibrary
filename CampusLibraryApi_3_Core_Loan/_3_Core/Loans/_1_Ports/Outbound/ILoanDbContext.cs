@@ -1,22 +1,21 @@
-using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
+using CampusLibraryApi._3_Core.Loans._3_Domain.Entities;
+namespace CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
 
-namespace CampusLibraryApi._3_Core.Readers._1_Ports;
-
-// DbContext port for the Reader module.
+// DbContext port for the Loan module.
 // Exposes only the persistence operations needed by this module.
 // The concrete EF Core implementation is provided by Infrastructure.
-public interface IReaderDbContext {
+public interface ILoanDbContext {
    // Query access to Reader aggregates.
-   IQueryable<Reader> Readers { get; }
+   IQueryable<Loan> Loans { get; }
 
    // Add a new reader to the persistence context.
-   void Add(Reader reader);
+   void Add(Loan loan);
 
    // Add multiple readers to the persistence context.
-   void AddRange(IEnumerable<Reader> readers);
+   void AddRange(IEnumerable<Loan> loans);
    
    // Remove a reader from the persistence context
-   void Remove(Reader reader);
+   void Remove(Loan loan);
 }
 
 /*

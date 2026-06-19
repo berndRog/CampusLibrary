@@ -21,7 +21,8 @@ public sealed class Reader : AggregateRoot {
    public string Lastname { get; private set; } = string.Empty;
    public EmailVo EmailVo { get; private set; } = null!;
    public AddressVo AddressVo { get; private set; } = null!;
-
+   public bool IsActive { get; private set; } = true;
+   
    // Technical identity subject from the Identity Server.
    public string Subject { get; private set; } = string.Empty;
 

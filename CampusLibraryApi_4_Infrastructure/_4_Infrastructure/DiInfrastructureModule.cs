@@ -1,6 +1,7 @@
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Readers._1_Ports;
+using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 using CampusLibraryApi._4_Infrastructure.Persistence.Catalog;
 using CampusLibraryApi._4_Infrastructure.Persistence.Database;
 using CampusLibraryApi._4_Infrastructure.Persistence.Readers;

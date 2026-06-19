@@ -1,7 +1,6 @@
 using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
-
-namespace CampusLibraryApi._3_Core.Readers._1_Ports;
+namespace CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 
 // Repository port for the Reader aggregate.
 // Used by write-side use cases to load and store aggregate roots.

@@ -31,13 +31,17 @@ public static class ReaderMappings {
          )
       );
    
-   
    public static AddressDto ToAddressDto(this AddressVo addressVo) => new AddressDto(
       Street: addressVo.Street,
       PostalCode: addressVo.PostalCode,
       City: addressVo.City,
       Country: addressVo.Country
    );
-
    
+   public static ReaderLoanInfoDto ToReaderLoanInfoDto(this Reader reader) => new(
+      Id: reader.Id,
+      Firstname: reader.Firstname,
+      Lastname: reader.Lastname,
+      IsActive: reader.IsActive
+   );
 }

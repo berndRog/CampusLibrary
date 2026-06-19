@@ -1,7 +1,6 @@
 using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
-
-namespace CampusLibraryApi._3_Core.Readers._1_Ports;
+namespace CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 
 // Read model interface for querying reader data.
 // Used by the web layer to retrieve reader information without exposing
