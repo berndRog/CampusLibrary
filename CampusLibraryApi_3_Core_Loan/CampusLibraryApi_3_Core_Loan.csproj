@@ -9,11 +9,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="_3_Core\Loans\_1_Ports\Inbound\" />
-    <Folder Include="_3_Core\Loans\_2_Application\Dtos\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\CampusLibraryApi_2_BuildingBlocks\CampusLibraryApi_2_BuildingBlocks.csproj" />
   </ItemGroup>
 

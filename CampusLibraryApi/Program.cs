@@ -29,6 +29,7 @@ public class Program {
       // Modules
       builder.Services.AddReadersModule();
       builder.Services.AddCatalogModule();
+      builder.Services.AddLoansModule();
       builder.Services.AddInfrastructureModule(builder.Configuration);
 
       builder.Services.AddEndpointsApiExplorer();

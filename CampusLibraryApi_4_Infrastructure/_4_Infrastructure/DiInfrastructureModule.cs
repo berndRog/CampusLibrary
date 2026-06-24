@@ -1,7 +1,11 @@
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
+using CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
 using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
-using CampusLibraryApi._3_Core.Readers._1_Ports;
+using CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
+using CampusLibraryApi._4_Infrastructure._2_Persistence.Contracts;
+using CampusLibraryApi._4_Infrastructure._2_Persistence.ReadModels;
+using CampusLibraryApi._4_Infrastructure._2_Persistence.Repositories;
 using CampusLibraryApi._4_Infrastructure.Persistence.Catalog;
 using CampusLibraryApi._4_Infrastructure.Persistence.Database;
 using CampusLibraryApi._4_Infrastructure.Persistence.Readers;
@@ -25,16 +29,21 @@ public static class DiInfrastructureModule {
       // BC Db Contexts
       services.AddScoped<IReaderDbContext, ReaderDbContextEf>();
       services.AddScoped<ICatalogDbContext, CatalogDbContextEf>();
-
+      services.AddScoped<ILoanDbContext, LoadDbContextEf>();
+      
       // Adapters
-
+      services.AddScoped<IReaderLoanContract, ReaderLoanContractEf>();
+      services.AddScoped<IBookItemLoanContract, BookItemLoanContractEf>();
+      
       // Repositories
       services.AddScoped<IReaderRepository, ReaderRepositoryEf>();
       services.AddScoped<IBookRepository, BookRepositoryEf>();
+      services.AddScoped<ILoanRepository, LoanRepositoryEf>();
       
       // ReadModels
       services.AddScoped<IReaderReadModel, ReaderReadModelEf>();
       services.AddScoped<IBookReadModel, BookReadModelEf>();
+      services.AddScoped<ILoanReadModel, LoanReadModelEf>();
 
       // Unit of Work
       services.AddScoped<IUnitOfWork, UnitOfWorkEf>();

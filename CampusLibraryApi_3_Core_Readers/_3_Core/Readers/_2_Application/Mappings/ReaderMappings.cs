@@ -1,4 +1,4 @@
-using System.Linq.Expressions;
+using CampusLibraryApi._2_BuildingBlocks._2_Application.Contracts;
 using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
@@ -17,10 +17,19 @@ public static class ReaderMappings {
       
    );
    
+   public static ReaderLoanInfoDto ToReaderLoanInfoDto(this Reader reader) =>
+      new(
+         Id: reader.Id,
+         Firstname: reader.Firstname,
+         Lastname: reader.Lastname,
+         IsActive: reader.IsActive
+      );
+   
    public static AddressDto ToAddressDto(this AddressVo addressVo) => new AddressDto(
       Street: addressVo.Street,
       PostalCode: addressVo.PostalCode,
       City: addressVo.City,
       Country: addressVo.Country
    );
+   
 }

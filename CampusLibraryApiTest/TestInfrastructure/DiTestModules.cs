@@ -1,11 +1,18 @@
 using System.Data.Common;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
+using CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
 using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Catalog._2_Application.UseCases;
+using CampusLibraryApi._3_Core.Loans._1_Ports.Inbound;
+using CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
+using CampusLibraryApi._3_Core.Loans._2_Application.UseCases;
 using CampusLibraryApi._3_Core.Readers._1_Ports;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Inbound;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Readers._2_Application.UseCases;
+using CampusLibraryApi._4_Infrastructure._2_Persistence.Contracts;
+using CampusLibraryApi._4_Infrastructure._2_Persistence.ReadModels;
+using CampusLibraryApi._4_Infrastructure._2_Persistence.Repositories;
 using CampusLibraryApi._4_Infrastructure.Persistence;
 using CampusLibraryApi._4_Infrastructure.Persistence.Catalog;
 using CampusLibraryApi._4_Infrastructure.Persistence.Database;
@@ -34,16 +41,21 @@ public static class DiTestModules {
       // BC Db Contexts
       services.AddScoped<IReaderDbContext, ReaderDbContextEf>();
       services.AddScoped<ICatalogDbContext, CatalogDbContextEf>();
-
+      services.AddScoped<ILoanDbContext, LoadDbContextEf>();
+      
       // Adapters
-
+      services.AddScoped<IReaderLoanContract, ReaderLoanContractEf>();
+      services.AddScoped<IBookItemLoanContract, BookItemLoanContractEf>();
+      
       // Repositories
       services.AddScoped<IReaderRepository, ReaderRepositoryEf>();
       services.AddScoped<IBookRepository, BookRepositoryEf>();
-
+      services.AddScoped<ILoanRepository, LoanRepositoryEf>();
+      
       // ReadModels
       services.AddScoped<IReaderReadModel, ReaderReadModelEf>();
       services.AddScoped<IBookReadModel, BookReadModelEf>();
+      services.AddScoped<ILoanReadModel, LoanReadModelEf>();
       
       // Reader UseCases
       services.AddScoped<IReaderUseCases, ReaderUseCases>();
@@ -55,6 +67,11 @@ public static class DiTestModules {
       services.AddScoped<BookUcAddBookItem>();
       services.AddScoped<BookUcDeactivate>();
       services.AddScoped<IBookUseCases, BookUseCases>();
+      
+      services.AddScoped<LoanUcBorrow>();
+      services.AddScoped<LoanUcRenew>();
+      services.AddScoped<LoanUcReturnAtDesk>();
+      services.AddScoped<ILoanUseCases, LoanUseCases>();
       
       // Unit of Work
       services.AddScoped<IUnitOfWork, UnitOfWorkEf>();

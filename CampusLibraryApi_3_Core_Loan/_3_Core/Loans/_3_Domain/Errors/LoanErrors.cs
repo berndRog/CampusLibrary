@@ -33,12 +33,26 @@ public static class LoanErrors {
          "Loan: Reader Id Required",
          "The reader id is required."
       );
+   
+   public static readonly DomainError InvalidReaderId =
+      new(
+         WebErrorStatus.BadRequest,
+         "Loan: Invalid Reader Id",
+         "The given reader id is invalid."
+      );
 
    public static readonly DomainError BookItemIdRequired =
       new(
          WebErrorStatus.BadRequest,
          "Loan: Book Item Id Required",
          "The book item id is required."
+      );
+   
+   public static readonly DomainError InvalidBookItemId =
+      new(
+         WebErrorStatus.BadRequest,
+         "Loan: Invalid Book Item Id",
+         "The given book item id is invalid."
       );
 
    public static readonly DomainError InvalidLoanDate =
@@ -48,6 +62,13 @@ public static class LoanErrors {
          "The loan date must be a non-default UTC timestamp."
       );
 
+   public static readonly DomainError LoanPeriodRequired = 
+      new(
+         WebErrorStatus.BadRequest,
+         "Loan: LoanPeriod Required",
+         "Loan period is required."
+      );
+   
    public static readonly DomainError InvalidDueDate =
       new(
          WebErrorStatus.BadRequest,
@@ -162,11 +183,11 @@ public static class LoanErrors {
          "The book item must be available."
       );
 
-   public static readonly DomainError BookItemAlreadyHasActiveLoan =
+   public static readonly DomainError BookItemAlreadyBorrowed =
       new(
          WebErrorStatus.Conflict,
-         "Loan: Book Item Already Has Active Loan",
-         "The book item already has an active loan."
+         "Loan: Book Item Already Borrowed",
+         "The book item is already borrowed."
       );
 
 
@@ -192,4 +213,7 @@ public static class LoanErrors {
          "Loan: LoanRenewDtoRequired",
          "A LoanRenewDto object must be provided."
       );
+   
+   
+
 }

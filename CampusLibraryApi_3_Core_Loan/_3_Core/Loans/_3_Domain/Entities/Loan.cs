@@ -7,43 +7,57 @@ using CampusLibraryApi._3_Core.Loans._3_Domain.ValueObjects;
 namespace CampusLibraryApi._3_Core.Loans._3_Domain.Entities;
 
 public sealed class Loan : AggregateRoot {
-   public Guid ReaderId { get; private set; }
-   public Guid BookItemId { get; private set; }
-   public DateTime LoanDate { get; private set; }
-   public DateTime DueDate { get; private set; }
+   //--- properties ------------------------------------------------------------
+   // Inherited from Entity / AggregateRoot:
+   // public Guid Id { get; protected set; }
+   // public DateTime CreatedAt { get; protected set; }
+   // public DateTime UpdatedAt { get; protected set; }
+
+   // EF Core sets this property when materializing the aggregate.
+   // The domain factory always creates a valid LoanPeriodVo.
+   public LoanPeriodVo LoanPeriodVo { get; private set; } = null!;
+   public DateTime LoanDate => LoanPeriodVo.LoanDate;
+   public DateTime DueDate => LoanPeriodVo.DueDate;
+   
+   // Actual return timestamp.
+   // Null means: the book item has not been returned yet.
    public DateTime? ReturnedAt { get; private set; }
+
    public LoanStatus Status { get; private set; }
    public int RenewalCount { get; private set; }
 
+   public Guid ReaderId { get; private set; }
+   public Guid BookItemId { get; private set; }
+   
+   //--- constructors ----------------------------------------------------------
+   // Required by EF Core.
    private Loan() {
-      // Required by EF Core.
    }
 
+   // Domain ctor.
    private Loan(
       Guid id,
       Guid readerId,
       Guid bookItemId,
-      DateTime loanDate,
-      DateTime dueDate
+      LoanPeriodVo loanPeriodVo
    ) {
       Id = id;
       ReaderId = readerId;
       BookItemId = bookItemId;
-      LoanDate = loanDate;
-      DueDate = dueDate;
+      LoanPeriodVo = loanPeriodVo;
       ReturnedAt = null;
       Status = LoanStatus.Active;
       RenewalCount = 0;
-
-      Initialize(createdAt: loanDate);
    }
 
+   //--- factory methods -------------------------------------------------------
+   // Creates a new Loan aggregate and initializes its timestamps.
+   // Validation errors are returned as Result failures.
    public static Result<Loan> Create(
       Guid id,
       Guid readerId,
       Guid bookItemId,
-      DateTime loanDate,
-      DateTime dueDate
+      LoanPeriodVo? loanPeriodVo
    ) {
       if (id == Guid.Empty)
          return Result<Loan>.Failure(LoanErrors.LoanIdRequired);
@@ -54,25 +68,27 @@ public sealed class Loan : AggregateRoot {
       if (bookItemId == Guid.Empty)
          return Result<Loan>.Failure(LoanErrors.BookItemIdRequired);
 
-      Result<LoanPeriodVo> periodResult = LoanPeriodVo.Create(
-         loanDate: loanDate,
-         dueDate: dueDate
-      );
+      if (loanPeriodVo is null)
+         return Result<Loan>.Failure(LoanErrors.LoanPeriodRequired);
 
-      if (!periodResult.IsSuccess)
-         return Result<Loan>.Failure(periodResult.Error!);
-
-      Loan loan = new(
+      var loan = new Loan(
          id: id,
          readerId: readerId,
          bookItemId: bookItemId,
-         loanDate: periodResult.Value!.LoanDate,
-         dueDate: periodResult.Value!.DueDate
+         loanPeriodVo: loanPeriodVo
       );
+
+      var resultCreated = loan.Initialize(
+         createdAt: loanPeriodVo.LoanDate
+      );
+      if (resultCreated.IsFailure)
+         return Result<Loan>.Failure(resultCreated.Error);
 
       return Result<Loan>.Success(loan);
    }
 
+   //--- domain methods --------------------------------------------------------
+   // Returns the book item at the service desk.
    public Result ReturnAtDesk(DateTime returnedAt) {
       if (Status == LoanStatus.Returned)
          return Result.Failure(LoanErrors.LoanAlreadyReturned);
@@ -89,7 +105,9 @@ public sealed class Loan : AggregateRoot {
       ReturnedAt = returnedAt;
       Status = LoanStatus.Returned;
 
-      Touch(updatedAt: returnedAt);
+      Touch(
+         updatedAt: returnedAt
+      );
 
       return Result.Success();
    }
@@ -107,25 +125,27 @@ public sealed class Loan : AggregateRoot {
       if (!IsValidUtc(utcNow))
          return Result.Failure(LoanErrors.InvalidUtcNow);
 
-      if (IsOverdue(utcNow: utcNow))
+      if (IsOverdue(
+            utcNow: utcNow
+         ))
          return Result.Failure(LoanErrors.LoanAlreadyOverdue);
 
       if (RenewalCount >= LoanRules.MaxRenewals)
          return Result.Failure(LoanErrors.MaxRenewalsReached);
 
-      LoanPeriodVo currentPeriod = NewPeriodFromCurrentState();
-
-      Result<LoanPeriodVo> renewedPeriodResult = currentPeriod.RenewUntil(
+      Result<LoanPeriodVo> renewedPeriodResult = LoanPeriodVo.RenewUntil(
          newDueDate: newDueDate
       );
 
-      if (!renewedPeriodResult.IsSuccess)
-         return Result.Failure(renewedPeriodResult.Error!);
+      if (renewedPeriodResult.IsFailure)
+         return Result.Failure(renewedPeriodResult.Error);
 
-      DueDate = renewedPeriodResult.Value!.DueDate;
+      LoanPeriodVo = renewedPeriodResult.Value;
       RenewalCount += 1;
 
-      Touch(updatedAt: utcNow);
+      Touch(
+         updatedAt: utcNow
+      );
 
       return Result.Success();
    }
@@ -140,13 +160,9 @@ public sealed class Loan : AggregateRoot {
    public bool CanRenew(DateTime utcNow)
       => Status == LoanStatus.Active &&
          RenewalCount < LoanRules.MaxRenewals &&
-         !IsOverdue(utcNow: utcNow);
-
-   private LoanPeriodVo NewPeriodFromCurrentState()
-      => LoanPeriodVo.Create(
-            loanDate: LoanDate,
-            dueDate: DueDate
-         ).Value!;
+         !IsOverdue(
+            utcNow: utcNow
+         );
 
    private static bool IsValidUtc(DateTime value)
       => value != default &&

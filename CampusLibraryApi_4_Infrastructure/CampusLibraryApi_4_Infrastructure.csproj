@@ -1,6 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+  
+  <PropertyGroup>
     <OutputType>Library</OutputType>
     <RootNamespace>CampusLibraryApi</RootNamespace>
     <TargetFramework>net10.0</TargetFramework>
@@ -22,11 +26,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CampusLibraryApi_3_Core_Catalog\CampusLibraryApi_3_Core_Catalog.csproj" />
+    <ProjectReference Include="..\CampusLibraryApi_3_Core_Loan\CampusLibraryApi_3_Core_Loan.csproj" />
     <ProjectReference Include="..\CampusLibraryApi_3_Core_Readers\CampusLibraryApi_3_Core_Readers.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="_4_Infrastructure\Persistence\Contracts\" />
   </ItemGroup>
 
 </Project>

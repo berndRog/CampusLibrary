@@ -1,5 +1,6 @@
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._3_Core.Catalog._3_Domain.Entities;
+using CampusLibraryApi._3_Core.Loans._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
 using CampusLibraryApi._4_Infrastructure.Persistence;
@@ -63,5 +64,18 @@ public sealed class TestSeed {
    public string BookItem5Id => Seed.BookItem5Id;
    public string BookItem6Id => Seed.BookItem6Id;
    #endregion
+   
+   #region -------------- Test Loans (Aggregates) ------------------------------------------
+   public string Loan1Id => Seed.Loan1Id;
+   public string Loan2Id => Seed.Loan2Id;
+   public string Loan3Id => Seed.Loan3Id;
+
+   public Loan Loan1() => _seed.Loan1();
+   public Loan Loan2() => _seed.Loan2();
+   public Loan Loan3() => _seed.Loan3();
+   
+   public IReadOnlyList<Loan> Loans  => _seed.Loans;
+   #endregion
+
    
 }
