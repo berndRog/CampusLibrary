@@ -19,7 +19,7 @@ public interface IBookRepository {
       CancellationToken ct = default
    );
    
-   void Add(Book bookAlt);
+   void Add(Book book);
    void AddRange(IEnumerable<Book> books);
    
 }

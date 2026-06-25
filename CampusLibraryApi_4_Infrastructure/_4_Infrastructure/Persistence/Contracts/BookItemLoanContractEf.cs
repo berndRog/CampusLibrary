@@ -33,6 +33,7 @@ internal sealed class BookItemLoanContractEf(
             book.Id,
             bookItem.InventoryNumber,
             book.Title,
+            book.Subtitle,
             book.AuthorsText,
             book.IsbnVo.Value,
             book.IsActive,

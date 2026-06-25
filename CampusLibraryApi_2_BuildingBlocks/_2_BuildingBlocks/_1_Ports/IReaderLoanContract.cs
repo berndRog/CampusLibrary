@@ -8,7 +8,7 @@ public interface IReaderLoanContract {
 
    // Finds an active reader for a loan operation.
    // Returns failure if the reader does not exist or is not active.
-   Task<Result<ReaderLoanInfoDto>> FindActiveReaderForLoanAsync(
+   Task<Result<ReaderLoanInfoDto>> FindReaderForLoanAsync(
       Guid readerId,
       CancellationToken ct
    );

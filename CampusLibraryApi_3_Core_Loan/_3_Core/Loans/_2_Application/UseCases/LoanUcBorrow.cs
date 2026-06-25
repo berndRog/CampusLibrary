@@ -48,7 +48,7 @@ internal sealed class LoanUcBorrow(
       // Ask the Readers module whether this reader may borrow book items.
       // Loans does not access the Reader aggregate or the Readers table directly.
       var resultReader = await readerLoanContract
-         .FindActiveReaderForLoanAsync(dto.ReaderId, ct);
+         .FindReaderForLoanAsync(dto.ReaderId, ct);
       if (resultReader.IsFailure)
          return Result<LoanDto>.Failure(resultReader.Error);
 

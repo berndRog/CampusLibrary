@@ -6,6 +6,7 @@ public sealed record BookItemLoanInfoDto(
    Guid BookId,
    string InventoryNumber,
    string Title,
+   string? Subtitle,
    string AuthorsText,
    string Isbn,
    bool BookIsActive,

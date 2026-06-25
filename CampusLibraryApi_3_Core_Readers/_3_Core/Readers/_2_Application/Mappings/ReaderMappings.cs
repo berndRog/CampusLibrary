@@ -14,7 +14,6 @@ public static class ReaderMappings {
       AddressDto: reader.AddressVo.ToAddressDto(),
       IsActive: reader.IsActive,
       Subject: reader.Subject
-      
    );
    
    public static ReaderLoanInfoDto ToReaderLoanInfoDto(this Reader reader) =>

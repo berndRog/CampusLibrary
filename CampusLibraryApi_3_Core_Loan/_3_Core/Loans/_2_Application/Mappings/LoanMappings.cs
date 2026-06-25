@@ -11,7 +11,7 @@ public static class LoanMappings {
       ReaderId: loan.ReaderId,
       BookItemId: loan.BookItemId,
       ReturnedAt: loan.ReturnedAt,
-      Status: loan.Status,
+      Status: (int) loan.Status,
       RenewalCount: loan.RenewalCount
    );
    

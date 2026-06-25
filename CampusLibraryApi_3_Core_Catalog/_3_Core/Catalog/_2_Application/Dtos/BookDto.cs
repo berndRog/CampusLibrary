@@ -1,5 +1,6 @@
 namespace CampusLibraryApi._3_Core.Catalog._2_Application.Dtos;
 
+// API Response Dto
 public sealed record BookDto(
    Guid Id,
    string AuthorsText,

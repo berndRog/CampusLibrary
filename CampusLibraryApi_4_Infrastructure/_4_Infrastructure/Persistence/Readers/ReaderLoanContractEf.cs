@@ -18,7 +18,7 @@ internal sealed class ReaderLoanContractEf(
 
    // Finds loan-relevant information for one active reader.
    // The Loans module receives only the DTO, not the Reader aggregate.
-   public async Task<Result<ReaderLoanInfoDto>> FindActiveReaderForLoanAsync(
+   public async Task<Result<ReaderLoanInfoDto>> FindReaderForLoanAsync(
       Guid id,
       CancellationToken ct
    ) {

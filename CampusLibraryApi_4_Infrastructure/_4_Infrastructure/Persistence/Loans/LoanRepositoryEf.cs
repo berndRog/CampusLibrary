@@ -3,9 +3,8 @@ using CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Enums;
 using Microsoft.EntityFrameworkCore;
-
 [assembly: InternalsVisibleTo("CampusLibraryApiTest")]
-namespace CampusLibraryApi._4_Infrastructure._2_Persistence.Repositories;
+namespace CampusLibraryApi._4_Infrastructure.Persistence.Loans;
 
 // EF Core implementation of the Loan repository.
 // The repository loads and stores Loan aggregates for command use cases.

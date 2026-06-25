@@ -1,7 +1,6 @@
 namespace CampusLibraryApi._3_Core.Catalog._2_Application.Dtos;
 
-// DTO for displaying the details of one Book.
-// This DTO belongs to the query side and is optimized for read-only views.
+// API Response Dto
 public sealed record BookDetailDto(
    Guid Id,
    string AuthorsText,
@@ -9,9 +8,7 @@ public sealed record BookDetailDto(
    string? Subtitle,
    string Isbn,
    IReadOnlyList<BookItemDto> BookItems,
-   int TotalBookItems,
-   int AvailableBookItems,
-   bool IsActive,
-   DateTime CreatedAt,
-   DateTime UpdatedAt
+   int TotalItems,
+   int AvailableItems,
+   bool IsActive
 );

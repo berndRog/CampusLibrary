@@ -13,7 +13,6 @@ namespace CampusLibraryApi._1_Web.Controllers;
 // HTTP API controller for Book resources.
 // Translates HTTP requests into calls to read models or use cases.
 // Contains no domain logic.
-
 [ApiVersion("1.0")]
 [Route("camplib/v{version:apiVersion}")]
 [ApiController]
@@ -21,12 +20,16 @@ public sealed class BooksController(
    IBookReadModel bookReadModel,
    IBookUseCases bookUseCases
 ) : ControllerBase {
+
    /// <summary>
-   ///    Returns all active books.
+   ///    Returns books.
    /// </summary>
+   /// <param name="includeInactive">
+   ///    If true, inactive books are included. The default is false.
+   /// </param>
    /// <param name="ct">Cancellation token.</param>
-   /// <returns>A list of active book resources.</returns>
-   // Query all active books through the read model.
+   /// <returns>A list of book resources.</returns>
+   // Query books through the read model.
    [HttpGet("books", Name = nameof(GetAllBooksAsync))]
    [Produces("application/json")]
    [ProducesResponseType<IReadOnlyList<BookListItemDto>>(StatusCodes.Status200OK)]
@@ -34,13 +37,16 @@ public sealed class BooksController(
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    public async Task<ActionResult<IReadOnlyList<BookListItemDto>>> GetAllBooksAsync(
-      CancellationToken ct
+      [FromQuery] bool includeInactive = false,
+      CancellationToken ct = default
    ) {
-      var result = await bookReadModel.SelectAllAsync(ct);
+      var result = await bookReadModel.SelectAllAsync(
+         includeInactive, ct);
       if (result.IsSuccess)
          return Ok(result.Value);
 
-      var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+      var problem = DomainProblemDetailsFactory.FromDomainError(
+         result.Error, HttpContext);
 
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),
@@ -51,12 +57,15 @@ public sealed class BooksController(
    }
 
    /// <summary>
-   ///    Returns one active book by id.
+   ///    Returns one book by id.
    /// </summary>
    /// <param name="id">Book unique id.</param>
+   /// <param name="includeInactive">
+   ///    If true, inactive books are included. The default is false.
+   /// </param>
    /// <param name="ct">Cancellation token.</param>
    /// <returns>The requested book detail resource.</returns>
-   // Query one active book by id through the read model.
+   // Query one book by id through the read model.
    [HttpGet("books/{id:guid}", Name = nameof(GetBookByIdAsync))]
    [Produces("application/json")]
    [ProducesResponseType<BookDetailDto>(StatusCodes.Status200OK)]
@@ -66,13 +75,17 @@ public sealed class BooksController(
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
    public async Task<ActionResult<BookDetailDto>> GetBookByIdAsync(
       [FromRoute] Guid id,
-      CancellationToken ct
+      [FromQuery] bool includeInactive = false,
+      CancellationToken ct = default
    ) {
-      var result = await bookReadModel.FindByIdAsync(id, ct);
+      var result = await bookReadModel.FindByIdAsync(
+         id, includeInactive, ct);
+
       if (result.IsSuccess)
          return Ok(result.Value);
 
-      var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+      var problem = DomainProblemDetailsFactory.FromDomainError(
+         result.Error, HttpContext);
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),
          WebErrorStatus.Unauthorized => Unauthorized(problem),
@@ -83,13 +96,18 @@ public sealed class BooksController(
    }
 
    /// <summary>
-   ///    Searches active books by one search criterion.
+   ///    Searches books by one search criterion.
    /// </summary>
-   /// <param name="searchField">Search field: Title, AuthorName or Isbn.</param>
+   /// <param name="searchField">
+   ///    Search field: Title, AuthorLastName or Isbn.
+   /// </param>
    /// <param name="searchText">Search text.</param>
+   /// <param name="includeInactive">
+   ///    If true, inactive books are included in the search. The default is false.
+   /// </param>
    /// <param name="ct">Cancellation token.</param>
-   /// <returns>A list of matching active book resources.</returns>
-   // Search active books through the read model.
+   /// <returns>A list of matching book resources.</returns>
+   // Search books through the read model.
    [HttpGet("books/search", Name = nameof(SearchBooksAsync))]
    [Produces("application/json")]
    [ProducesResponseType<IReadOnlyList<BookListItemDto>>(StatusCodes.Status200OK)]
@@ -99,18 +117,20 @@ public sealed class BooksController(
    public async Task<ActionResult<IReadOnlyList<BookListItemDto>>> SearchBooksAsync(
       [FromQuery] BookSearchField searchField,
       [FromQuery] string searchText,
-      CancellationToken ct
+      [FromQuery] bool includeInactive = false,
+      CancellationToken ct = default
    ) {
-      var search = new BookSearchDto(
-         SearchField: searchField,
-         SearchText: searchText
-      );
+      var search = new BookSearchDto(searchField, searchText);
 
-      var result = await bookReadModel.SearchAsync(search, ct);
+      var result = await bookReadModel.SearchAsync(
+         search, includeInactive, ct);
+      
       if (result.IsSuccess)
          return Ok(result.Value);
 
-      var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+      var problem = DomainProblemDetailsFactory.FromDomainError(
+         result.Error, HttpContext);
+
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),
          WebErrorStatus.Unauthorized => Unauthorized(problem),
@@ -118,37 +138,7 @@ public sealed class BooksController(
          _ => BadRequest(problem)
       };
    }
-/*
-   /// <summary>
-   ///    Returns all active books assigned to one author.
-   /// </summary>
-   /// <param name="authorId">Author unique id.</param>
-   /// <param name="ct">Cancellation token.</param>
-   /// <returns>A list of active books assigned to the author.</returns>
-   // Query active books by author id through the read model.
-   [HttpGet("books/by-author/{authorId:guid}", Name = nameof(GetBooksByAuthorIdAsync))]
-   [Produces("application/json")]
-   [ProducesResponseType<IReadOnlyList<BookListItemDto>>(StatusCodes.Status200OK)]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
-   public async Task<ActionResult<IReadOnlyList<BookListItemDto>>> GetBooksByAuthorIdAsync(
-      [FromRoute] Guid authorId,
-      CancellationToken ct
-   ) {
-      var result = await bookReadModel.SelectByAuthorIdAsync(authorId, ct);
-      if (result.IsSuccess)
-         return Ok(result.Value);
 
-      var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
-      return result.Error.Status switch {
-         WebErrorStatus.BadRequest => BadRequest(problem),
-         WebErrorStatus.Unauthorized => Unauthorized(problem),
-         WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
-         _ => BadRequest(problem)
-      };
-   }
-*/
    /// <summary>
    ///    Creates a new book.
    /// </summary>
@@ -169,9 +159,10 @@ public sealed class BooksController(
       CancellationToken ct
    ) {
       var result = await bookUseCases.CreateAsync(dto, ct);
-      
       if (result.IsSuccess) {
-         var requestedApiVersion = HttpContext.Features.Get<IApiVersioningFeature>()?.RequestedApiVersion;
+         var requestedApiVersion =
+            HttpContext.Features.Get<IApiVersioningFeature>()?.RequestedApiVersion;
+
          return CreatedAtRoute(
             routeName: nameof(GetBookByIdAsync),
             routeValues: new {
@@ -182,7 +173,9 @@ public sealed class BooksController(
          );
       }
 
-      var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+      var problem = DomainProblemDetailsFactory.FromDomainError(
+         result.Error, HttpContext);
+
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),
          WebErrorStatus.Unauthorized => Unauthorized(problem),
@@ -214,11 +207,20 @@ public sealed class BooksController(
       [FromBody] BookItemAddDto dto,
       CancellationToken ct
    ) {
-      var result = await bookUseCases.AddBookItemAsync(bookId, dto, ct);
+      var result = await bookUseCases.AddBookItemAsync(
+         id: bookId,
+         dto: dto,
+         ct: ct
+      );
+
       if (result.IsSuccess)
          return Ok(result.Value);
 
-      var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+      var problem = DomainProblemDetailsFactory.FromDomainError(
+         result.Error,
+         HttpContext
+      );
+
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),
          WebErrorStatus.Unauthorized => Unauthorized(problem),
@@ -247,11 +249,18 @@ public sealed class BooksController(
       [FromRoute] Guid bookId,
       CancellationToken ct
    ) {
-      var result = await bookUseCases.DeactivateAsync(bookId, ct);
+      var result = await bookUseCases.DeactivateAsync(
+         id: bookId,
+         ct: ct
+      );
+
       if (result.IsSuccess)
          return Ok(result.Value);
 
-      var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+      var problem = DomainProblemDetailsFactory.FromDomainError(
+         result.Error,
+         HttpContext
+      );
 
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),
@@ -275,29 +284,45 @@ Result in eine HTTP-Antwort übersetzt wird.
 
 GET-Endpunkte verwenden das ReadModel:
 
-* GetAllBooksAsync        -> IBookReadModel.SelectAllAsync
-* GetBookByIdAsync        -> IBookReadModel.FindByIdAsync
-* SearchBooksAsync        -> IBookReadModel.SearchAsync
-* GetBooksByAuthorIdAsync -> IBookReadModel.SelectByAuthorIdAsync
+* GetAllBooksAsync -> IBookReadModel.SelectAllAsync
+* GetBookByIdAsync -> IBookReadModel.FindByIdAsync
+* SearchBooksAsync -> IBookReadModel.SearchAsync
 
 Schreibende Endpunkte verwenden die UseCase-Fassade:
 
 * CreateBookAsync     -> IBookUseCases.CreateAsync
 * AddBookItemAsync    -> IBookUseCases.AddBookItemAsync
-* AssignAuthorAsync   -> IBookUseCases.AssignAuthorAsync
 * DeactivateBookAsync -> IBookUseCases.DeactivateAsync
 
-Die Fallunterscheidung im Controller ist bewusst explizit gehalten.
-Dadurch sehen Studierende direkt, welcher DomainError.Status zu welcher
-HTTP-Antwort führt.
+Die normale Sicht auf den Catalog liefert nur aktive Books:
+
+   includeInactive = false
+
+Eine administrative oder interne Sicht kann inaktive Books einbeziehen:
+
+   includeInactive = true
+
+Die Ressource bleibt dabei dieselbe. Es gibt keinen zusätzlichen Endpunkt wie
+/books/with-inactive. Stattdessen wird die Sicht auf die Ressource über einen
+Query-Parameter erweitert:
+
+   GET /books?includeInactive=true
+   GET /books/{id}?includeInactive=true
+   GET /books/search?searchField=Title&searchText=clean&includeInactive=true
 
 Deactivate ist kein Delete. Ein Book wird fachlich deaktiviert, aber nicht
 physisch gelöscht. Das ReadModel entscheidet anschließend, ob inaktive Books
-in normalen Listen und Suchen angezeigt werden.
+in Listen, Details und Suchen sichtbar sind.
 
 BookItems sind physische Exemplare eines Book. Sie werden über das Book-
-Aggregate hinzugefügt. Authors werden über die Book-Author-Beziehung
-zugeordnet. Die Join-Tabelle bleibt ein Infrastrukturdetail.
+Aggregate hinzugefügt. Ihr Status beschreibt den fachlichen Zustand eines
+Exemplars, zum Beispiel Available, Unavailable, Lost oder Damaged.
+
+In dieser reduzierten Catalog-Version gibt es keine eigene Author-Entity mehr.
+Autorinnen und Autoren werden als kommaseparierter Text im Book gespeichert.
+Eine Suche nach Autor erfolgt deshalb über SearchAsync mit dem Suchfeld
+AuthorLastName. Einen Endpunkt wie /books/by-author/{authorId} gibt es nicht
+mehr.
 
 Swagger-Attribute dokumentieren die erwarteten Erfolgs- und Fehlerantworten.
 Sie machen die API für Clients und Tests explizit nachvollziehbar.
@@ -305,12 +330,11 @@ Sie machen die API für Clients und Tests explizit nachvollziehbar.
 ## Lernziele
 * Controller als HTTP-Adapter verstehen
 * Unterschied zwischen GET/ReadModel und schreibenden UseCases erkennen
-* m:n-Zuordnung zwischen Book und Author über einen HTTP-Endpunkt auslösen
+* ReadModel-Parameter für unterschiedliche Sichten verwenden
 * 1:n-Beziehung zwischen Book und BookItem über einen HTTP-Endpunkt auslösen
 * Deactivate als fachliche Zustandsänderung verstehen
 * DomainError.Status explizit auf HTTP-Antworten abbilden
 * ProblemDetails als standardisiertes Fehlerformat verwenden
 * Swagger-Metadaten für API-Dokumentation einsetzen
 * Keine Domainlogik im Controller platzieren
-  
 */

@@ -15,14 +15,14 @@ public interface IBookUseCases {
 
    // Adds a physical BookItem to an existing Book.
    Task<Result<BookItemDto>> AddBookItemAsync(
-      Guid bookId,
+      Guid id,
       BookItemAddDto? dto,
       CancellationToken ct = default
    );
    
    // Deactivates a Book without physically deleting it from the database.
    Task<Result<BookDto>> DeactivateAsync(
-      Guid bookId,
+      Guid id,
       CancellationToken ct = default
    );
 }

@@ -1,7 +1,5 @@
 using CampusLibraryApi._3_Core.Catalog._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Catalog._3_Domain.Entities;
-using CampusLibraryApi._3_Core.Catalog._3_Domain.Enums;
-
 namespace CampusLibraryApi._3_Core.Catalog._2_Application.Mappings;
 
 public static class CatalogMappings {
@@ -22,6 +20,6 @@ public static class CatalogMappings {
          Id: bookItem.Id,
          BookId: bookItem.BookId,
          InventoryNumber: bookItem.InventoryNumber,
-         Status: bookItem.Status
+         Status: (int) bookItem.Status
       );
 }

@@ -9,6 +9,7 @@ using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
 using CampusLibraryApiTest.TestHelper.Mappings;
 using CampusLibraryApiTest.TestInfrastructure;
 using Microsoft.Extensions.DependencyInjection;
+
 namespace CampusLibraryApiTest._2_ApplicationTests.UseCases_Integration;
 
 public sealed class ReaderUseCasesIntT : TestBaseIntegration {
@@ -20,6 +21,7 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
    }
 
    #region ReaderUcCreate
+
    [Fact]
    public async Task CreateAsync_ok_persists_reader_to_database() {
       using var scope = Root.CreateDefaultScope();
@@ -33,13 +35,20 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
       var dto = Mappings.ToReaderCreateDto(reader1);
 
       // Act
-      var resultCreateReader1Dto = await useCases.CreateAsync(dto, ct);
+      var resultCreateReader1Dto = await useCases.CreateAsync(
+         dto: dto,
+         ct: ct
+      );
+
       resultCreateReader1Dto.IsSuccess.Should().BeTrue();
       var createReader1Dto = resultCreateReader1Dto.Value;
-      
+
       // Assert
-      var resultFind = await readModel.FindByIdAsync(createReader1Dto.Id, ct);
-      
+      var resultFind = await readModel.FindByIdAsync(
+         id: createReader1Dto.Id,
+         ct: ct
+      );
+
       resultFind.IsSuccess.Should().BeTrue();
       var actualReader1Dto = resultFind.Value;
       actualReader1Dto.Should().BeEquivalentTo(createReader1Dto);
@@ -53,7 +62,7 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
       var repository = scope.ServiceProvider.GetRequiredService<IReaderRepository>();
       var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
-      
+
       // Arrange
       var reader1 = seed.Reader1();
       var reader2Dto = Mappings.ToReaderCreateDto(seed.Reader2());
@@ -66,16 +75,20 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
       unitOfWork.ClearChangeTracker();
 
       // Act
-      var result = await useCases.CreateAsync(reader2DtoWithSameEmail, ct);
-     
+      var result = await useCases.CreateAsync(
+         dto: reader2DtoWithSameEmail,
+         ct: ct
+      );
+
       // Assert
       result.IsFailure.Should().BeTrue();
       result.Error.Should().Be(ReaderErrors.EmailAlreadyInUse);
-      
    }
+
    #endregion
 
    #region ReadUcUpdate
+
    [Fact]
    public async Task UpdateAsync_ok_persists_changes_to_database() {
       using var scope = Root.CreateDefaultScope();
@@ -88,11 +101,13 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
 
       // Arrange
       var reader = seed.Reader1();
+
       repository.Add(reader);
       await unitOfWork.SaveAllChangesAsync("Reader1 inserted", ct);
       unitOfWork.ClearChangeTracker();
 
       var addressDto = seed.Address4Vo.ToAddressDto();
+
       var dto = new ReaderUpdateDto(
          Lastname: "Meier",
          Email: "e.meier@gmx.de",
@@ -100,14 +115,23 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
       );
 
       // Act
-      var resultUpdate = await useCases.UpdateAsync(reader.Id, dto, ct);
-      
+      var resultUpdate = await useCases.UpdateAsync(
+         id: reader.Id,
+         dto: dto,
+         ct: ct
+      );
+
       resultUpdate.IsSuccess.Should().BeTrue();
       var updatedReader1Dto = resultUpdate.Value;
+
       unitOfWork.ClearChangeTracker();
-      
+
       // Assert
-      var resultFind = await readModel.FindByIdAsync(reader.Id, ct);
+      var resultFind = await readModel.FindByIdAsync(
+         id: reader.Id,
+         ct: ct
+      );
+
       resultFind.IsSuccess.Should().BeTrue();
       var actualReader1Dto = resultFind.Value;
       actualReader1Dto.Should().BeEquivalentTo(updatedReader1Dto);
@@ -126,6 +150,7 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
       // Arrange
       var reader1 = seed.Reader1();
       var reader2 = seed.Reader2();
+
       repository.AddRange([reader1, reader2]);
       await unitOfWork.SaveAllChangesAsync("Reader1 and Reader2 inserted", ct);
       unitOfWork.ClearChangeTracker();
@@ -137,14 +162,22 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
       );
 
       // Act
-      var resultUpdate = await useCases.UpdateAsync(reader1.Id, dto, ct);
+      var resultUpdate = await useCases.UpdateAsync(
+         id: reader1.Id,
+         dto: dto,
+         ct: ct
+      );
+
       unitOfWork.ClearChangeTracker();
-      
+
       // Assert
       resultUpdate.IsFailure.Should().BeTrue();
       resultUpdate.Error.Should().Be(ReaderErrors.EmailAlreadyInUse);
    }
+
    #endregion
+
+   #region ReaderUcDeactivate
 
    [Fact]
    public async Task DeactivateAsync_ok_hides_reader_from_normal_queries() {
@@ -181,10 +214,12 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
       );
 
       activeFindResult.IsFailure.Should().BeTrue();
+      activeFindResult.Error.Should().Be(ReaderErrors.ReaderNotFound);
 
       // Assert: administrative/internal queries can still find the reader.
-      var inactiveFindResult = await readModel.FindByIdWithInactiveAsync(
+      var inactiveFindResult = await readModel.FindByIdAsync(
          id: reader.Id,
+         includeInactive: true,
          ct: ct
       );
 
@@ -192,7 +227,7 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
       inactiveFindResult.Value.Id.Should().Be(reader.Id);
       inactiveFindResult.Value.IsActive.Should().BeFalse();
    }
-   
+
    [Fact]
    public async Task DeactivateAsync_unknown_reader_fails() {
       using var scope = Root.CreateDefaultScope();
@@ -213,4 +248,6 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
       deactivateResult.IsFailure.Should().BeTrue();
       deactivateResult.Error.Should().Be(ReaderErrors.ReaderNotFound);
    }
+
+   #endregion
 }

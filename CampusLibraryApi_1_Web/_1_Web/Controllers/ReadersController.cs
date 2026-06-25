@@ -1,7 +1,6 @@
 using Asp.Versioning;
 using CampusLibraryApi._1_Web.Common;
 using CampusLibraryApi._2_BuildingBlocks._3_Domain.Enums;
-using CampusLibraryApi._3_Core.Readers._1_Ports;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Inbound;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
@@ -28,23 +27,36 @@ public sealed class ReaderController(
 ) : ControllerBase {
 
    /// <summary>
-   ///    Returns all active readers.
+   ///    Returns readers.
    /// </summary>
+   /// <param name="includeInactive">
+   ///    If true, inactive readers are included. Otherwise only active readers are returned.
+   /// </param>
    /// <param name="ct">Cancellation token.</param>
    /// <returns>A list of reader resources.</returns>
    // Query all readers through the read model.
-   [HttpGet("readers", Name = nameof(GetAllAsync))]
+   // The default view returns only active readers.
+   // Administrative views can include inactive readers by using includeInactive=true.
+   [HttpGet("readers", Name = nameof(GetAllReadersAsync))]
    [Produces("application/json")]
    [ProducesResponseType<IReadOnlyList<ReaderDto>>(StatusCodes.Status200OK)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
-   public async Task<ActionResult<IReadOnlyList<ReaderDto>>> GetAllAsync(CancellationToken ct) {
-      var result = await readerReadModel.SelectAllAsync(ct);
-      if (result.IsSuccess)
+   public async Task<ActionResult<IReadOnlyList<ReaderDto>>> GetAllReadersAsync(
+      [FromQuery] bool includeInactive,
+      CancellationToken ct
+   ) {
+      var result = await readerReadModel.SelectAllAsync(
+         includeInactive: includeInactive,
+         ct: ct
+      );
+
+      if(result.IsSuccess)
          return Ok(result.Value);
 
       var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),
          WebErrorStatus.Unauthorized => Unauthorized(problem),
@@ -57,24 +69,36 @@ public sealed class ReaderController(
    ///    Returns one reader by id.
    /// </summary>
    /// <param name="id">Reader unique id.</param>
+   /// <param name="includeInactive">
+   ///    If true, inactive readers are included. Otherwise only active readers are returned.
+   /// </param>
    /// <param name="ct">Cancellation token.</param>
    /// <returns>The requested reader resource.</returns>
    // Query one reader by id through the read model.
-   [HttpGet("readers/{id:guid}", Name = nameof(GetByIdAsync))]
+   // The default view returns only active readers.
+   // Administrative views can include inactive readers by using includeInactive=true.
+   [HttpGet("readers/{id:guid}", Name = nameof(GetReaderByIdAsync))]
    [Produces("application/json")]
    [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
-   public async Task<ActionResult<ReaderDto>> GetByIdAsync(
+   public async Task<ActionResult<ReaderDto>> GetReaderByIdAsync(
       [FromRoute] Guid id,
+      [FromQuery] bool includeInactive,
       CancellationToken ct
    ) {
-      var result = await readerReadModel.FindByIdAsync(id, ct);
-      if (result.IsSuccess)
+      var result = await readerReadModel.FindByIdAsync(
+         id: id,
+         includeInactive: includeInactive,
+         ct: ct
+      );
+
+      if(result.IsSuccess)
          return Ok(result.Value);
 
       var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+
       return result.Error.Status switch {
          WebErrorStatus.Unauthorized => Unauthorized(problem),
          WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
@@ -87,23 +111,33 @@ public sealed class ReaderController(
    ///    Returns one reader by email address.
    /// </summary>
    /// <param name="email">Reader email address.</param>
+   /// <param name="includeInactive">
+   ///    If true, inactive readers are included. Otherwise only active readers are returned.
+   /// </param>
    /// <param name="ct">Cancellation token.</param>
    /// <returns>The requested reader resource.</returns>
    // Query one reader by email through the read model.
-   [HttpGet("readers/email", Name = nameof(GetByEmailAsync))]
+   // The default view returns only active readers.
+   // Administrative views can include inactive readers by using includeInactive=true.
+   [HttpGet("readers/email", Name = nameof(GetReaderByEmailAsync))]
    [Produces("application/json")]
    [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
-   public async Task<ActionResult<ReaderDto>> GetByEmailAsync(
+   public async Task<ActionResult<ReaderDto>> GetReaderByEmailAsync(
       [FromQuery] string email,
+      [FromQuery] bool includeInactive,
       CancellationToken ct
    ) {
-      var result = await readerReadModel.FindByEmailAsync(email, ct);
+      var result = await readerReadModel.FindByEmailAsync(
+         email: email,
+         includeInactive: includeInactive,
+         ct: ct
+      );
 
-      if (result.IsSuccess)
+      if(result.IsSuccess)
          return Ok(result.Value);
 
       var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
@@ -124,7 +158,7 @@ public sealed class ReaderController(
    /// <param name="ct">Cancellation token.</param>
    /// <returns>The created reader resource.</returns>
    // Create a new reader through the write-side use case.
-   [HttpPost("readers", Name = nameof(CreateAsync))]
+   [HttpPost("readers", Name = nameof(CreateReaderAsync))]
    [Consumes("application/json")]
    [Produces("application/json")]
    [ProducesResponseType<ReaderDto>(StatusCodes.Status201Created)]
@@ -132,16 +166,20 @@ public sealed class ReaderController(
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
-   public async Task<ActionResult<ReaderDto>> CreateAsync(
+   public async Task<ActionResult<ReaderDto>> CreateReaderAsync(
       [FromBody] ReaderCreateDto dto,
       CancellationToken ct
    ) {
-      var result = await readerUseCases.CreateAsync(dto, ct);
+      var result = await readerUseCases.CreateAsync(
+         dto: dto,
+         ct: ct
+      );
 
-      if (result.IsSuccess) {
+      if(result.IsSuccess) {
          var requestedApiVersion = HttpContext.Features.Get<IApiVersioningFeature>()?.RequestedApiVersion;
+
          return CreatedAtRoute(
-            routeName: nameof(GetByIdAsync),
+            routeName: nameof(GetReaderByIdAsync),
             routeValues: new {
                version = requestedApiVersion?.ToString() ?? "1",
                id = result.Value.Id
@@ -169,7 +207,7 @@ public sealed class ReaderController(
    /// <param name="ct">Cancellation token.</param>
    /// <returns>The updated reader resource.</returns>
    // Update an existing reader through the write-side use case.
-   [HttpPut("readers/{id:guid}", Name = nameof(UpdateAsync))]
+   [HttpPut("readers/{id:guid}", Name = nameof(UpdateReaderAsync))]
    [Consumes("application/json")]
    [Produces("application/json")]
    [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
@@ -178,14 +216,18 @@ public sealed class ReaderController(
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
-   public async Task<ActionResult<ReaderDto>> UpdateAsync(
+   public async Task<ActionResult<ReaderDto>> UpdateReaderAsync(
       [FromRoute] Guid id,
       [FromBody] ReaderUpdateDto dto,
       CancellationToken ct
    ) {
-      var result = await readerUseCases.UpdateAsync(id, dto, ct);
+      var result = await readerUseCases.UpdateAsync(
+         id: id,
+         dto: dto,
+         ct: ct
+      );
 
-      if (result.IsSuccess)
+      if(result.IsSuccess)
          return Ok(result.Value);
 
       var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
@@ -209,23 +251,23 @@ public sealed class ReaderController(
    // Deactivate an existing reader through the write-side use case.
    // This is a soft delete: the reader remains stored,
    // but is hidden from normal read model queries.
-   [HttpDelete("readers/{id:guid}", Name = nameof(DeactivateAsync))]
+   [HttpDelete("readers/{id:guid}", Name = nameof(DeactivateReaderAsync))]
    [ProducesResponseType(StatusCodes.Status204NoContent)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
-   public async Task<IActionResult> DeactivateAsync(
+   public async Task<IActionResult> DeactivateReaderAsync(
       [FromRoute] Guid id,
       CancellationToken ct
    ) {
       var result = await readerUseCases.DeactivateAsync(
-         id,
-         ct
+         id: id,
+         ct: ct
       );
 
-      if (result.IsSuccess)
+      if(result.IsSuccess)
          return NoContent();
 
       var problem = DomainProblemDetailsFactory.FromDomainError(
@@ -239,83 +281,6 @@ public sealed class ReaderController(
          WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
          WebErrorStatus.NotFound => NotFound(problem),
          WebErrorStatus.Conflict => Conflict(problem),
-         _ => BadRequest(problem)
-      };
-   }
-   
-   /// <summary>
-   ///    Returns one reader by id, including inactive readers.
-   /// </summary>
-   /// <param name="id">Reader unique id.</param>
-   /// <param name="ct">Cancellation token.</param>
-   /// <returns>The requested reader resource, even if it is inactive.</returns>
-   // Query one reader by id through the read model, including inactive readers.
-   // This endpoint is intended for administrative or internal views.
-   [HttpGet("readers/{id:guid}/with-inactive", Name = nameof(GetByIdWithInactiveAsync))]
-   [Produces("application/json")]
-   [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
-   public async Task<ActionResult<ReaderDto>> GetByIdWithInactiveAsync(
-      [FromRoute] Guid id,
-      CancellationToken ct
-   ) {
-      var result = await readerReadModel.FindByIdWithInactiveAsync(
-         id,
-         ct
-      );
-
-      if (result.IsSuccess)
-         return Ok(result.Value);
-
-      var problem = DomainProblemDetailsFactory.FromDomainError(
-         result.Error,
-         HttpContext
-      );
-
-      return result.Error.Status switch {
-         WebErrorStatus.BadRequest => BadRequest(problem),
-         WebErrorStatus.Unauthorized => Unauthorized(problem),
-         WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
-         WebErrorStatus.NotFound => NotFound(problem),
-         _ => BadRequest(problem)
-      };
-   }
-   
-   /// <summary>
-   ///    Returns all readers, including inactive readers.
-   /// </summary>
-   /// <param name="ct">Cancellation token.</param>
-   /// <returns>A list of reader resources, including inactive readers.</returns>
-   // Query all readers through the read model, including inactive readers.
-   // This endpoint is intended for administrative or internal views.
-   [HttpGet("readers/with-inactive", Name = nameof(GetAllWithInactiveAsync))]
-   [Produces("application/json")]
-   [ProducesResponseType<IReadOnlyList<ReaderDto>>(StatusCodes.Status200OK)]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
-   public async Task<ActionResult<IReadOnlyList<ReaderDto>>> GetAllWithInactiveAsync(
-      CancellationToken ct
-   ) {
-      var result = await readerReadModel.SelectAllWithInactiveAsync(
-         ct
-      );
-
-      if (result.IsSuccess)
-         return Ok(result.Value);
-
-      var problem = DomainProblemDetailsFactory.FromDomainError(
-         result.Error,
-         HttpContext
-      );
-
-      return result.Error.Status switch {
-         WebErrorStatus.BadRequest => BadRequest(problem),
-         WebErrorStatus.Unauthorized => Unauthorized(problem),
-         WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
          _ => BadRequest(problem)
       };
    }
@@ -333,15 +298,31 @@ Result in eine HTTP-Antwort übersetzt wird.
 
 GET-Endpunkte verwenden das ReadModel:
 
-- GetAllAsync      -> IReaderReadModel.SelectAllAsync
-- GetByIdAsync     -> IReaderReadModel.FindByIdAsync
-- GetByEmailAsync  -> IReaderReadModel.FindByEmailAsync
+- GetAllReadersAsync      -> IReaderReadModel.SelectAllAsync
+- GetReaderByIdAsync      -> IReaderReadModel.FindByIdAsync
+- GetReaderByEmailAsync   -> IReaderReadModel.FindByEmailAsync
 
 Schreibende Endpunkte verwenden die UseCase-Fassade:
 
-- CreateAsync      -> IReaderUseCases.CreateAsync
-- UpdateAsync      -> IReaderUseCases.UpdateAsync
-- DeactivateAsync  -> IReaderUseCases.DeactivatedAsync
+- CreateReaderAsync       -> IReaderUseCases.CreateAsync
+- UpdateReaderAsync       -> IReaderUseCases.UpdateAsync
+- DeactivateReaderAsync   -> IReaderUseCases.DeactivateAsync
+
+Die normale Sicht auf Reader liefert nur aktive Reader. Inaktive Reader
+werden nicht über zusätzliche Routen wie /with-inactive abgefragt, sondern
+über einen Query-Parameter:
+
+   GET /readers
+   GET /readers?includeInactive=true
+
+   GET /readers/{id}
+   GET /readers/{id}?includeInactive=true
+
+   GET /readers/email?email=max@example.org
+   GET /readers/email?email=max@example.org&includeInactive=true
+
+Dadurch bleibt die API ruhiger: Die Ressource bleibt dieselbe, nur die
+Sicht auf diese Ressource wird über einen Parameter erweitert.
 
 Die Fallunterscheidung im Controller ist bewusst explizit gehalten.
 Dadurch sehen Studierende direkt, welcher DomainError.Status zu welcher
@@ -372,5 +353,6 @@ Lernziele
 - 401 Unauthorized und 403 Forbidden unterscheiden
 - ProblemDetails als standardisiertes Fehlerformat verwenden
 - Swagger-Metadaten für API-Dokumentation einsetzen
+- Query-Parameter zur Erweiterung einer Standardsicht verwenden
 - Keine Domainlogik im Controller platzieren
 */

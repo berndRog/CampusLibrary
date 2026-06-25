@@ -1,7 +1,10 @@
+using System.Runtime.CompilerServices;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Entities;
 using CampusLibraryApi._4_Infrastructure.Persistence.Converters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+[assembly: InternalsVisibleTo("CampusLibraryApiTest")]
 namespace CampusLibraryApi._4_Infrastructure.Persistence.Loans;
 
 internal sealed class ConfigLoan(

@@ -8,27 +8,16 @@ namespace CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
 public interface ILoanReadModel {
 
    // Finds one loan by its id.
-   Task<Result<LoanDto>> FindByIdAsync(
+   Task<Result<LoanDetailDto>> FindByIdAsync(
       Guid id,
       CancellationToken ct
    );
 
    // Returns all currently active loans.
-   Task<Result<IReadOnlyList<LoanDto>>> FindAllActiveAsync(
+   Task<Result<IReadOnlyList<LoanListItemDto>>> FindAllActiveAsync(
       CancellationToken ct
    );
-
-   // Returns all currently active loans for one reader.
-   Task<Result<IReadOnlyList<LoanDto>>> FindActiveByReaderIdAsync(
-      Guid readerId,
-      CancellationToken ct
-   );
-
-   // Returns all active loans whose due date is before the given timestamp.
-   Task<Result<IReadOnlyList<LoanDto>>> FindAllOverdueAsync(
-      DateTime utcNow,
-      CancellationToken ct
-   );
+   
 }
 
 /*
