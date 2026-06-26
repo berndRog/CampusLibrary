@@ -7,8 +7,8 @@ public interface IBookItemLoanContract {
 
    // Finds loan-relevant information for one concrete book item.
    // The Loans module must not access Book, BookItem or the Catalog tables directly.
-   Task<Result<BookItemLoanInfoDto>> FindByIdAsync(
-      Guid bookItemId,
+   Task<Result<BookItemLoanInfoDto>> FindBookItemForLoanAsync(
+      Guid id,
       CancellationToken ct
    );
 }

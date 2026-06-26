@@ -14,13 +14,13 @@ public interface ILoanUseCases {
       CancellationToken ct
    );
 
-   // Renews an active loan if the domain rules allow it.
+   // Renews a borrowed loan if the domain rules allow it.
    // The maximum number of renewals is defined in the domain rules.
    Task<Result<LoanDto>> RenewAsync(
       Guid loanId,
       CancellationToken ct
    );
-   
+
    // Returns a borrowed book item at the service desk.
    // The actual return timestamp is provided by the application service.
    Task<Result<LoanDto>> ReturnAtDeskAsync(
@@ -40,8 +40,10 @@ nach außen anbietet. Der Controller kennt nur dieses Interface und nicht die
 konkrete Implementierung der Use Cases.
 
 Die Methoden sind bewusst als Commands formuliert:
-BorrowAsync verändert den Zustand, ReturnAtDeskAsync verändert den Zustand
-und RenewAsync verändert den Zustand.
+
+- BorrowAsync legt eine neue Ausleihe an.
+- RenewAsync verlängert eine aktuell ausgeliehene Ausleihe.
+- ReturnAtDeskAsync registriert die Rückgabe eines ausgeliehenen Exemplars.
 
 Leseoperationen stehen hier nicht. Sie gehören in diesem Projekt konsequent
 in ein ReadModel. Dadurch bleibt die Trennung zwischen schreibenden Use Cases
@@ -49,4 +51,7 @@ und lesenden Projektionen sichtbar.
 
 Wichtig ist außerdem: Der Client liefert bei BorrowAsync keine Leihdauer.
 Die Leihdauer ist eine fachliche Regel des Loans-Moduls.
+
+Loans besitzen kein IsActive-Flag. Der fachliche Zustand wird über
+LoanStatus modelliert. Eine offene Ausleihe hat den Status Borrowed.
 */

@@ -46,7 +46,7 @@ public sealed class Loan : AggregateRoot {
       BookItemId = bookItemId;
       LoanPeriodVo = loanPeriodVo;
       ReturnedAt = null;
-      Status = LoanStatus.Active;
+      Status = LoanStatus.Borrowed;
       RenewalCount = 0;
    }
 
@@ -78,9 +78,7 @@ public sealed class Loan : AggregateRoot {
          loanPeriodVo: loanPeriodVo
       );
 
-      var resultCreated = loan.Initialize(
-         createdAt: loanPeriodVo.LoanDate
-      );
+      var resultCreated = loan.Initialize(loanPeriodVo.LoanDate);
       if (resultCreated.IsFailure)
          return Result<Loan>.Failure(resultCreated.Error);
 
@@ -93,8 +91,8 @@ public sealed class Loan : AggregateRoot {
       if (Status == LoanStatus.Returned)
          return Result.Failure(LoanErrors.LoanAlreadyReturned);
 
-      if (Status != LoanStatus.Active)
-         return Result.Failure(LoanErrors.LoanNotActive);
+      if (Status != LoanStatus.Borrowed)
+         return Result.Failure(LoanErrors.LoanNotBorrowed);
 
       if (!IsValidUtc(returnedAt))
          return Result.Failure(LoanErrors.InvalidReturnedAt);
@@ -105,9 +103,7 @@ public sealed class Loan : AggregateRoot {
       ReturnedAt = returnedAt;
       Status = LoanStatus.Returned;
 
-      Touch(
-         updatedAt: returnedAt
-      );
+      Touch(updatedAt: returnedAt);
 
       return Result.Success();
    }
@@ -119,15 +115,13 @@ public sealed class Loan : AggregateRoot {
       if (Status == LoanStatus.Returned)
          return Result.Failure(LoanErrors.LoanAlreadyReturned);
 
-      if (Status != LoanStatus.Active)
-         return Result.Failure(LoanErrors.LoanNotActive);
+      if (Status != LoanStatus.Borrowed)
+         return Result.Failure(LoanErrors.LoanNotBorrowed);
 
       if (!IsValidUtc(utcNow))
          return Result.Failure(LoanErrors.InvalidUtcNow);
 
-      if (IsOverdue(
-            utcNow: utcNow
-         ))
+      if (IsOverdue(utcNow))
          return Result.Failure(LoanErrors.LoanAlreadyOverdue);
 
       if (RenewalCount >= LoanRules.MaxRenewals)
@@ -143,9 +137,7 @@ public sealed class Loan : AggregateRoot {
       LoanPeriodVo = renewedPeriodResult.Value;
       RenewalCount += 1;
 
-      Touch(
-         updatedAt: utcNow
-      );
+      Touch(updatedAt: utcNow);
 
       return Result.Success();
    }
@@ -154,11 +146,11 @@ public sealed class Loan : AggregateRoot {
       => ReaderId == readerId;
 
    public bool IsOverdue(DateTime utcNow)
-      => Status == LoanStatus.Active &&
+      => Status == LoanStatus.Borrowed &&
          DueDate < utcNow;
 
    public bool CanRenew(DateTime utcNow)
-      => Status == LoanStatus.Active &&
+      => Status == LoanStatus.Borrowed &&
          RenewalCount < LoanRules.MaxRenewals &&
          !IsOverdue(
             utcNow: utcNow

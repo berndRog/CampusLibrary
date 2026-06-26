@@ -1,0 +1,70 @@
+@baseUrl = https://localhost:8010/camplib/v1
+
+@book1Id = b0000001-0000-0000-0000-000000000000
+@book2Id = b0000002-0000-0000-0000-000000000000
+@book3Id = b0000003-0000-0000-0000-000000000000
+@book4Id = b0000004-0000-0000-0000-000000000000
+
+@book1Isbn = 9780132350884
+@book2Isbn = 9780321125217
+@book3Isbn = 9780201485677
+@book4Isbn = 9780201633610
+
+@unknownBookId = b9999999-0000-0000-0000-000000000000
+
+### 1. Create seed books =======================================================
+
+### Create seed book 1: Clean Code
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+
+{
+  "authorsText": "Robert C. Martin",
+  "title": "Clean Code",
+  "subtitle": "A Handbook of Agile Software Craftsmanship",
+  "isbn": "{{book1Isbn}}",
+  "id": "{{book1Id}}"
+}
+
+
+### Create seed book 2: Domain-Driven Design
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+
+{
+  "authorsText": "Eric Evans",
+  "title": "Domain-Driven Design",
+  "subtitle": "Tackling Complexity in the Heart of Software",
+  "isbn": "{{book2Isbn}}",
+  "id": "{{book2Id}}"
+}
+
+
+### Create seed book 3: Refactoring
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+
+{
+  "authorsText": "Martin Fowler, Kent Beck",
+  "title": "Refactoring",
+  "subtitle": "Improving the Design of Existing Code",
+  "isbn": "{{book3Isbn}}",
+  "id": "{{book3Id}}"
+}
+
+
+### Create seed book 4: Design Patterns
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+
+{
+  "authorsText": "Erich Gamma, Richard Helm, Ralph Johnson, John Vlissides",
+  "title": "Design Patterns",
+  "subtitle": "Elements of Reusable Object-Oriented Software",
+  "isbn": "{{book4Isbn}}",
+  "id": "{{book4Id}}"
+}

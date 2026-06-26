@@ -1,0 +1,81 @@
+@baseUrl = https://localhost:8010/camplib/v1
+
+@book1Id = b0000001-0000-0000-0000-000000000000
+@book2Id = b0000002-0000-0000-0000-000000000000
+@book3Id = b0000003-0000-0000-0000-000000000000
+@book4Id = b0000004-0000-0000-0000-000000000000
+
+@bookItem1Id = be000001-0000-0000-0000-000000000000
+@bookItem2Id = be000002-0000-0000-0000-000000000000
+@bookItem3Id = be000003-0000-0000-0000-000000000000
+@bookItem4Id = be000004-0000-0000-0000-000000000000
+@bookItem5Id = be000005-0000-0000-0000-000000000000
+@bookItem6Id = be000006-0000-0000-0000-000000000000
+
+
+### Add BookItems to seed books ================================================
+
+### Add BookItem 1 to Clean Code
+POST {{baseUrl}}/books/{{book1Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "inventoryNumber": "CL-BOOK-0001",
+  "id": "{{bookItem1Id}}"
+}
+
+
+### Add BookItem 2 to Clean Code
+POST {{baseUrl}}/books/{{book1Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "inventoryNumber": "CL-BOOK-0002",
+  "id": "{{bookItem2Id}}"
+}
+
+
+### Add BookItem 3 to Domain-Driven Design
+POST {{baseUrl}}/books/{{book2Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "inventoryNumber": "CL-BOOK-0003",
+  "id": "{{bookItem3Id}}"
+}
+
+
+### Add BookItem 4 to Refactoring
+POST {{baseUrl}}/books/{{book3Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "inventoryNumber": "CL-BOOK-0004",
+  "id": "{{bookItem4Id}}"
+}
+
+
+### Add BookItem 5 to Design Patterns
+POST {{baseUrl}}/books/{{book4Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "inventoryNumber": "CL-BOOK-0005",
+  "id": "{{bookItem5Id}}"
+}
+
+
+### Add BookItem 6 to Design Patterns
+POST {{baseUrl}}/books/{{book4Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "inventoryNumber": "CL-BOOK-0006",
+  "id": "{{bookItem6Id}}"
+}

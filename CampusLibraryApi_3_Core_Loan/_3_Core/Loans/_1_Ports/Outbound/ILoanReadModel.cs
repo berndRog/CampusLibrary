@@ -8,33 +8,38 @@ namespace CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
 public interface ILoanReadModel {
 
    // Finds one loan by its id.
+   // Returns a detailed DTO enriched with reader and book item information.
    Task<Result<LoanDetailDto>> FindByIdAsync(
       Guid id,
       CancellationToken ct
    );
 
-   // Returns all currently active loans.
-   Task<Result<IReadOnlyList<LoanListItemDto>>> FindAllActiveAsync(
+   // Returns all currently borrowed loans.
+   // A borrowed loan has LoanStatus.Borrowed and no return timestamp.
+   Task<Result<IReadOnlyList<LoanListItemDto>>> FindAllBorrowedAsync(
       CancellationToken ct
    );
-   
 }
 
 /*
 Lernziele und Didaktik
 ----------------------
 
-Dieses Interface beschreibt die Leseseite des Loans-Moduls.
+Dieses Interface ist der ReadModel-Port des Loans-Moduls.
 
-In diesem Projekt werden ReadModels als Outbound-Ports eingeordnet, weil die
-Interfaces im Core definiert und die technischen Implementierungen in
-Infrastructure bereitgestellt werden.
+Reader und Book verwenden IsActive, weil sie aktiviert oder deaktiviert
+werden können.
 
-ReadModels dürfen für Abfragen optimierte Projektionen liefern. Sie müssen
-nicht zwingend vollständige Aggregate laden. Dadurch wird sichtbar, dass
-Lesen und Schreiben unterschiedliche Anforderungen haben können.
+BookItem und Loan verwenden Status, weil sie fachliche Zustände besitzen.
 
-Die Use Cases verändern den Zustand der Domäne. Das ReadModel liefert
-Daten für API-Abfragen. Diese Trennung erleichtert Tests und macht die
-Architektur für Studierende übersichtlicher.
+Für Loan bedeutet der Status Borrowed, dass ein Exemplar aktuell ausgeliehen
+ist. Deshalb heißt die Listenabfrage FindAllBorrowedAsync und nicht
+FindAllActiveAsync.
+
+Damit bleibt die Sprache im Modell eindeutig:
+
+- Reader ist aktiv oder deaktiviert.
+- Book ist aktiv oder deaktiviert.
+- BookItem ist verfügbar, nicht verfügbar, verloren oder beschädigt.
+- Loan ist ausgeliehen, zurückgegeben oder storniert.
 */

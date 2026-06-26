@@ -97,11 +97,11 @@ public static class LoanErrors {
          "ReturnedAt must not be before the loan date."
       );
 
-   public static readonly DomainError LoanNotActive =
+   public static readonly DomainError LoanNotBorrowed =
       new(
          WebErrorStatus.Conflict,
-         "Loan: Loan Not Active",
-         "The loan must be active."
+         "Loan: Not Borrowed",
+         "The loan status must be borrowed."
       );
 
    public static readonly DomainError LoanAlreadyReturned =

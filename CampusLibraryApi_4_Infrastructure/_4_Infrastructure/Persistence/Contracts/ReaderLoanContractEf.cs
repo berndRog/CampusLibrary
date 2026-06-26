@@ -2,13 +2,12 @@ using System.Runtime.CompilerServices;
 using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
 using CampusLibraryApi._2_BuildingBlocks._2_Application.Contracts;
+using CampusLibraryApi._3_Core.Loans._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Readers._2_Application.Mappings;
-using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
 using Microsoft.EntityFrameworkCore;
-
 [assembly: InternalsVisibleTo("CampusLibraryApiTest")]
-namespace CampusLibraryApi._4_Infrastructure._2_Persistence.Contracts;
+namespace CampusLibraryApi._4_Infrastructure.Persistence.Contracts;
 
 // EF Core implementation of the Readers contract used by the Loans module.
 // This class is allowed to access the Readers table because Readers owns it.
@@ -23,16 +22,16 @@ internal sealed class ReaderLoanContractEf(
       CancellationToken ct
    ) {
       if (id == Guid.Empty)
-         return Result<ReaderLoanInfoDto>.Failure(ReaderErrors.IdRequired);
+         return Result<ReaderLoanInfoDto>.Failure(CommonErrors.ReaderIdRequired);
 
       var reader = await readerDbContext.Readers
          .AsNoTracking()
          .FirstOrDefaultAsync(reader => reader.Id == id, ct);
       if (reader is null)
-         return Result<ReaderLoanInfoDto>.Failure(ReaderErrors.ReaderNotFound);
+         return Result<ReaderLoanInfoDto>.Failure(CommonErrors.ReaderNotFound);
 
       if (!reader.IsActive)
-         return Result<ReaderLoanInfoDto>.Failure(ReaderErrors.IsDeactivated);
+         return Result<ReaderLoanInfoDto>.Failure(CommonErrors.ReaderIsDeactivated);
 
       ReaderLoanInfoDto dto = reader.ToReaderLoanInfoDto();
       return Result<ReaderLoanInfoDto>.Success(dto);

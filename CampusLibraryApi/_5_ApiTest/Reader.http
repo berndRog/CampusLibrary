@@ -1,26 +1,8 @@
 @baseUrl = https://localhost:8010/camplib/v1
 
-### ============================================================
-### Readers API
-### Seed-based manual API test
-### ============================================================
-###
-### Important:
-### The database should be deleted/reset before running this file.
-### This file creates reproducible Reader demo data through the public API.
-###
-### Current Readers behavior:
-### - Normal read endpoints return only active readers.
-### - Deactivate does not physically delete a reader.
-### - Deactivated readers are hidden from normal read model queries.
-### - Deactivated readers remain visible through with-inactive endpoints.
-###
-### Run the destructive deactivation block near the end.
-### ============================================================
-
 @reader1Id = 10000000-0000-0000-0000-000000000000
 @reader2Id = 20000000-0000-0000-0000-000000000000
-@unknownReaderId = 99999999-9999-9999-9999-999999999999
+@reader3Id = 30000000-0000-0000-0000-000000000000
 
 @reader1Subject = reader-001
 @reader2Subject = reader-002
@@ -31,72 +13,8 @@
 @reader3Email = a.arndt@t-online.de
 
 
-### 1. Create seed readers =====================================================
 
-### Create reader 1: Erika Mustermann
-### Expected: 201 Created
-POST {{baseUrl}}/readers
-Content-Type: application/json
-Accept: application/json
-
-{
-  "firstname": "Erika",
-  "lastname": "Mustermann",
-  "email": "{{reader1Email}}",
-  "addressDto": {
-    "street": "Hauptstr. 12",
-    "postalCode": "29556",
-    "city": "Suderburg",
-    "country": "DE"
-  },
-  "subject": "{{reader1Subject}}",
-  "id": "{{reader1Id}}"
-}
-
-
-### Create reader 2: Max Mustermann
-### Expected: 201 Created
-POST {{baseUrl}}/readers
-Content-Type: application/json
-Accept: application/json
-
-{
-  "firstname": "Max",
-  "lastname": "Mustermann",
-  "email": "{{reader2Email}}",
-  "addressDto": {
-    "street": "Hauptstr. 12",
-    "postalCode": "29556",
-    "city": "Suderburg",
-    "country": "DE"
-  },
-  "subject": "{{reader2Subject}}",
-  "id": "{{reader2Id}}"
-}
-
-
-### Create reader 3 with generated id: Arne Arndt
-### Expected: 201 Created
-POST {{baseUrl}}/readers
-Content-Type: application/json
-Accept: application/json
-
-{
-  "firstname": "Arne",
-  "lastname": "Arndt",
-  "email": "{{reader3Email}}",
-  "addressDto": {
-    "street": "Neuperverstr. 29",
-    "postalCode": "29410",
-    "city": "Salzwedel",
-    "country": "DE"
-  },
-  "subject": "{{reader3Subject}}",
-  "id": null
-}
-
-
-### 2. Verify active readers ==================================================
+### Verify active readers ==================================================
 
 ### Get all active readers
 ### Expected: 200 OK with reader 1, reader 2 and reader 3
@@ -121,6 +39,10 @@ Accept: application/json
 GET {{baseUrl}}/readers/{{reader2Id}}
 Accept: application/json
 
+### Get active reader 3 by id
+### Expected: 200 OK
+GET {{baseUrl}}/readers/{{reader3Id}}
+Accept: application/json
 
 ### Get reader 1 by id including inactive readers
 ### Expected: 200 OK

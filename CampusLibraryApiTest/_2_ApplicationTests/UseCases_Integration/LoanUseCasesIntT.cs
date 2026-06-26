@@ -69,7 +69,7 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
       createdLoanDto.ReaderId.Should().Be(reader1.Id);
       createdLoanDto.BookItemId.Should().Be(bookItem1.Id);
       createdLoanDto.ReturnedAt.Should().BeNull();
-      createdLoanDto.Status.Should().Be(LoanStatus.Active);
+      createdLoanDto.Status.Should().Be((int)LoanStatus.Borrowed);
       createdLoanDto.RenewalCount.Should().Be(0);
 
       createdLoanDto.DueDate.Should().Be(
@@ -90,7 +90,7 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
       actualLoanDto.Id.Should().Be(createdLoanDto.Id);
       actualLoanDto.ReaderId.Should().Be(reader1.Id);
       actualLoanDto.BookItemId.Should().Be(bookItem1.Id);
-      actualLoanDto.Status.Should().Be(LoanStatus.Active);
+      actualLoanDto.Status.Should().Be((int)LoanStatus.Borrowed);
       actualLoanDto.ReturnedAt.Should().BeNull();
    }
 
@@ -109,6 +109,7 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
       var book1 = books[0];
       var bookItem1 = book1.BookItems.Single(bi =>
          bi.Id == Guid.Parse(seed.BookItem1Id));
+      var loan1Id = Guid.Parse(seed.Loan1Id);
 
       bookRepository.AddRange( books);
       await unitOfWork.SaveAllChangesAsync("Books inserted", ct);
@@ -127,12 +128,9 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
 
       // Assert
       resultBorrow.IsFailure.Should().BeTrue();
-      resultBorrow.Error.Should().Be(ReaderErrors.ReaderNotFound);
+      resultBorrow.Error.Should().Be(CommonErrors.ReaderNotFound);
 
-      var resultFind = await readModel.FindByIdAsync(
-         id: Guid.Parse(seed.Loan1Id),
-         ct: ct
-      );
+      var resultFind = await readModel.FindByIdAsync(loan1Id, ct);
 
       resultFind.IsFailure.Should().BeTrue();
    }
@@ -182,7 +180,7 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
 
       // Assert
       resultBorrow.IsFailure.Should().BeTrue();
-      resultBorrow.Error.Should().Be(ReaderErrors.IsDeactivated);
+      resultBorrow.Error.Should().Be(CommonErrors.ReaderIsDeactivated);
 
       var resultFind = await readModel.FindByIdAsync(
          id: Guid.Parse(seed.Loan1Id),
@@ -206,6 +204,7 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
       // Arrange
       var reader1 = seed.Reader1();
       var books = seed.Books;
+      var loan1Id = Guid.Parse(seed.Loan1Id);
 
       readerRepository.Add(reader1);
       bookRepository.AddRange(books);
@@ -221,17 +220,13 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
       );
 
       // Act
-      var resultBorrow = await useCases.BorrowAsync(
-         dto: dto,
-         ct: ct
-      );
+      var resultBorrow = await useCases.BorrowAsync(dto, ct);
 
       // Assert
       resultBorrow.IsFailure.Should().BeTrue();
-      resultBorrow.Error.Should().Be(CatalogErrors.BookItemNotFound);
+      resultBorrow.Error.Should().Be(CommonErrors.BookItemNotFound);
 
-      var resultFind = await readModel.FindByIdAsync(
-         id: Guid.Parse(seed.Loan1Id), ct: ct);
+      var resultFind = await readModel.FindByIdAsync(loan1Id, ct);
 
       resultFind.IsFailure.Should().BeTrue();
    }
@@ -381,7 +376,7 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
       var returnedLoanDto = resultReturn.Value;
 
       returnedLoanDto.Id.Should().Be(loan1.Id);
-      returnedLoanDto.Status.Should().Be(LoanStatus.Returned);
+      returnedLoanDto.Status.Should().Be((int)LoanStatus.Returned);
       returnedLoanDto.ReturnedAt.Should().NotBeNull();
 
       unitOfWork.ClearChangeTracker();
@@ -516,7 +511,7 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
       var renewedLoanDto = resultRenew.Value;
 
       renewedLoanDto.Id.Should().Be(loan1.Id);
-      renewedLoanDto.Status.Should().Be(LoanStatus.Active);
+      renewedLoanDto.Status.Should().Be((int)LoanStatus.Borrowed);
       renewedLoanDto.RenewalCount.Should().Be(1);
       renewedLoanDto.DueDate.Should().Be(
          oldDueDate.AddDays(LoanRules.StandardRenewalDays)

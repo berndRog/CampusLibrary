@@ -28,76 +28,97 @@ internal sealed class LoanUcBorrow(
       LoanCreateDto? loanCreateDto,
       CancellationToken ct = default
    ) {
-      if (loanCreateDto is null)
+      if(loanCreateDto is null)
          return Result<LoanDto>.Failure(LoanErrors.LoanCreateDtoRequired);
+
       var dto = loanCreateDto;
 
       // Resolve the optional external id into a domain id.
       var resultId = EntityId.Resolve(dto.Id, LoanErrors.InvalidLoanId);
-      if (resultId.IsFailure)
+      if(resultId.IsFailure)
          return Result<LoanDto>.Failure(resultId.Error);
 
       // Validate the referenced reader id.
-      if (dto.ReaderId == Guid.Empty)
+      if(dto.ReaderId == Guid.Empty)
          return Result<LoanDto>.Failure(LoanErrors.ReaderIdRequired);
 
       // Validate the referenced book item id.
-      if (dto.BookItemId == Guid.Empty)
+      if(dto.BookItemId == Guid.Empty)
          return Result<LoanDto>.Failure(LoanErrors.BookItemIdRequired);
 
       // Ask the Readers module whether this reader may borrow book items.
       // Loans does not access the Reader aggregate or the Readers table directly.
       var resultReader = await readerLoanContract
          .FindReaderForLoanAsync(dto.ReaderId, ct);
-      if (resultReader.IsFailure)
+      if(resultReader.IsFailure)
          return Result<LoanDto>.Failure(resultReader.Error);
 
       // Ask the Catalog module whether this concrete book item is loanable.
       // Loans does not access Book or BookItem entities directly.
       var resultBookItem = await bookItemLoanContract
-         .FindByIdAsync(dto.BookItemId, ct);
-      if (resultBookItem.IsFailure)
+         .FindBookItemForLoanAsync(dto.BookItemId, ct);
+      if(resultBookItem.IsFailure)
          return Result<LoanDto>.Failure(resultBookItem.Error);
       var bookItem = resultBookItem.Value;
 
-      if (!bookItem.IsAvailableForLoan)
+      if(!bookItem.IsAvailableForLoan)
          return Result<LoanDto>.Failure(LoanErrors.BookItemNotAvailable);
 
-      // Check whether this concrete book item is already actively borrowed.
-      var activeLoan = await loanRepository
-         .FindActiveByBookItemIdAsync(dto.BookItemId, ct);
-      if (activeLoan is not null)
+      // Check whether this concrete book item is already borrowed.
+      // A BookItem may not have more than one open loan at the same time.
+      var borrowedLoan = await loanRepository
+         .FindBorrowedByBookItemIdAsync(dto.BookItemId, ct);
+
+      if(borrowedLoan is not null)
          return Result<LoanDto>.Failure(LoanErrors.BookItemAlreadyBorrowed);
 
       // Create the loan period using the domain rules of the Loans module.
       var loanDate = clock.UtcNow;
+
       var dueDate = loanDate.AddDays(LoanRules.StandardLoanDays);
 
-      var loanPeriodResult = LoanPeriodVo.Create(loanDate, dueDate);
-      if (loanPeriodResult.IsFailure)
+      var loanPeriodResult = LoanPeriodVo.Create(
+         loanDate: loanDate,
+         dueDate: dueDate
+      );
+
+      if(loanPeriodResult.IsFailure)
          return Result<LoanDto>.Failure(loanPeriodResult.Error);
 
       // Create the Loan aggregate.
+      // The created loan starts with LoanStatus.Borrowed in the domain.
       var resultLoan = Loan.Create(
          id: resultId.Value,
          readerId: dto.ReaderId,
          bookItemId: dto.BookItemId,
          loanPeriodVo: loanPeriodResult.Value
       );
-      if (resultLoan.IsFailure)
+
+      if(resultLoan.IsFailure)
          return Result<LoanDto>.Failure(resultLoan.Error);
+
       var loan = resultLoan.Value;
 
       // Add to repository.
-      loanRepository.Add(loan);
+      loanRepository.Add(
+         loan: loan
+      );
 
       // Save all changes to database.
-      var rows = await unitOfWork.SaveAllChangesAsync("LoanUcBorrow", ct);
+      var rows = await unitOfWork.SaveAllChangesAsync(
+         "LoanUcBorrow",
+         ct
+      );
 
-      logger.LogDebug("LoanUcBorrow {LoanId} done, rows {Rows}",
-         loan.Id, rows);
+      logger.LogDebug(
+         "LoanUcBorrow {LoanId} done, rows {Rows}",
+         loan.Id,
+         rows
+      );
 
-      return Result<LoanDto>.Success(loan.ToLoanDto());
+      return Result<LoanDto>.Success(
+         loan.ToLoanDto()
+      );
    }
 }
 
@@ -113,11 +134,20 @@ Catalog-Tabellen zu.
 
 Stattdessen werden die besitzenden Module über Contracts gefragt:
 
-- Readers entscheidet, ob ein Reader existiert und aktiv ist.
+- Readers entscheidet, ob ein Reader existiert und ausleihen darf.
 - Catalog entscheidet, ob ein BookItem existiert und grundsätzlich ausleihbar ist.
-- Loans entscheidet, ob dieses BookItem aktuell bereits aktiv ausgeliehen ist.
+- Loans entscheidet, ob dieses BookItem aktuell bereits ausgeliehen ist.
 
 Dadurch bleibt die fachliche Zuständigkeit klar getrennt.
+
+Loans besitzen kein IsActive-Flag. Der Zustand einer Ausleihe wird über
+LoanStatus modelliert. Eine offene Ausleihe hat den Status Borrowed.
+
+Deshalb prüft der Use Case nicht auf eine "aktive" Ausleihe, sondern auf eine
+bereits bestehende Borrowed-Ausleihe für dasselbe konkrete BookItem.
+
+Ein BookItem beschreibt ein physisches Exemplar. Dieses Exemplar darf nicht
+gleichzeitig mehrfach ausgeliehen sein.
 
 Der Client liefert keine Leihdauer. Die Leihdauer ist eine fachliche Regel
 des Loans-Moduls und wird hier aus LoanRules und LoanPeriodVo gebildet.

@@ -33,21 +33,15 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
          var repository = sp.GetRequiredService<IBookRepository>();
          var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
          var seed = sp.GetRequiredService<TestSeed>();
-
-         var book = seed.Book1();
-
+         
+         // seed books with bookItems
+         var books = seed.Books;
+         var book = books.First();
          bookId = book.Id;
          authorsText = book.AuthorsText;
 
-         repository.Add(
-            book: book
-         );
-
-         await unitOfWork.SaveAllChangesAsync(
-            "Book1 inserted",
-            _ct
-         );
-
+         repository.Add(book);
+         await unitOfWork.SaveAllChangesAsync("Book1 inserted", _ct);
          unitOfWork.ClearChangeTracker();
       });
 

@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Catalog._3_Domain.Errors;
+using CampusLibraryApi._3_Core.Loans._3_Domain.Errors;
 using CampusLibraryApiTest.TestInfrastructure;
 using Microsoft.Extensions.DependencyInjection;
 namespace CampusLibraryApiTest._3_InfrastructureTests.Contracts;
@@ -32,7 +33,7 @@ public sealed class BookItemLoanContractIntT : TestBaseIntegration {
       unitOfWork.ClearChangeTracker();
 
       // Act
-      var result = await contract.FindByIdAsync(bookItem1.Id, ct);
+      var result = await contract.FindBookItemForLoanAsync(bookItem1.Id, ct);
 
       // Assert
       result.IsSuccess.Should().BeTrue();
@@ -57,11 +58,11 @@ public sealed class BookItemLoanContractIntT : TestBaseIntegration {
       var contract = scope.ServiceProvider.GetRequiredService<IBookItemLoanContract>();
 
       // Act
-      var result = await contract.FindByIdAsync(Guid.Empty, ct);
+      var result = await contract.FindBookItemForLoanAsync(Guid.Empty, ct);
 
       // Assert
       result.IsFailure.Should().BeTrue();
-      result.Error.Should().Be(CatalogErrors.BookItemIdRequired);
+      result.Error.Should().Be(CommonErrors.BookItemIdRequired);
    }
 
    [Fact]
@@ -74,11 +75,11 @@ public sealed class BookItemLoanContractIntT : TestBaseIntegration {
       var unknownBookItemId = Guid.Parse("be999999-0000-0000-0000-000000000000");
 
       // Act
-      var result = await contract.FindByIdAsync(unknownBookItemId, ct);
+      var result = await contract.FindBookItemForLoanAsync(unknownBookItemId, ct);
 
       // Assert
       result.IsFailure.Should().BeTrue();
-      result.Error.Should().Be(CatalogErrors.BookItemNotFound);
+      result.Error.Should().Be(CommonErrors.BookItemNotFound);
    }
 
    [Fact]
@@ -108,7 +109,7 @@ public sealed class BookItemLoanContractIntT : TestBaseIntegration {
       unitOfWork.ClearChangeTracker();
 
       // Act
-      var result = await contract.FindByIdAsync(bookItem1.Id, ct);
+      var result = await contract.FindBookItemForLoanAsync(bookItem1.Id, ct);
 
       // Assert
       result.IsSuccess.Should().BeTrue();

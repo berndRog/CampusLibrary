@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
+using CampusLibraryApi._3_Core.Loans._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
 using CampusLibraryApiTest.TestInfrastructure;
@@ -40,7 +41,7 @@ public sealed class ReaderLoanContractIntT : TestBaseIntegration {
       unitOfWork.ClearChangeTracker();
 
       // Act
-      var result = await contract.FindActiveReaderForLoanAsync(
+      var result = await contract.FindReaderForLoanAsync(
          readerId: reader1.Id,
          ct: ct
       );
@@ -64,14 +65,14 @@ public sealed class ReaderLoanContractIntT : TestBaseIntegration {
       var contract = scope.ServiceProvider.GetRequiredService<IReaderLoanContract>();
 
       // Act
-      var result = await contract.FindActiveReaderForLoanAsync(
+      var result = await contract.FindReaderForLoanAsync(
          readerId: Guid.Empty,
          ct: ct
       );
 
       // Assert
       result.IsFailure.Should().BeTrue();
-      result.Error.Should().Be(ReaderErrors.IdRequired);
+      result.Error.Should().Be(CommonErrors.ReaderIdRequired);
    }
 
    [Fact]
@@ -84,14 +85,14 @@ public sealed class ReaderLoanContractIntT : TestBaseIntegration {
       var unknownReaderId = Guid.Parse("99999999-0000-0000-0000-000000000000");
 
       // Act
-      var result = await contract.FindActiveReaderForLoanAsync(
+      var result = await contract.FindReaderForLoanAsync(
          readerId: unknownReaderId,
          ct: ct
       );
 
       // Assert
       result.IsFailure.Should().BeTrue();
-      result.Error.Should().Be(ReaderErrors.ReaderNotFound);
+      result.Error.Should().Be(CommonErrors.ReaderNotFound);
    }
 
    [Fact]
@@ -129,13 +130,11 @@ public sealed class ReaderLoanContractIntT : TestBaseIntegration {
       unitOfWork.ClearChangeTracker();
 
       // Act
-      var result = await contract.FindActiveReaderForLoanAsync(
-         readerId: reader1.Id,
-         ct: ct
-      );
+      var result = await contract.FindReaderForLoanAsync(
+         reader1.Id, ct);
 
       // Assert
       result.IsFailure.Should().BeTrue();
-      result.Error.Should().Be(ReaderErrors.IsDeactivated);
+      result.Error.Should().Be(CommonErrors.ReaderIsDeactivated);
    }
 }

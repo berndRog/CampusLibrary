@@ -12,26 +12,29 @@ public interface ILoanRepository {
       CancellationToken ct
    );
 
-   // Finds the currently active loan for one concrete book item.
+   // Finds the currently borrowed loan for one concrete book item.
    // This is needed to prevent lending the same physical copy twice.
-   Task<Loan?> FindActiveByBookItemIdAsync(
+   Task<Loan?> FindBorrowedByBookItemIdAsync(
       Guid bookItemId,
       CancellationToken ct
    );
 
-   // Finds all active loans for one reader.
-   // This can be used for domain checks such as maximum active loans.
-   Task<IReadOnlyList<Loan>> FindActiveByReaderIdAsync(
+   // Finds all currently borrowed loans for one reader.
+   // This can be used for domain checks such as maximum borrowed loans.
+   Task<IReadOnlyList<Loan>> FindBorrowedByReaderIdAsync(
       Guid readerId,
       CancellationToken ct
    );
 
-   // Adds a new loan aggregate
-   void Add(Loan loan);
-   
-   // Add a collection of loan aggregates
-   void AddRange(IEnumerable<Loan> loans);
+   // Adds a new loan aggregate.
+   void Add(
+      Loan loan
+   );
 
+   // Adds a collection of loan aggregates.
+   void AddRange(
+      IEnumerable<Loan> loans
+   );
 }
 
 /*
@@ -46,8 +49,16 @@ verwendet, wenn ein Loan geladen, geprüft oder neu gespeichert werden muss.
 Das Repository gibt Loan-Aggregates zurück, keine DTOs. Dadurch bleibt der
 Unterschied zwischen Domänenmodell und API-/ReadModel-Daten sichtbar.
 
-Besonders wichtig ist FindActiveByBookItemIdAsync: Ein BookItem beschreibt
-ein konkretes physisches Exemplar. Dieses Exemplar darf nicht gleichzeitig
-mehrfach aktiv ausgeliehen sein. Diese fachliche Regel wird später im
-Borrow-Use-Case geprüft.
+Loans besitzen kein IsActive-Flag. Der fachliche Zustand einer Ausleihe wird
+über LoanStatus modelliert.
+
+Deshalb heißen die Suchmethoden nicht FindActive..., sondern FindBorrowed...:
+
+- FindBorrowedByBookItemIdAsync sucht die offene Ausleihe eines konkreten
+  physischen Exemplars.
+- FindBorrowedByReaderIdAsync sucht alle offenen Ausleihen eines Readers.
+
+Ein BookItem beschreibt ein konkretes physisches Exemplar. Dieses Exemplar
+darf nicht gleichzeitig mehrfach ausgeliehen sein. Diese fachliche Regel wird
+im Borrow-Use-Case geprüft.
 */

@@ -1,0 +1,79 @@
+@baseUrl = https://localhost:8010/camplib/v1
+
+
+@reader1Id = 10000000-0000-0000-0000-000000000000
+@reader2Id = 20000000-0000-0000-0000-000000000000
+@reader3Id = 30000000-0000-0000-0000-000000000000
+
+@reader1Subject = reader-001
+@reader2Subject = reader-002
+@reader3Subject = reader-003
+
+@reader1Email = e.mustermann@t-online.de
+@reader2Email = m.mustermann@gmail.com
+@reader3Email = a.arndt@t-online.de
+
+
+### 1. Create seed readers =====================================================
+
+### Create reader 1: Erika Mustermann
+### Expected: 201 Created
+POST {{baseUrl}}/readers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "firstname": "Erika",
+  "lastname": "Mustermann",
+  "email": "{{reader1Email}}",
+  "addressDto": {
+    "street": "Hauptstr. 12",
+    "postalCode": "29556",
+    "city": "Suderburg",
+    "country": "DE"
+  },
+  "subject": "{{reader1Subject}}",
+  "id": "{{reader1Id}}"
+}
+
+
+### Create reader 2: Max Mustermann
+### Expected: 201 Created
+POST {{baseUrl}}/readers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "firstname": "Max",
+  "lastname": "Mustermann",
+  "email": "{{reader2Email}}",
+  "addressDto": {
+    "street": "Hauptstr. 12",
+    "postalCode": "29556",
+    "city": "Suderburg",
+    "country": "DE"
+  },
+  "subject": "{{reader2Subject}}",
+  "id": "{{reader2Id}}"
+}
+
+
+### Create reader 3 with generated id: Arne Arndt
+### Expected: 201 Created
+POST {{baseUrl}}/readers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "firstname": "Arne",
+  "lastname": "Arndt",
+  "email": "{{reader3Email}}",
+  "addressDto": {
+    "street": "Neuperverstr. 29",
+    "postalCode": "29410",
+    "city": "Salzwedel",
+    "country": "DE"
+  },
+  "subject": "{{reader3Subject}}",
+  "id": "{{reader3Id}}"
+}

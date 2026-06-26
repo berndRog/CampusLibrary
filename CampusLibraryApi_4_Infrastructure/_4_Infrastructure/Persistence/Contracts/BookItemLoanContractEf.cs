@@ -1,12 +1,13 @@
+using System.Runtime.CompilerServices;
 using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._2_BuildingBlocks._2_Application.Contracts;
 using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Catalog._3_Domain.Enums;
-using CampusLibraryApi._3_Core.Catalog._3_Domain.Errors;
+using CampusLibraryApi._3_Core.Loans._3_Domain.Errors;
 using Microsoft.EntityFrameworkCore;
-
-namespace CampusLibraryApi._4_Infrastructure._2_Persistence.Contracts;
+[assembly: InternalsVisibleTo("CampusLibraryApiTest")]
+namespace CampusLibraryApi._4_Infrastructure.Persistence.Contracts;
 
 // EF Core implementation of the Catalog contract used by the Loans module.
 // This class is allowed to access Books and BookItems because Catalog owns them.
@@ -16,18 +17,18 @@ internal sealed class BookItemLoanContractEf(
 
    // Finds loan-relevant information for one concrete book item.
    // The Loans module receives only the DTO, not Catalog entities.
-   public async Task<Result<BookItemLoanInfoDto>> FindByIdAsync(
-      Guid bookItemId,
+   public async Task<Result<BookItemLoanInfoDto>> FindBookItemForLoanAsync(
+      Guid id,
       CancellationToken ct
    ) {
-      if (bookItemId == Guid.Empty)
-         return Result<BookItemLoanInfoDto>.Failure(CatalogErrors.BookItemIdRequired);
+      if (id == Guid.Empty)
+         return Result<BookItemLoanInfoDto>.Failure(CommonErrors.BookItemIdRequired);
 
       BookItemLoanInfoDto? dto = await (
          from bookItem in catalogDbContext.BookItems.AsNoTracking()
          join book in catalogDbContext.Books.AsNoTracking()
             on bookItem.BookId equals book.Id
-         where bookItem.Id == bookItemId
+         where bookItem.Id == id
          select new BookItemLoanInfoDto(
             bookItem.Id,
             book.Id,
@@ -43,7 +44,7 @@ internal sealed class BookItemLoanContractEf(
       ).FirstOrDefaultAsync(ct);
 
       if (dto is null)
-         return Result<BookItemLoanInfoDto>.Failure(CatalogErrors.BookItemNotFound);
+         return Result<BookItemLoanInfoDto>.Failure(CommonErrors.BookItemNotFound);
       
       return Result<BookItemLoanInfoDto>.Success(dto);
    }
