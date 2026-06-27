@@ -1,20 +1,26 @@
-# Teststrategie
+# Teststrategie: CampusLibrary Teil 2
 
-Dieses Dokument beschreibt die Teststrategie, die im Projekt `CampusLibrary` verwendet wird.
+Dieses Dokument beschreibt die Teststrategie von **Teil 2 – Readers Modular Monolith**.
 
-Das Ziel besteht nicht nur darin, Korrektheit zu prüfen. Die verschiedenen Testebenen sollen auch für die Lehre sichtbar werden. Das Projekt trennt daher Domain Tests, Application UseCase Tests, Infrastructure Integration Tests und Controller-/End-to-End-Tests.
+Das Ziel besteht nicht nur darin, Korrektheit zu prüfen. Die Testsuite macht auch die architektonischen Schichten und Testebenen für die Lehre sichtbar.
 
-In Teil 2 wurde die Anwendung von einem Ein-Projekt-Monolithen in einen projektbasierten modularen Monolithen überführt. Der fachliche Umfang ist weiterhin derselbe: Die Anwendung enthält aktuell nur das Readers-Modul. Die Tests prüfen, dass dieses strukturelle Refactoring das fachliche Verhalten nicht verändert hat.
+In Teil 2 wurde die Anwendung von einem ordnerbasierten Monolithen in einen projektbasierten modularen Monolithen überführt. Der fachliche Umfang bleibt auf das Readers-Modul begrenzt.
 
-## Überblick
-
-Das aktuelle Testprojekt ist:
+Der aktuelle Teststand lautet:
 
 ```text
-CampusLibraryApiTest
+Test summary: total: 70, failed: 0, succeeded: 70, skipped: 0
 ```
 
-Der Produktivcode ist auf mehrere Projekte verteilt:
+Alle Tests ausführen:
+
+```bash
+dotnet test
+```
+
+## Getestete Produktivprojekte
+
+Der Produktivcode ist auf folgende Projekte verteilt:
 
 ```text
 CampusLibraryApi
@@ -24,7 +30,15 @@ CampusLibraryApi_3_Core_Readers
 CampusLibraryApi_4_Infrastructure
 ```
 
-Die Tests decken folgende Bereiche ab:
+Das Testprojekt ist:
+
+```text
+CampusLibraryApiTest
+```
+
+## Testebenen
+
+Die Tests decken folgende Ebenen ab:
 
 ```text
 Domain Tests
@@ -34,65 +48,51 @@ Infrastructure Tests für Repositories und ReadModels
 Controller-/End-to-End-Tests mit WebApplicationFactory
 ```
 
-Im aktuellen Projektstand sind alle Tests grün:
-
-```text
-Test summary: total: 66, failed: 0, succeeded: 66, skipped: 0
-```
-
-Alle Tests ausführen:
-
-```bash
-dotnet test
-```
-
-## Testebenen
-
 ## 1. Domain Tests
 
-Domain Tests prüfen das Verhalten von Domain-Objekten ohne Infrastructure.
+Domain Tests prüfen fachliches Verhalten ohne Infrastructure und ohne ASP.NET Core.
 
 Typische Beispiele:
 
 ```text
 Reader.Create(...)
 Reader.UpdateProfile(...)
+Reader.Deactivate(...)
 EmailVo.Create(...)
 AddressVo.Create(...)
 ```
 
-Domain Tests konzentrieren sich auf fachliche Regeln:
+Der Fokus liegt auf fachlichen Regeln:
 
 ```text
 Pflichtwerte
 gültige Wertebereiche
 Normalisierung
-ungültige Eingaben
 partielle Updates
+Soft-Deactivation
+ungültige Zustandsübergänge
 Domain Errors
 ```
 
-Die Domain-Schicht verwendet kein EF Core, kein ASP.NET Core, keine Repositories, keine Controller und kein HTTP.
+Die Domain-Schicht hängt nicht von EF Core, Controllern, Repositories oder HTTP ab.
 
-Das Hauptziel ist zu prüfen, ob Aggregates und Value Objects ihre eigenen Invarianten schützen.
-
-In der Struktur des modularen Monolithen prüfen diese Tests hauptsächlich Code aus:
+Der wichtigste didaktische Punkt lautet:
 
 ```text
-CampusLibraryApi_3_Core_Readers
-CampusLibraryApi_2_BuildingBlocks
+Aggregates und Value Objects schützen ihre eigenen Invarianten.
 ```
 
 ## 2. Application UseCase Tests mit Mocks
 
-Application UseCase Tests prüfen die Orchestrierungslogik der UseCases.
+Application UseCase Tests prüfen die Orchestrierungslogik.
 
-Typische Beispiele:
+Typische UseCases:
 
 ```text
 ReaderUcCreate
 ReaderUcUpdate
-ReaderUcDelete
+ReaderUcDeactivate
+ReaderUseCases
 ```
 
 Diese Tests verwenden Mocks oder Test Doubles für Ports wie:
@@ -103,347 +103,182 @@ IUnitOfWork
 IClock
 ```
 
-Ziel ist zu prüfen, ob der UseCase den Workflow korrekt koordiniert:
+Sie prüfen, ob der UseCase den Workflow korrekt koordiniert:
 
 ```text
-Aggregate laden
 Eingaben validieren
 Value Objects erzeugen
+Aggregate laden
 Eindeutigkeit prüfen
 Domain-Methoden aufrufen
 Änderungen speichern
-DTOs oder Fehler zurückgeben
+DTOs oder Domain Errors zurückgeben
 ```
 
-`ReaderUcUpdate` prüft zum Beispiel, ob eine neue Email-Adresse bereits von einem anderen Reader verwendet wird, bevor das Aggregate aktualisiert wird.
+Der wichtige didaktische Punkt lautet:
 
-Diese Tests sind weitgehend unabhängig von EF Core und HTTP. Sie konzentrieren sich auf Application-Logik innerhalb des Readers Core Moduls.
+```text
+UseCases orchestrieren. Sie enthalten keinen Persistenzcode und kein HTTP-Verhalten.
+```
 
 ## 3. Application Integration Tests
 
-Application Integration Tests verwenden echte Infrastructure-Bestandteile, wenn das sinnvoll ist.
+Application Integration Tests prüfen UseCases zusammen mit echten Infrastructure-Komponenten.
 
-Sie prüfen, ob UseCases korrekt zusammenarbeiten mit:
+Sie verwenden:
 
 ```text
-echter Repository-Implementierung
-echtem UnitOfWork
+echte Repository-Implementierung
+echten UnitOfWork
 SQLite-Testdatenbank
 EF-Core-Tracking
+Fake Clock für deterministische Zeitstempel
 ```
 
-Das ist nützlich, weil manche Fehler erst auftreten, wenn EF Core, Repository und UnitOfWork gemeinsam verwendet werden.
+Diese Tests sind nützlich, weil manche Fehler erst auftreten, wenn Application, Repository, DbContext und UnitOfWork zusammenspielen.
 
-Diese Tests sind langsamer als reine Domain Tests, geben aber mehr Sicherheit, dass Application und Persistence korrekt zusammenspielen.
+In Teil 2 ist das besonders relevant, weil die UseCases im Readers-Core-Projekt liegen, während Repository- und UnitOfWork-Implementierungen im Infrastructure-Projekt liegen.
 
-In Teil 2 sind diese Tests besonders wichtig, weil die UseCases im Readers-Modul liegen, während Repository- und UnitOfWork-Implementierungen im Infrastructure-Projekt liegen.
-
-Die beabsichtigte Abhängigkeitsrichtung lautet:
+Die Abhängigkeitsrichtung bleibt:
 
 ```text
 Core definiert Ports.
 Infrastructure implementiert Ports.
-Tests prüfen, dass beide korrekt zusammenspielen.
+Tests prüfen, dass beides korrekt zusammenspielt.
 ```
 
 ## 4. Infrastructure Tests
 
 Infrastructure Tests prüfen die Persistenzadapter.
 
-Typische Bereiche:
+Typische getestete Komponenten:
 
 ```text
 ReaderRepositoryEf
 ReaderReadModelEf
+ReaderDbContextEf
 AppDbContext
-EF-Core-Mappings
-SQLite-Verhalten
+ConfigReader
+UtcDateTimeConverter
 ```
 
-Das Repository gehört zur Schreibseite.
-
-Das ReadModel gehört zur Leseseite.
-
-Diese Trennung ist beabsichtigt:
+Das Repository gehört zur Schreibseite:
 
 ```text
-Repository -> domain-orientierter Schreibzugriff
-ReadModel  -> DTO-orientierter Lesezugriff
+ReaderRepositoryEf -> Reader-Aggregate
 ```
 
-Infrastructure Tests helfen zu prüfen, ob Entities, Value Objects, Conversions und Queries korrekt mit der Datenbank funktionieren.
-
-In der projektbasierten Struktur prüfen diese Tests hauptsächlich Code aus:
+Das ReadModel gehört zur Leseseite:
 
 ```text
-CampusLibraryApi_4_Infrastructure
+ReaderReadModelEf -> ReaderDto
 ```
 
-zusammen mit Domain-Typen und Ports aus:
+Das aktuelle Reader-ReadModel-Verhalten ist wichtig:
 
 ```text
-CampusLibraryApi_3_Core_Readers
-CampusLibraryApi_2_BuildingBlocks
+normale Abfragen liefern nur aktive Reader
+spezielle Abfragen können inaktive Reader einschließen
 ```
+
+Infrastructure Tests prüfen, dass dieses Verhalten mit einer echten SQLite-Datenbank funktioniert.
 
 ## 5. Controller- / End-to-End-Tests
 
-Controller Tests verwenden:
+Controller-/End-to-End-Tests verwenden den ASP.NET-Core-Testhost.
+
+Typische Infrastruktur:
 
 ```text
 WebApplicationFactory<Program>
 TestBaseFactory
 TestBaseEndToEnd
-TestAuthHandler
+Test Authentication
+SQLite-Testdatenbank
 ```
 
-Diese Tests starten die ASP.NET-Core-Anwendung in einem Testhost und rufen die API über HTTP auf.
-
-Sie prüfen:
+Diese Tests rufen die API über HTTP auf und prüfen:
 
 ```text
 Routing
 Model Binding
-Controller Actions
-Status Codes
+Statuscodes
 JSON-Serialisierung
 ProblemDetails-Mapping
 Dependency Injection
 Datenbankintegration
 ```
 
-Die aktuellen Reader Controller Tests decken folgende Endpunkte ab:
+Die aktuellen Reader-Controller-Tests decken das wichtigste API-Verhalten ab:
 
 ```text
 GET    /camplib/v1/readers
+GET    /camplib/v1/readers/with-inactive
 GET    /camplib/v1/readers/{id}
+GET    /camplib/v1/readers/{id}/with-inactive
 GET    /camplib/v1/readers/email?email=...
 POST   /camplib/v1/readers
 PUT    /camplib/v1/readers/{id}
 DELETE /camplib/v1/readers/{id}
 ```
 
-Diese Tests sind am nächsten an der realen API-Nutzung.
-
-In Teil 2 prüfen Controller-/End-to-End-Tests außerdem, ob die getrennten Projekte korrekt durch das ausführbare API-Projekt verdrahtet werden.
-
-Sie prüfen daher nicht nur Controller-Verhalten, sondern auch die Zusammensetzung von:
-
-```text
-Web
-Readers-Modul
-Infrastructure
-BuildingBlocks
-```
+Der `DELETE`-Endpunkt wird als Deactivate-Operation getestet. Er darf den Reader nicht physisch löschen.
 
 ## Testdatenbank
 
-Die Tests verwenden SQLite über die Testinfrastruktur.
+Die Tests verwenden SQLite.
 
-Die Testdatenbank wird erzeugt durch:
+Die Testinfrastruktur erzeugt eine Testdatenbank und ersetzt ausgewählte Laufzeitdienste.
 
-```text
-TestDatabase
-TestBaseFactory
-```
-
-Die Factory ersetzt ausgewählte Produktivdienste:
+Typische Ersetzungen sind:
 
 ```text
 AppDbContext
 IUnitOfWork
 IClock
-TestSeed
+Test-Seed-Daten
 Authentication
 ```
 
-Eine Fake Clock wird verwendet, um Zeitstempel deterministisch zu machen.
+Eine Fake Clock wird verwendet, damit `CreatedAt`- und `UpdatedAt`-Werte deterministisch getestet werden können.
 
-Das ist wichtig, weil die Domain UTC-Zeitstempel erwartet.
+## Wichtiges Verhalten unter Test
 
-Beispiel:
-
-```csharp
-public DateTime TestCreatedAt { get; set; } =
-   new(2025, 01, 01, 00, 00, 00, DateTimeKind.Utc);
-```
-
-## Test Seed
-
-Der Test Seed stellt stabile Demo- und Testdaten bereit.
-
-Typische Reader:
+Das wichtigste aktuelle Reader-Verhalten ist:
 
 ```text
-Reader1
-Reader2
-Reader3
-Reader4
-Reader5
-Reader6
-ReaderRegister
+Reader anlegen
+Reader aktualisieren
+Reader deaktivieren
+doppelte Email/Subject ablehnen, soweit fachlich vorgesehen
+deaktivierte Reader in der Datenbank behalten
+deaktivierte Reader aus normalen Leseabfragen ausblenden
+deaktivierte Reader nur über explizite with-inactive-Abfragen zurückgeben
 ```
 
-Tests sollten Seed-Daten gegenüber manuell konstruierten Ad-hoc-Daten bevorzugen.
+## Warum sich die Testanzahl geändert hat
 
-Dadurch bleiben Beispiele konsistent und für Studierende leichter verständlich.
+Die aktuelle Testsuite enthält 70 Tests.
 
-## Tests für partielle Updates
+Ältere Dokumentation nannte 66 Tests. Im Zuge der Angleichung an das aktuelle Reader-Modell wurden Tests aktualisiert und ein doppelter historischer Delete-Test entfernt.
 
-`ReaderUpdateDto` unterstützt partielle Updates:
-
-```csharp
-public sealed record ReaderUpdateDto(
-   string? Lastname,
-   string? Email,
-   AddressDto? AddressDto
-);
-```
-
-Die Bedeutung von `null` lautet:
+Maßgeblich ist der aktuell geprüfte Stand:
 
 ```text
-Lastname = null   -> aktuellen Nachnamen beibehalten
-Email = null      -> aktuelle Email beibehalten
-AddressDto = null -> aktuelle Adresse beibehalten
-```
-
-Nur angegebene Werte werden geändert.
-
-Ein leerer oder nur aus Leerzeichen bestehender Nachname ist nicht dasselbe wie `null`.
-
-```text
-null       -> keine Änderung
-""         -> ungültiger Wert
-"   "      -> ungültiger Wert
-"Meier"   -> gültige Änderung
-```
-
-Diese Unterscheidung ist für die Semantik partieller Updates wichtig.
-
-Die Tests sollten daher beide Fälle abdecken:
-
-```text
-Feld fehlt oder ist null     -> keine Änderung
-Feld ist angegeben, aber ungültig -> Validierungsfehler
-```
-
-## Warum unterschiedliche Testarten?
-
-Jede Testart beantwortet eine andere Frage.
-
-```text
-Domain Test:
-Funktioniert die fachliche Regel?
-
-UseCase Mock Test:
-Ruft der Application Workflow die richtigen Ports auf und behandelt er Fehler korrekt?
-
-Integration Test:
-Funktioniert der UseCase mit echter Persistenz?
-
-Infrastructure Test:
-Speichert und lädt EF Core die Daten korrekt?
-
-Controller-/E2E-Test:
-Verhält sich die API von außen korrekt?
-```
-
-Zusammen bilden diese Tests eine lehrorientierte Teststrategie.
-
-## Warum die Tests in Teil 2 wichtig sind
-
-Teil 2 ist hauptsächlich ein architektonisches Refactoring.
-
-Die Anwendung wurde von einem Ein-Projekt-Monolithen in einen projektbasierten modularen Monolithen überführt.
-
-Das erwartete Ergebnis lautet:
-
-```text
-Die Struktur ändert sich.
-Das fachliche Verhalten bleibt gleich.
-```
-
-Die Testsuite ist das Sicherheitsnetz für dieses Refactoring.
-
-Wenn nach der Projektaufteilung alle Tests grün bleiben, gibt das Vertrauen, dass das Refactoring das Verhalten des Readers-Moduls nicht versehentlich verändert hat.
-
-Der aktuelle Stand lautet:
-
-```text
-66 Tests
+70 total
 0 failed
+0 skipped
 ```
 
-## Empfohlener Workflow
+## Didaktischer Wert
 
-Während der Entwicklung:
+Teil 2 ist für die Lehre besonders nützlich, weil die Tests zeigen, dass ein architektonisches Refactoring sicher durchgeführt werden kann.
 
-```bash
-dotnet test
-```
-
-Bei API-Änderungen zusätzlich die Anwendung starten und Swagger prüfen:
-
-```bash
-dotnet run --project CampusLibraryApi
-```
-
-Swagger ist im Development-Modus erreichbar unter:
+Studierende können vergleichen:
 
 ```text
-https://localhost:8010/swagger
+Teil 1: ein Projekt, ordnerbasierte Struktur
+Teil 2: mehrere Projekte, explizite Modulgrenzen
 ```
 
-## Version
-
-Die aktuelle Version gehört zu Teil 2:
-
-```text
-Branch: part-2/readers-modular-monolith
-Tag:    v2-readers-modular-monolith
-```
-
-Teil 1 bleibt verfügbar als:
-
-```text
-Tag: v1-readers-monolith
-```
-
-## Didaktische Ziele
-
-Die Testsuite soll Studierenden helfen, folgende Themen zu verstehen:
-
-```text
-Trennung von Testebenen
-Domain Testing ohne Infrastructure
-mockbasiertes Testen von UseCases
-Integration Testing mit SQLite
-Controller Testing über HTTP
-Wiederverwendung von Testdaten über Seed-Objekte
-Nutzen von Fake Clocks
-Testen partieller Updates
-Tests als Schutz bei Architektur-Refactorings
-End-to-End-Tests trotz modularen Monolithen
-```
-
-Die Tests sind daher nicht nur ein Sicherheitsnetz, sondern auch Teil des Lernmaterials.
-
-## Didaktische Faustregel
-
-Jede Testebene hat ihren eigenen Zweck:
-
-```text
-Domain Tests schützen fachliche Regeln.
-UseCase Tests schützen Application Workflows.
-Infrastructure Tests schützen Persistenzverhalten.
-Controller Tests schützen die HTTP API.
-End-to-End-Tests schützen die Gesamtkomposition.
-```
-
-Für Teil 2 ist der wichtigste Lehrpunkt:
-
-```text
-Ein modulares Refactoring ist erfolgreich, wenn sich die Struktur ändert,
-die Tests aber weiterhin dasselbe Verhalten nachweisen.
-```
+Das Verhalten bleibt auf Readers konzentriert, aber die Architektur bereitet das Projekt auf spätere Module vor.

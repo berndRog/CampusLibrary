@@ -1,20 +1,26 @@
-# Testing Strategy
+# Testing Strategy: CampusLibrary Part 2
 
-This document describes the testing strategy used in the `CampusLibrary` project.
+This document describes the testing strategy used in **Part 2 – Readers Modular Monolith**.
 
-The goal is not only to verify correctness, but also to make the different test levels visible for teaching purposes. The project therefore separates domain tests, application use case tests, infrastructure integration tests, and controller/end-to-end tests.
+The goal is not only to verify correctness. The test suite also makes the architectural layers and testing levels visible for teaching purposes.
 
-In Part 2, the application has been refactored from a one-project monolith into a project-based modular monolith. The functional scope is still the same: the application currently contains the Readers module only. The tests verify that this structural refactoring did not change the business behavior.
+In Part 2, the application has been refactored from a folder-based monolith into a project-based modular monolith. The business scope is still limited to the Readers module.
 
-## Overview
-
-The current test project is:
+The current test status is:
 
 ```text
-CampusLibraryApiTest
+Test summary: total: 70, failed: 0, succeeded: 70, skipped: 0
 ```
 
-The production code is split across several projects:
+Run all tests with:
+
+```bash
+dotnet test
+```
+
+## Tested Production Projects
+
+The production code is split across these projects:
 
 ```text
 CampusLibraryApi
@@ -24,7 +30,15 @@ CampusLibraryApi_3_Core_Readers
 CampusLibraryApi_4_Infrastructure
 ```
 
-The tests cover the following areas:
+The test project is:
+
+```text
+CampusLibraryApiTest
+```
+
+## Test Levels
+
+The tests cover the following levels:
 
 ```text
 Domain tests
@@ -34,65 +48,51 @@ Infrastructure tests for repositories and read models
 Controller/end-to-end tests with WebApplicationFactory
 ```
 
-At the current project state, all tests pass:
+## 1. Domain Tests
 
-```text
-Test summary: total: 66, failed: 0, succeeded: 66, skipped: 0
-```
-
-Run all tests with:
-
-```bash
-dotnet test
-```
-
-## Test Levels
-
-### 1. Domain Tests
-
-Domain tests verify the behavior of domain objects without infrastructure.
+Domain tests verify domain behavior without Infrastructure and without ASP.NET Core.
 
 Typical examples:
 
 ```text
 Reader.Create(...)
 Reader.UpdateProfile(...)
+Reader.Deactivate(...)
 EmailVo.Create(...)
 AddressVo.Create(...)
 ```
 
-Domain tests focus on business rules:
+The focus is on business rules:
 
 ```text
 required values
 valid value ranges
 normalization
-invalid input
 partial updates
+soft-deactivation
+invalid state transitions
 domain errors
 ```
 
-The domain layer does not use EF Core, ASP.NET Core, repositories, controllers, or HTTP.
+The domain layer does not depend on EF Core, controllers, repositories or HTTP.
 
-The main goal is to verify that aggregates and value objects protect their own invariants.
-
-In the modular monolith structure, these tests mainly verify code from:
+The main teaching point is:
 
 ```text
-CampusLibraryApi_3_Core_Readers
-CampusLibraryApi_2_BuildingBlocks
+Aggregates and value objects protect their own invariants.
 ```
 
-### 2. Application Use Case Tests with Mocks
+## 2. Application Use Case Tests with Mocks
 
-Application use case tests verify the orchestration logic of use cases.
+Application use case tests verify orchestration logic.
 
-Typical examples:
+Typical use cases:
 
 ```text
 ReaderUcCreate
 ReaderUcUpdate
-ReaderUcDelete
+ReaderUcDeactivate
+ReaderUseCases
 ```
 
 These tests use mocks or test doubles for ports such as:
@@ -103,108 +103,105 @@ IUnitOfWork
 IClock
 ```
 
-The purpose is to check that the use case coordinates the workflow correctly:
+They verify that the use case coordinates the workflow correctly:
 
 ```text
-load aggregate
 validate input
 create value objects
+load aggregates
 check uniqueness
 call domain methods
 save changes
-return DTOs or errors
+return DTOs or domain errors
 ```
 
-For example, `ReaderUcUpdate` checks whether a new email address is already used by another reader before updating the aggregate.
-
-These tests are still mostly independent from EF Core and HTTP. They focus on application logic inside the Readers core module.
-
-### 3. Application Integration Tests
-
-Application integration tests use real infrastructure parts where useful.
-
-They verify that use cases work together with:
+The important teaching point is:
 
 ```text
-real repository implementation
+UseCases orchestrate. They do not contain persistence code and they do not expose HTTP behavior.
+```
+
+## 3. Application Integration Tests
+
+Application integration tests verify use cases together with real infrastructure components.
+
+They use:
+
+```text
+real Repository implementation
 real UnitOfWork
 SQLite test database
 EF Core tracking
+Fake clock for deterministic timestamps
 ```
 
-This is useful because some bugs only appear when EF Core, the repository, and the UnitOfWork interact.
+These tests are useful because some problems only appear when Application, Repository, DbContext and UnitOfWork interact.
 
-These tests are slower than pure domain tests, but they give more confidence that application and persistence work together.
+In Part 2 this is especially relevant because the use cases live in the Readers core project while repository and UnitOfWork implementations live in the Infrastructure project.
 
-In Part 2, these tests are especially important because the use cases live in the Readers module, while the repository and UnitOfWork implementations live in the Infrastructure project.
-
-The intended dependency direction is:
+The dependency direction remains:
 
 ```text
 Core defines ports.
 Infrastructure implements ports.
-Tests verify that both work together correctly.
+Tests verify that both work together.
 ```
 
-### 4. Infrastructure Tests
+## 4. Infrastructure Tests
 
-Infrastructure tests verify the persistence adapters.
+Infrastructure tests verify persistence adapters.
 
-Typical areas:
+Typical tested components:
 
 ```text
 ReaderRepositoryEf
 ReaderReadModelEf
+ReaderDbContextEf
 AppDbContext
-EF Core mappings
-SQLite behavior
+ConfigReader
+UtcDateTimeConverter
 ```
 
-The repository is part of the write side.
-
-The read model is part of the query side.
-
-This separation is intentional:
+The repository is part of the write side:
 
 ```text
-Repository -> domain-oriented write access
-ReadModel  -> DTO-oriented query access
+ReaderRepositoryEf -> Reader aggregate
 ```
 
-Infrastructure tests help verify that entities, value objects, conversions, and queries work correctly with the database.
-
-In the project-based structure, these tests mainly verify code from:
+The read model is part of the query side:
 
 ```text
-CampusLibraryApi_4_Infrastructure
+ReaderReadModelEf -> ReaderDto
 ```
 
-together with domain types and ports from:
+The current Reader read model behavior is important:
 
 ```text
-CampusLibraryApi_3_Core_Readers
-CampusLibraryApi_2_BuildingBlocks
+normal queries return only active readers
+special queries can include inactive readers
 ```
 
-### 5. Controller / End-to-End Tests
+Infrastructure tests verify that this behavior works with a real SQLite database.
 
-Controller tests use:
+## 5. Controller / End-to-End Tests
+
+Controller/end-to-end tests use the ASP.NET Core test host.
+
+Typical infrastructure:
 
 ```text
 WebApplicationFactory<Program>
 TestBaseFactory
 TestBaseEndToEnd
-TestAuthHandler
+Test authentication
+SQLite test database
 ```
 
-These tests start the ASP.NET Core application in a test host and call the API through HTTP.
-
-They verify:
+These tests call the API through HTTP and verify:
 
 ```text
 routing
 model binding
-controller actions
 status codes
 JSON serialization
 ProblemDetails mapping
@@ -212,237 +209,76 @@ dependency injection
 database integration
 ```
 
-The current Reader controller tests cover:
+The current Reader controller tests cover the main API behavior:
 
 ```text
 GET    /camplib/v1/readers
+GET    /camplib/v1/readers/with-inactive
 GET    /camplib/v1/readers/{id}
+GET    /camplib/v1/readers/{id}/with-inactive
 GET    /camplib/v1/readers/email?email=...
 POST   /camplib/v1/readers
 PUT    /camplib/v1/readers/{id}
 DELETE /camplib/v1/readers/{id}
 ```
 
-These tests are closest to real API usage.
-
-In Part 2, controller/end-to-end tests also verify that the separated projects are wired correctly by the executable API project.
-
-They therefore check not only controller behavior, but also the composition of:
-
-```text
-Web
-Readers module
-Infrastructure
-BuildingBlocks
-```
+The `DELETE` endpoint is tested as a deactivate operation. It must not physically remove the reader.
 
 ## Test Database
 
-The tests use SQLite through the test infrastructure.
+The tests use SQLite.
 
-The test database is created by:
+The test infrastructure creates a test database and replaces selected runtime services.
 
-```text
-TestDatabase
-TestBaseFactory
-```
-
-The factory replaces selected production services:
+Typical replacements are:
 
 ```text
 AppDbContext
 IUnitOfWork
 IClock
-TestSeed
+Test seed data
 Authentication
 ```
 
-A fake clock is used to make timestamps deterministic.
+A fake clock is used so that `CreatedAt` and `UpdatedAt` values can be tested deterministically.
 
-This is important because the domain expects UTC timestamps.
+## Important Behavior Under Test
 
-Example:
-
-```csharp
-public DateTime TestCreatedAt { get; set; } =
-   new(2025, 01, 01, 00, 00, 00, DateTimeKind.Utc);
-```
-
-## Test Seed
-
-The test seed provides stable demo and test data.
-
-Typical readers:
+The most important current Reader behavior is:
 
 ```text
-Reader1
-Reader2
-Reader3
-Reader4
-Reader5
-Reader6
-ReaderRegister
+Create reader
+Update reader
+Deactivate reader
+Reject duplicate email/subject where applicable
+Keep deactivated readers in the database
+Hide deactivated readers from normal read queries
+Return deactivated readers only through explicit with-inactive queries
 ```
 
-The tests should prefer seed data over manually constructed ad hoc data.
+## Why the Test Count Changed
 
-This keeps the examples consistent and easier to understand for students.
+The current test suite contains 70 tests.
 
-## Partial Update Tests
+Older documentation mentioned 66 tests. During the alignment with the current Reader model, tests were updated and one duplicate historical delete test was removed.
 
-`ReaderUpdateDto` supports partial updates:
-
-```csharp
-public sealed record ReaderUpdateDto(
-   string? Lastname,
-   string? Email,
-   AddressDto? AddressDto
-);
-```
-
-The meaning of `null` is:
+The relevant result is the current verified state:
 
 ```text
-Lastname = null   -> keep current lastname
-Email = null      -> keep current email
-AddressDto = null -> keep current address
-```
-
-Only provided values are changed.
-
-An empty or whitespace lastname is not the same as `null`.
-
-```text
-null       -> no change
-""         -> invalid value
-"   "      -> invalid value
-"Meier"   -> valid change
-```
-
-This distinction is important for partial update semantics.
-
-The tests should therefore cover both cases:
-
-```text
-field omitted or null -> no change
-field provided but invalid -> validation error
-```
-
-## Why Different Test Types?
-
-Each test type answers a different question.
-
-```text
-Domain test:
-Does the business rule work?
-
-Use case mock test:
-Does the application workflow call the right ports and handle errors?
-
-Integration test:
-Does the use case work with real persistence?
-
-Infrastructure test:
-Does EF Core store and load the data correctly?
-
-Controller/E2E test:
-Does the API behave correctly from the outside?
-```
-
-Together, these tests form a teaching-oriented test strategy.
-
-## Why the Tests Matter in Part 2
-
-Part 2 is mainly an architectural refactoring.
-
-The application was moved from a one-project monolith into a project-based modular monolith.
-
-The expected result is:
-
-```text
-The structure changes.
-The business behavior stays the same.
-```
-
-The test suite is the safety net for this refactoring.
-
-If all tests remain green after the project split, this gives confidence that the refactoring did not accidentally change the behavior of the Readers module.
-
-The current result is:
-
-```text
-66 tests
+70 total
 0 failed
+0 skipped
 ```
 
-## Recommended Workflow
+## Teaching Value
 
-During development:
+Part 2 is useful for teaching because the tests show that architectural refactoring can be performed safely.
 
-```bash
-dotnet test
-```
-
-For API changes, also run the application and inspect Swagger:
-
-```bash
-dotnet run --project CampusLibraryApi
-```
-
-Swagger is available in development mode at:
+Students can compare:
 
 ```text
-https://localhost:8010/swagger
+Part 1: one project, folder-based structure
+Part 2: several projects, explicit module boundaries
 ```
 
-## Version
-
-The current version belongs to Part 2:
-
-```text
-Branch: part-2/readers-modular-monolith
-Tag:    v2-readers-modular-monolith
-```
-
-Part 1 remains available as:
-
-```text
-Tag: v1-readers-monolith
-```
-
-## Didactic Goals
-
-The test suite is intended to help students understand:
-
-```text
-separation of test levels
-domain testing without infrastructure
-mock-based use case testing
-integration testing with SQLite
-controller testing through HTTP
-test data reuse through seed objects
-why fake clocks are useful
-how partial updates should be tested
-how tests protect architectural refactorings
-how a modular monolith can still be tested end-to-end
-```
-
-The tests are therefore not only a safety net, but also part of the learning material.
-
-## Didactic Rule of Thumb
-
-Each test level has its own purpose:
-
-```text
-Domain tests protect business rules.
-Use case tests protect application workflows.
-Infrastructure tests protect persistence behavior.
-Controller tests protect the HTTP API.
-End-to-end tests protect the full composition.
-```
-
-For Part 2, the most important teaching point is:
-
-```text
-A modular refactoring is successful when the structure changes but the tests still prove the same behavior.
-```
+The behavior remains centered on Readers, but the architecture now prepares the project for later modules.

@@ -2,32 +2,45 @@
 
 Lehrprojekt für eine modular aufgebaute, DDD-orientierte ASP.NET-Core-Web-API.
 
-Das Projekt zeigt, wie ein kleiner modularer Monolith in getrennte Projekte für Web/API, Building Blocks, Core-Module, Infrastructure und Tests aufgeteilt werden kann, ohne dass das Domain Model von technischen Persistenzdetails abhängig wird.
+Diese Version ist **Teil 2 – Readers Modular Monolith**. Sie übernimmt die Reader-Funktionalität aus Teil 1 und überführt die Architektur von einem ordnerbasierten Monolithen in einen projektbasierten modularen Monolithen.
+
+Der fachliche Umfang bleibt bewusst klein: Die Anwendung enthält nur das **Readers**-Modul. Ziel dieses Teils ist es, Modulgrenzen, Abhängigkeitsrichtung, Ports, Adapter, Repositories, ReadModels und Tests sichtbar zu machen, bevor in späteren Teilen weitere Module hinzukommen.
 
 ## Aktueller Stand
 
-Das Projekt enthält aktuell das erste funktionsfähige Modul:
+Das Projekt enthält aktuell:
 
-* Readers-Modul
-* ASP.NET Core Web API
-* API-Versionierung
-* Swagger/OpenAPI-Dokumentation
-* SQLite-Persistenz mit EF Core
-* Repository- und ReadModel-Infrastruktur
-* UseCases für Create, partielles Update und Delete
-* Controller-/End-to-End-Tests mit einer echten SQLite-Testdatenbank
+- nur das Readers-Modul
+- ASP.NET Core Web API
+- API-Versionierung
+- Swagger/OpenAPI-Dokumentation
+- SQLite-Persistenz mit EF Core
+- Repository- und ReadModel-Infrastruktur
+- UseCases für Create, Update und Deactivate
+- Controller-/End-to-End-Tests mit echter SQLite-Testdatenbank
+- modulare Projektstruktur mit Web, BuildingBlocks, Core_Readers, Infrastructure und Tests
 
-Der ursprüngliche Monolith wurde in einen projektbasierten modularen Monolithen überführt. Gemeinsame Abstraktionen und Basistypen wurden nach `BuildingBlocks` verschoben. Das `Readers`-Modul ist jetzt ein eigenständiges Core-Modul, während technische Persistenzdetails im Infrastructure-Projekt liegen.
+Das Reader-Verhalten wurde an das aktuelle Modell der späteren Projektteile angepasst:
 
-Die Testsuite enthält aktuell 66 Tests. Diese prüfen Domainlogik, Value Objects, UseCases, Repositories, ReadModels und Controller-/End-to-End-Szenarien.
+- `Reader` ist ein Aggregate Root.
+- `Reader` besitzt ein `IsActive`-Flag.
+- Reader werden nicht physisch gelöscht.
+- Die frühere Delete-Operation ist fachlich ein **Deactivate**.
+- Normale Leseabfragen liefern nur aktive Reader.
+- Spezielle ReadModel-Abfragen können deaktivierte Reader einschließen.
+- Command-UseCases sind von Query-ReadModels getrennt.
 
-## Versionen
+Der aktuelle Teststand lautet:
 
-* `v1-readers-monolith`
-  Erste abgeschlossene Version mit dem Readers-Modul innerhalb einer einfachen monolithischen Projektstruktur.
+```text
+Test summary: total: 70, failed: 0, succeeded: 70, skipped: 0
+```
 
-* `v2-readers-modular-monolith`
-  Refaktorierte Version mit einer projektbasierten modularen Monolith-Struktur.
+## Version
+
+```text
+v2-readers-modular-monolith
+```
 
 ## Aktueller Branch
 
@@ -50,11 +63,11 @@ CampusLibraryApiTest
 
 Die Web/API-Schicht stellt die HTTP-Endpunkte bereit.
 
-Das Core-Modul enthält das readerspezifische Domain Model, die Application UseCases und die Ports.
+Das BuildingBlocks-Projekt enthält gemeinsame Abstraktionen und Basistypen, die unabhängig von einem konkreten Fachmodul sind.
 
-Das BuildingBlocks-Projekt enthält gemeinsame Abstraktionen, die unabhängig von einem konkreten Fachmodul sind.
+Das Readers-Core-Projekt enthält das readerspezifische Domain Model, DTOs, Mappings, Application UseCases und Ports.
 
-Das Infrastructure-Projekt implementiert technische Details wie EF-Core-Persistenz, Repositories und ReadModels.
+Das Infrastructure-Projekt implementiert EF-Core-Persistenz, Repositories, ReadModels, Datenbankkonfiguration und UnitOfWork.
 
 Das Testprojekt prüft das Verhalten über Domain-, Application-, Infrastructure- und API-Grenzen hinweg.
 
@@ -63,5 +76,18 @@ Die wichtigste Abhängigkeitsregel lautet:
 ```text
 Core-Module hängen nicht von Web/API oder Infrastructure ab.
 Infrastructure hängt von Core-Modulen ab, weil sie deren Outbound Ports implementiert.
-Das API-Projekt ist der Composition Root und verdrahtet alle Module miteinander.
+Das ausführbare API-Projekt ist der Composition Root und verdrahtet alle Module miteinander.
 ```
+
+## Was noch nicht enthalten ist
+
+Teil 2 enthält bewusst noch nicht:
+
+- Catalog-Modul
+- Books
+- BookItems
+- Loans
+- Authentifizierung und Autorisierung
+- modulübergreifende Contracts
+
+Diese Themen werden in späteren Teilen der Lehrreihe eingeführt.
