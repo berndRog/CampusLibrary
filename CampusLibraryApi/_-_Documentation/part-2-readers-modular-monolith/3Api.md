@@ -1,12 +1,12 @@
-# API Documentation
+# API Documentation: CampusLibrary Part 2
 
-This document describes the public HTTP API of the current `CampusLibraryApi`.
+This document describes the public HTTP API of **Part 2 – Readers Modular Monolith**.
 
-Swagger/OpenAPI is the authoritative technical API description. This file provides an additional didactic overview for students.
+Swagger/OpenAPI is the authoritative technical API description. This document provides a didactic overview for students.
 
 ## Base URL
 
-In development, the API listens on:
+In development, the API is typically available at:
 
 ```text
 https://localhost:8010
@@ -18,8 +18,6 @@ The current API prefix is:
 ```text
 /camplib/v1
 ```
-
-The version is part of the URL.
 
 Example:
 
@@ -35,40 +33,60 @@ Swagger UI is available in development mode:
 https://localhost:8010/swagger
 ```
 
-The generated OpenAPI document describes:
+Swagger documents:
 
-```text
-routes
-request bodies
-response bodies
-status codes
-ProblemDetails responses
-DTO schemas
-```
+- routes
+- request bodies
+- response bodies
+- status codes
+- ProblemDetails responses
+- DTO schemas
 
-## Reader Module
+## Module Scope
 
-The current API contains the Reader module.
+Part 2 contains only the **Readers** module.
 
-A Reader represents a fachlicher Bibliotheksnutzer of the CampusLibrary domain.
+It does not contain Catalog, Books, BookItems or Loans.
 
-It is not the same as a technical user account.
+A Reader represents a business library reader of the CampusLibrary domain. A Reader is not the same as a technical login account.
 
-The technical identity reference is represented by:
+The connection to a technical identity is represented through:
 
 ```text
 Subject
 ```
 
+## Reader Behavior
+
+Readers are not physically deleted.
+
+A Reader has an `IsActive` flag.
+
+Normal query endpoints return only active readers. Additional endpoints can include deactivated readers.
+
+The public API still uses HTTP semantics. Therefore the endpoint:
+
+```http
+DELETE /camplib/v1/readers/{id}
+```
+
+means:
+
+```text
+Deactivate the reader.
+```
+
+It does not physically remove the database row.
+
 ## Reader Routes
 
-### Get all readers
+### Get all active readers
 
 ```http
 GET /camplib/v1/readers
 ```
 
-Returns all readers.
+Returns all active readers.
 
 Successful response:
 
@@ -82,7 +100,7 @@ Response body:
 [
   {
     "id": "10000000-0000-0000-0000-000000000000",
-    "subject": "a00090ad-d9df-486a-8757-4a649e26a54e",
+    "subject": "70000000-0007-0000-0000-000000000000",
     "firstname": "Erika",
     "lastname": "Mustermann",
     "email": "erika.mustermann@t-online.de",
@@ -96,7 +114,23 @@ Response body:
 ]
 ```
 
-## Get one reader by id
+### Get all readers including inactive readers
+
+```http
+GET /camplib/v1/readers/with-inactive
+```
+
+Returns active and deactivated readers.
+
+This endpoint is useful for administration, tests and teaching the difference between normal queries and explicit queries including inactive data.
+
+Successful response:
+
+```http
+200 OK
+```
+
+### Get one active reader by id
 
 ```http
 GET /camplib/v1/readers/{id}
@@ -108,31 +142,7 @@ Example:
 GET /camplib/v1/readers/10000000-0000-0000-0000-000000000000
 ```
 
-Successful response:
-
-```http
-200 OK
-```
-
-Possible error responses:
-
-```http
-401 Unauthorized
-403 Forbidden
-404 Not Found
-```
-
-## Get one reader by email
-
-```http
-GET /camplib/v1/readers/email?email={email}
-```
-
-Example:
-
-```http
-GET /camplib/v1/readers/email?email=erika.mustermann@t-online.de
-```
+Returns the reader only if the reader is active.
 
 Successful response:
 
@@ -144,12 +154,58 @@ Possible error responses:
 
 ```http
 400 Bad Request
-401 Unauthorized
-403 Forbidden
 404 Not Found
 ```
 
-## Create a reader
+### Get one reader by id including inactive readers
+
+```http
+GET /camplib/v1/readers/{id}/with-inactive
+```
+
+Returns the reader even if the reader is deactivated.
+
+Successful response:
+
+```http
+200 OK
+```
+
+Possible error responses:
+
+```http
+400 Bad Request
+404 Not Found
+```
+
+### Get one active reader by email
+
+```http
+GET /camplib/v1/readers/email?email={email}
+```
+
+Example:
+
+```http
+GET /camplib/v1/readers/email?email=erika.mustermann@t-online.de
+```
+
+Returns the reader only if the reader is active.
+
+Successful response:
+
+```http
+200 OK
+```
+
+Possible error responses:
+
+```http
+400 Bad Request
+404 Not Found
+```
+
+### Create a reader
 
 ```http
 POST /camplib/v1/readers
@@ -179,57 +235,14 @@ Successful response:
 201 Created
 ```
 
-Response body:
-
-```json
-{
-  "id": "generated-or-provided-id",
-  "subject": "70000000-0007-0000-0000-000000000000",
-  "firstname": "Edgar",
-  "lastname": "Engel",
-  "email": "e.engel@freenet.de",
-  "addressDto": {
-    "street": "Am Markt 14",
-    "postalCode": "04109",
-    "city": "Leipzig",
-    "country": "DE"
-  }
-}
-```
-
 Possible error responses:
 
 ```http
 400 Bad Request
-401 Unauthorized
-403 Forbidden
 409 Conflict
 ```
 
-## ReaderCreateDto
-
-```csharp
-public sealed record ReaderCreateDto(
-   string Firstname,
-   string Lastname,
-   string Email,
-   AddressDto AddressDto,
-   string Subject,
-   string? Id
-);
-```
-
-`Id` is optional.
-
-This is intentional.
-
-The id may be omitted in normal API usage. The use case then creates a new id.
-
-The id may be provided for teaching, testing, or deterministic seed data.
-
-Therefore, `Id` is both technically and fachlich nullable.
-
-## Update a reader
+### Update a reader
 
 ```http
 PUT /camplib/v1/readers/{id}
@@ -245,6 +258,7 @@ Request body for changing only the lastname:
 
 ```json
 {
+  "firstname": null,
   "lastname": "Meier",
   "email": null,
   "addressDto": null
@@ -255,24 +269,10 @@ Request body for changing only the email:
 
 ```json
 {
+  "firstname": null,
   "lastname": null,
   "email": "e.meier@gmx.de",
   "addressDto": null
-}
-```
-
-Request body for changing only the address:
-
-```json
-{
-  "lastname": null,
-  "email": null,
-  "addressDto": {
-    "street": "Schillerstr. 1",
-    "postalCode": "30123",
-    "city": "Hannover",
-    "country": "DE"
-  }
 }
 ```
 
@@ -286,43 +286,11 @@ Possible error responses:
 
 ```http
 400 Bad Request
-401 Unauthorized
-403 Forbidden
 404 Not Found
 409 Conflict
 ```
 
-## ReaderUpdateDto
-
-```csharp
-public sealed record ReaderUpdateDto(
-   string? Lastname,
-   string? Email,
-   AddressDto? AddressDto
-);
-```
-
-All properties are nullable by design.
-
-This is required for partial updates.
-
-The meaning of `null` is:
-
-```text
-Lastname = null   -> no change
-Email = null      -> no change
-AddressDto = null -> no change
-```
-
-This is technically and fachlich required.
-
-`Firstname` is intentionally not part of the update DTO.
-
-`Subject` is also intentionally not part of the update DTO.
-
-The technical identity reference is not changed by normal profile updates.
-
-## Delete a reader
+### Deactivate a reader
 
 ```http
 DELETE /camplib/v1/readers/{id}
@@ -331,8 +299,12 @@ DELETE /camplib/v1/readers/{id}
 Example:
 
 ```http
-DELETE /camplib/v1/readers/30000000-0000-0000-0000-000000000000
+DELETE /camplib/v1/readers/10000000-0000-0000-0000-000000000000
 ```
+
+This endpoint deactivates the reader.
+
+It does not physically delete the database row.
 
 Successful response:
 
@@ -344,12 +316,27 @@ Possible error responses:
 
 ```http
 400 Bad Request
-401 Unauthorized
-403 Forbidden
 404 Not Found
+409 Conflict
 ```
 
-## AddressDto
+A deactivated reader no longer appears in normal read queries:
+
+```http
+GET /camplib/v1/readers
+GET /camplib/v1/readers/{id}
+```
+
+A deactivated reader can still be inspected through endpoints that explicitly include inactive readers:
+
+```http
+GET /camplib/v1/readers/with-inactive
+GET /camplib/v1/readers/{id}/with-inactive
+```
+
+## DTOs
+
+### AddressDto
 
 ```csharp
 public sealed record AddressDto(
@@ -360,89 +347,69 @@ public sealed record AddressDto(
 );
 ```
 
-The address is converted into an `AddressVo` in the application layer.
+### ReaderCreateDto
 
-The value object performs its own validation.
-
-## Error Responses
-
-The API uses `ProblemDetails` for error responses.
-
-Example structure:
-
-```json
-{
-  "type": "about:blank",
-  "title": "Bad Request",
-  "status": 400,
-  "detail": "Invalid email.",
-  "code": "Reader.InvalidEmail",
-  "traceId": "..."
-}
+```csharp
+public sealed record ReaderCreateDto(
+   string Firstname,
+   string Lastname,
+   string Email,
+   AddressDto AddressDto,
+   string Subject,
+   string? Id
+);
 ```
 
-The exact `code` depends on the domain or application error.
+`Id` is optional. In normal API usage, the use case can create a new id. In tests and deterministic seed scenarios, an id may be supplied explicitly.
 
-Typical categories:
+### ReaderUpdateDto
+
+```csharp
+public sealed record ReaderUpdateDto(
+   string? Firstname,
+   string? Lastname,
+   string? Email,
+   AddressDto? AddressDto
+);
+```
+
+`ReaderUpdateDto` supports partial updates. Fields with `null` are not changed.
+
+### ReaderDto
+
+```csharp
+public sealed record ReaderDto(
+   Guid Id,
+   string Subject,
+   string Firstname,
+   string Lastname,
+   string Email,
+   AddressDto AddressDto
+);
+```
+
+## ProblemDetails
+
+Business and validation errors are mapped to HTTP responses through ProblemDetails.
+
+Typical mappings are:
 
 ```text
-400 Bad Request   -> invalid input
-401 Unauthorized  -> authentication required
-403 Forbidden     -> access denied
-404 Not Found     -> resource not found
-409 Conflict      -> duplicate email or duplicate subject
+400 Bad Request -> invalid input
+404 Not Found   -> reader not found
+409 Conflict    -> duplicate data or invalid state transition
 ```
 
-## Read Side and Write Side
+The controller does not throw business exceptions for normal domain errors. Instead, use cases and read models return `Result<T>` values that are translated into HTTP responses.
 
-The Reader controller uses two different application ports:
+## Teaching Notes
 
-```text
-IReaderReadModel
-IReaderUseCases
-```
+Part 2 is intentionally small.
 
-The read side is used for queries:
+The API is used to show:
 
-```text
-GET /readers
-GET /readers/{id}
-GET /readers/email
-```
-
-The write side is used for commands:
-
-```text
-POST /readers
-PUT /readers/{id}
-DELETE /readers/{id}
-```
-
-This separation supports a clean teaching model:
-
-```text
-queries read DTOs
-commands change aggregates
-repositories work with domain objects
-read models return DTOs directly
-```
-
-## Didactic Goals
-
-This API is designed to demonstrate:
-
-```text
-REST-style endpoints
-API versioning
-Swagger/OpenAPI documentation
-DTOs as API contracts
-Result-based error handling
-ProblemDetails responses
-partial update semantics
-separation of read and write paths
-controller tests with WebApplicationFactory
-```
-
-Swagger should be used for technical exploration.
-
-This document should be used for conceptual explanation.
+- how a controller calls command use cases
+- how a controller calls read models for queries
+- how domain errors become HTTP ProblemDetails
+- how soft-deactivation differs from physical deletion
+- how a modular monolith can still expose a simple HTTP API
