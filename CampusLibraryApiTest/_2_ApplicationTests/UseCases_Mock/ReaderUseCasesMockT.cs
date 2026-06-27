@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._3_Core.Readers._1_Ports;
+using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Readers._2_Application.Mappings;
 using CampusLibraryApi._3_Core.Readers._2_Application.UseCases;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
@@ -10,7 +11,7 @@ using CampusLibraryApiTest.TestHelper.Mappings;
 using CampusLibraryApiTest.TestInfrastructure;
 using Microsoft.Extensions.Logging;
 using Moq;
-namespace CampusLibraryApiTest._2_ApplicationTests.UseCases;
+namespace CampusLibraryApiTest._2_ApplicationTests.UseCases_Mock;
 
 public sealed class ReaderUseCasesMockT {
    private static readonly DateTime CreatedAt =

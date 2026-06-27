@@ -4,6 +4,7 @@ using System.Text.Json;
 using AwesomeAssertions;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._3_Core.Readers._1_Ports;
+using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Readers._2_Application.Mappings;
 using CampusLibraryApiTest.TestController;
@@ -15,7 +16,7 @@ namespace CampusLibraryApiTest._4_WebTests;
 public sealed class ReadersControllerE2eT : TestBaseEndToEnd {
    
    protected override string DatabaseName => nameof(ReadersControllerE2eT);
-   //protected override DbMode DbMode => DbMode.FileUnique;
+   protected override DbMode DbMode => DbMode.InMemory;
    
    private readonly string _url = "/camplib/v1";
    private readonly CancellationToken _ct = TestContext.Current.CancellationToken;

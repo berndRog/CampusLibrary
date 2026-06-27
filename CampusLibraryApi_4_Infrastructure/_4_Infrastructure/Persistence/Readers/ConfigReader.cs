@@ -1,10 +1,13 @@
 using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
+using CampusLibraryApi._4_Infrastructure.Persistence.Converters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-namespace CampusLibraryApi._4_Infrastructure.Persistence.Configurations;
+namespace CampusLibraryApi._4_Infrastructure.Persistence.Readers;
 
-internal sealed class ConfigReader : IEntityTypeConfiguration<Reader> {
+internal sealed class ConfigReader(
+   UtcDateTimeConverter utcDtConv
+) : IEntityTypeConfiguration<Reader> {
    
    public void Configure(EntityTypeBuilder<Reader> builder) {
       
@@ -18,7 +21,6 @@ internal sealed class ConfigReader : IEntityTypeConfiguration<Reader> {
          .HasColumnName("Id").HasColumnOrder(0);
       
       // properties
-
       builder.Property(c => c.Firstname)
          .HasMaxLength(80)
          .HasColumnName("Firstname").HasColumnOrder(1)
@@ -71,6 +73,17 @@ internal sealed class ConfigReader : IEntityTypeConfiguration<Reader> {
          .HasColumnName("Subject").HasColumnOrder(9)
          .IsRequired();
       builder.HasIndex(r => r.Subject).IsUnique();
+      
+      // Audit timestamps
+      builder.Property(b => b.CreatedAt)
+         .HasConversion(utcDtConv)
+         .HasColumnName("CreatedAt").HasColumnOrder(10)
+         .IsRequired();
+
+      builder.Property(b => b.UpdatedAt)
+         .HasConversion(utcDtConv)
+         .HasColumnName("UpdatedAt").HasColumnOrder(11)
+         .IsRequired();
       
    }
 }
