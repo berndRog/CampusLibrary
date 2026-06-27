@@ -1,140 +1,161 @@
-using System.Runtime.CompilerServices;
+using System.Linq.Expressions;
 using CampusLibraryApi._2_BuildingBlocks;
-using CampusLibraryApi._3_Core.Readers._1_Ports;
+using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Readers._2_Application.Mappings;
+using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
-[assembly: InternalsVisibleTo("CampusLibraryApiTest")]
 namespace CampusLibraryApi._4_Infrastructure.Persistence.Readers;
 
-// EF Core read model for querying reader data.
-// Projects database rows directly into DTOs and does not expose aggregates.
-// This class belongs to the query side and is intentionally internal.
+// EF Core implementation of the reader read model.
+// Read models are used for query operations and project database data
+// directly into DTOs. They do not return domain aggregates.
 internal sealed class ReaderReadModelEf(
-   IReaderDbContext dbContext
+   IReaderDbContext readerDbContext
 ) : IReaderReadModel {
-   
-   // Find active reader DTO by technical identifier.
+
+   // Finds a reader by technical identifier.
+   // By default, inactive readers are filtered out.
    public async Task<Result<ReaderDto>> FindByIdAsync(
-      Guid id, 
-      CancellationToken ct
-   ) {
-      var reader = await dbContext.Readers
-         .AsNoTracking()
-         .SingleOrDefaultAsync(r => r.Id == id && r.IsActive, ct);
-
-      return reader is null
-         ? Result<ReaderDto>.Failure(ReaderErrors.ReaderNotFound)
-         : Result<ReaderDto>.Success(reader.ToReaderDto());
-   }
-
-   // Find active reader DTO by technical identity subject.
-   public async Task<Result<ReaderDto>> FindBySubjectAsync(
-      string subject, 
-      CancellationToken ct
-   ) {
-      var reader = await dbContext.Readers
-         .AsNoTracking()
-         .SingleOrDefaultAsync(r => 
-            r.Subject == subject && r.IsActive,ct);
-
-      return reader is null
-         ? Result<ReaderDto>.Failure(ReaderErrors.ReaderNotFound)
-         : Result<ReaderDto>.Success(reader.ToReaderDto());
-   }
-
-   // Find a reader DTO by email address.
-   // The email is normalized through EmailVo before the database query.
-   public async Task<Result<ReaderDto>> FindByEmailAsync(
-      string email,
-      CancellationToken ct
-   ) {
-      var result = EmailVo.Create(email.Trim());
-      if (result.IsFailure)
-         return Result<ReaderDto>.Failure(result.Error);
-
-      var emailVo = result.Value;
-
-      var reader = await dbContext.Readers
-         .AsNoTracking()
-         .SingleOrDefaultAsync(r => 
-            r.EmailVo == emailVo && r.IsActive, ct);
-
-      return reader is null
-         ? Result<ReaderDto>.Failure(ReaderErrors.ReaderNotFound)
-         : Result<ReaderDto>.Success(reader.ToReaderDto());
-   }
-
-   // Return all active readers ordered for display.
-   public async Task<Result<IReadOnlyList<ReaderDto>>> SelectAllAsync(CancellationToken ct) {
-      var readers = await dbContext.Readers
-         .AsNoTracking()
-         .Where(r => r.IsActive)
-         .OrderBy(r => r.Lastname)
-         .ThenBy(r => r.Firstname)
-         .ToListAsync(ct);
-      
-      var readerDtos = readers
-         .Select(r => r.ToReaderDto())
-         .ToList();
-
-      return Result<IReadOnlyList<ReaderDto>>.Success(readerDtos);
-   }
-
-   // Find active reader DTO by technical identifier.
-   public async Task<Result<ReaderDto>> FindByIdWithInactiveAsync(
-      Guid id, 
+      Guid id,
+      bool includeInactive = false,
       CancellationToken ct = default
    ) {
-      var reader = await dbContext.Readers
+      ReaderDto? dto = await readerDbContext.Readers
          .AsNoTracking()
-         .SingleOrDefaultAsync(r => r.Id == id, ct);
+         .Where(reader => reader.Id == id)
+         .Where(reader => includeInactive || reader.IsActive)
+         .Select(ReaderToDto)
+         .FirstOrDefaultAsync(ct);
 
-      return reader is null
-         ? Result<ReaderDto>.Failure(ReaderErrors.ReaderNotFound)
-         : Result<ReaderDto>.Success(reader.ToReaderDto());
+      if(dto is null)
+         return Result<ReaderDto>.Failure(ReaderErrors.ReaderNotFound);
+
+      return Result<ReaderDto>.Success(dto);
+   }
+
+   // Finds a reader by technical identity subject.
+   // By default, inactive readers are filtered out.
+   public async Task<Result<ReaderDto>> FindBySubjectAsync(
+      string subject,
+      bool includeInactive = false,
+      CancellationToken ct = default
+   ) {
+      ReaderDto? dto = await readerDbContext.Readers
+         .AsNoTracking()
+         .Where(reader => reader.Subject == subject)
+         .Where(reader => includeInactive || reader.IsActive)
+         .Select(ReaderToDto)
+         .FirstOrDefaultAsync(ct);
+
+      if(dto is null)
+         return Result<ReaderDto>.Failure(error: ReaderErrors.ReaderNotFound);
+
+      return Result<ReaderDto>.Success(dto);
+   }
+
+   // Finds a reader by normalized email address.
+   // By default, inactive readers are filtered out.
+   public async Task<Result<ReaderDto>> FindByEmailAsync(
+      string email,
+      bool includeInactive = false,
+      CancellationToken ct = default
+   ) {
+      var resultEmailVo = EmailVo.Create(email);
+      if(resultEmailVo.IsFailure)
+         return Result<ReaderDto>.Failure(resultEmailVo.Error);
+      var emailVo = resultEmailVo.Value;
+         
+      ReaderDto? dto = await readerDbContext.Readers
+         .AsNoTracking()
+         .Where(reader => reader.EmailVo == emailVo )
+         .Where(reader => includeInactive || reader.IsActive)
+         .Select(ReaderToDto)
+         .FirstOrDefaultAsync(ct);
+
+      if(dto is null)
+         return Result<ReaderDto>.Failure(ReaderErrors.ReaderNotFound);
+
+      return Result<ReaderDto>.Success(dto);
+   }
+
+   // Returns readers as DTOs.
+   // By default, inactive readers are filtered out.
+   public async Task<Result<IReadOnlyList<ReaderDto>>> SelectAllAsync(
+      bool includeInactive = false,
+      CancellationToken ct = default
+   ) {
+      List<ReaderDto> readers = await readerDbContext.Readers
+         .AsNoTracking()
+         .Where(reader => includeInactive || reader.IsActive)
+         .OrderBy(reader => reader.Lastname)
+         .ThenBy(reader => reader.Firstname)
+         .Select(ReaderToDto)
+         .ToListAsync(ct);
+
+      return Result<IReadOnlyList<ReaderDto>>.Success(readers);
    }
    
-   // Return all readers ordered for display.
-   public async Task<Result<IReadOnlyList<ReaderDto>>> SelectAllWithInactiveAsync(CancellationToken ct) {
-      var readers = await dbContext.Readers
-         .AsNoTracking()
-         .OrderBy(r => r.Lastname)
-         .ThenBy(r => r.Firstname)
-         .ToListAsync(ct);
-      
-      var readerDtos = readers
-         .Select(r => r.ToReaderDto())
-         .ToList();
-
-      return Result<IReadOnlyList<ReaderDto>>.Success(readerDtos);
-   }
+   // DTO projection used by EF Core.
+   // Because this is an expression, EF Core can translate the projection
+   // into SQL instead of loading full aggregates and mapping them in memory.
+   private static readonly Expression<Func<Reader, ReaderDto>> ReaderToDto =
+      reader => new ReaderDto(
+         Id: reader.Id,
+         Firstname: reader.Firstname,
+         Lastname: reader.Lastname,
+         Email: reader.EmailVo.Value,
+         AddressDto: reader.AddressVo.ToAddressDto(),
+         IsActive: reader.IsActive,
+         Subject: reader.Subject
+      );
+   
 }
 
 /*
 Didaktik
 --------
 
-ReaderReadModelEf ist die technische EF-Core-Implementierung des
-ReadModel-Ports IReaderReadModel.
+Diese Klasse implementiert das ReadModel des Readers-Moduls mit EF Core.
 
-ReadModels gehören zur Query-Seite. Sie laden keine Aggregates für
-fachliche Änderungen, sondern projizieren Daten direkt in DTOs. Deshalb
-wird AsNoTracking() verwendet: EF Core muss diese Objekte nicht für
-spätere Änderungen überwachen.
+Das ReadModel ist für lesende Abfragen zuständig. Es lädt keine vollständigen
+Aggregates für die Anzeige, sondern projiziert direkt aus der Datenbank in
+ReaderDto-Objekte.
 
-Die Projektion erfolgt über ReaderMappings.ToReaderDtoExpr. Da dies eine
-Expression ist, kann EF Core die Projektion in die Datenbankabfrage
-übersetzen.
+Der Parameter includeInactive ersetzt die früheren zusätzlichen Methoden
+FindByIdWithInactiveAsync und SelectAllWithInactiveAsync.
+
+Standardfall:
+
+   includeInactive = false
+
+Dann werden nur aktive Reader geliefert.
+
+Administrative Sicht:
+
+   includeInactive = true
+
+Dann werden aktive und inaktive Reader geliefert.
+
+Die Regel ist dadurch einheitlich:
+
+- Die normale Abfrage liefert aktive Reader.
+- Die erweiterte Abfrage wird über einen Query-Parameter gesteuert.
+- Es entstehen keine zusätzlichen Spezialmethoden für jede Variante.
+
+Die Projektion ReaderToDto ist bewusst als Expression<Func<Reader, ReaderDto>>
+formuliert. Dadurch kann EF Core die Projektion analysieren und in SQL
+übersetzen. Eine normale Mapping-Methode wäre hier weniger geeignet, weil sie
+erst nach dem Laden der Daten im Speicher ausgeführt werden könnte.
 
 Lernziele
 ---------
 
-- ReadModel als Query-Seite der Anwendung verstehen
-- AsNoTracking() für reine Lesezugriffe einsetzen
-- DTO-Projektion statt Aggregate-Laden nutzen
-- Expression-basierte Mappings für EF-Core-Abfragen einordnen
-- NotFound als erwartbaren Fehler über Result modellieren
+- ReadModel als Query-Seite verstehen
+- DTO-Projektion mit EF Core einsetzen
+- Standardsicht und administrative Sicht über includeInactive modellieren
+- Separate WithInactive-Methoden durch einen Parameter ersetzen
+- Unterschied zwischen Domain-Aggregate und Anzeige-DTO erkennen
 */

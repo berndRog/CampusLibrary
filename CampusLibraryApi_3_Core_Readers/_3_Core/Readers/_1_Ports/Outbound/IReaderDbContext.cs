@@ -1,6 +1,5 @@
 using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
-
-namespace CampusLibraryApi._3_Core.Readers._1_Ports;
+namespace CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 
 // DbContext port for the Reader module.
 // Exposes only the persistence operations needed by this module.

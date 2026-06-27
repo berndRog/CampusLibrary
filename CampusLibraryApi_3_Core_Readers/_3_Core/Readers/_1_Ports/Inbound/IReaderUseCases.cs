@@ -1,7 +1,6 @@
 using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
-
-namespace CampusLibraryApi._3_Core.Readers._1_Ports;
+namespace CampusLibraryApi._3_Core.Readers._1_Ports.Inbound;
 
 // Facade port for Reader command use cases.
 // The web layer depends on this interface instead of concrete use case classes.

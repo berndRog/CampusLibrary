@@ -1,11 +1,10 @@
 using AwesomeAssertions;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
-using CampusLibraryApi._3_Core.Readers._1_Ports;
+using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Readers._2_Application.Mappings;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
 using CampusLibraryApiTest.TestInfrastructure;
 using Microsoft.Extensions.DependencyInjection;
-
 namespace CampusLibraryApiTest._3_InfrastructureTests.ReadModels;
 
 public sealed class ReaderReadModelIntT : TestBaseIntegration {
@@ -37,7 +36,10 @@ public sealed class ReaderReadModelIntT : TestBaseIntegration {
       unitOfWork.ClearChangeTracker();
 
       // Act
-      var result = await readModel.FindByIdAsync(reader1.Id, ct);
+      var result = await readModel.FindByIdAsync(
+         id: reader1.Id,
+         ct: ct
+      );
 
       // Assert
       result.IsSuccess.Should().BeTrue();
@@ -64,7 +66,10 @@ public sealed class ReaderReadModelIntT : TestBaseIntegration {
       unitOfWork.ClearChangeTracker();
 
       // Act
-      var result = await readModel.FindByIdAsync(reader1.Id, ct);
+      var result = await readModel.FindByIdAsync(
+         id: reader1.Id,
+         ct: ct
+      );
 
       // Assert
       result.IsFailure.Should().BeTrue();
@@ -72,7 +77,7 @@ public sealed class ReaderReadModelIntT : TestBaseIntegration {
    }
 
    [Fact]
-   public async Task FindByIdWithInactiveAsync_inactive_reader_ok() {
+   public async Task FindByIdAsync_inactive_reader_ok_when_includeInactive_is_true() {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var repository = scope.ServiceProvider.GetRequiredService<IReaderRepository>();
@@ -91,7 +96,11 @@ public sealed class ReaderReadModelIntT : TestBaseIntegration {
       unitOfWork.ClearChangeTracker();
 
       // Act
-      var result = await readModel.FindByIdWithInactiveAsync(reader1.Id, ct);
+      var result = await readModel.FindByIdAsync(
+         id: reader1.Id,
+         includeInactive: true,
+         ct: ct
+      );
 
       // Assert
       result.IsSuccess.Should().BeTrue();
@@ -118,7 +127,10 @@ public sealed class ReaderReadModelIntT : TestBaseIntegration {
       unitOfWork.ClearChangeTracker();
 
       // Act
-      var result = await readModel.FindByEmailAsync(reader1.EmailVo.Value, ct);
+      var result = await readModel.FindByEmailAsync(
+         email: reader1.EmailVo.Value,
+         ct: ct
+      );
 
       // Assert
       result.IsSuccess.Should().BeTrue();
@@ -145,11 +157,47 @@ public sealed class ReaderReadModelIntT : TestBaseIntegration {
       unitOfWork.ClearChangeTracker();
 
       // Act
-      var result = await readModel.FindByEmailAsync(reader1.EmailVo.Value, ct);
+      var result = await readModel.FindByEmailAsync(
+         email: reader1.EmailVo.Value,
+         ct: ct
+      );
 
       // Assert
       result.IsFailure.Should().BeTrue();
       result.Error.Should().Be(ReaderErrors.ReaderNotFound);
+   }
+
+   [Fact]
+   public async Task FindByEmailAsync_inactive_reader_ok_when_includeInactive_is_true() {
+      using var scope = Root.CreateDefaultScope();
+      var ct = TestContext.Current.CancellationToken;
+      var repository = scope.ServiceProvider.GetRequiredService<IReaderRepository>();
+      var readModel = scope.ServiceProvider.GetRequiredService<IReaderReadModel>();
+      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
+
+      // Arrange
+      var reader1 = seed.Reader1();
+      reader1.Deactivate(updatedAt: DeactivatedAt);
+
+      var expReader1Dto = reader1.ToReaderDto();
+
+      repository.Add(reader1);
+      await unitOfWork.SaveAllChangesAsync("Inactive reader inserted", ct);
+      unitOfWork.ClearChangeTracker();
+
+      // Act
+      var result = await readModel.FindByEmailAsync(
+         email: reader1.EmailVo.Value,
+         includeInactive: true,
+         ct: ct
+      );
+
+      // Assert
+      result.IsSuccess.Should().BeTrue();
+      var actualReader1Dto = result.Value;
+      actualReader1Dto.Should().NotBeNull();
+      actualReader1Dto.Should().BeEquivalentTo(expReader1Dto);
    }
 
    [Fact]
@@ -170,7 +218,10 @@ public sealed class ReaderReadModelIntT : TestBaseIntegration {
       unitOfWork.ClearChangeTracker();
 
       // Act
-      var result = await readModel.FindBySubjectAsync(reader1.Subject, ct);
+      var result = await readModel.FindBySubjectAsync(
+         subject: reader1.Subject,
+         ct: ct
+      );
 
       // Assert
       result.IsSuccess.Should().BeTrue();
@@ -197,11 +248,47 @@ public sealed class ReaderReadModelIntT : TestBaseIntegration {
       unitOfWork.ClearChangeTracker();
 
       // Act
-      var result = await readModel.FindBySubjectAsync(reader1.Subject, ct);
+      var result = await readModel.FindBySubjectAsync(
+         subject: reader1.Subject,
+         ct: ct
+      );
 
       // Assert
       result.IsFailure.Should().BeTrue();
       result.Error.Should().Be(ReaderErrors.ReaderNotFound);
+   }
+
+   [Fact]
+   public async Task FindBySubjectAsync_inactive_reader_ok_when_includeInactive_is_true() {
+      using var scope = Root.CreateDefaultScope();
+      var ct = TestContext.Current.CancellationToken;
+      var repository = scope.ServiceProvider.GetRequiredService<IReaderRepository>();
+      var readModel = scope.ServiceProvider.GetRequiredService<IReaderReadModel>();
+      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
+
+      // Arrange
+      var reader1 = seed.Reader1();
+      reader1.Deactivate(updatedAt: DeactivatedAt);
+
+      var expReader1Dto = reader1.ToReaderDto();
+
+      repository.Add(reader1);
+      await unitOfWork.SaveAllChangesAsync("Inactive reader inserted", ct);
+      unitOfWork.ClearChangeTracker();
+
+      // Act
+      var result = await readModel.FindBySubjectAsync(
+         subject: reader1.Subject,
+         includeInactive: true,
+         ct: ct
+      );
+
+      // Assert
+      result.IsSuccess.Should().BeTrue();
+      var actualReader1Dto = result.Value;
+      actualReader1Dto.Should().NotBeNull();
+      actualReader1Dto.Should().BeEquivalentTo(expReader1Dto);
    }
 
    [Fact]
@@ -226,7 +313,9 @@ public sealed class ReaderReadModelIntT : TestBaseIntegration {
          .ToList();
 
       // Act
-      var result = await readModel.SelectAllAsync(ct);
+      var result = await readModel.SelectAllAsync(
+         ct: ct
+      );
 
       // Assert
       result.IsSuccess.Should().BeTrue();
@@ -265,7 +354,9 @@ public sealed class ReaderReadModelIntT : TestBaseIntegration {
          .ToList();
 
       // Act
-      var result = await readModel.SelectAllAsync(ct);
+      var result = await readModel.SelectAllAsync(
+         ct: ct
+      );
 
       // Assert
       result.IsSuccess.Should().BeTrue();
@@ -280,7 +371,7 @@ public sealed class ReaderReadModelIntT : TestBaseIntegration {
    }
 
    [Fact]
-   public async Task SelectAllWithInactiveAsync_returns_active_and_inactive_readers() {
+   public async Task SelectAllAsync_returns_active_and_inactive_readers_when_includeInactive_is_true() {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var repository = scope.ServiceProvider.GetRequiredService<IReaderRepository>();
@@ -303,7 +394,10 @@ public sealed class ReaderReadModelIntT : TestBaseIntegration {
          .ToList();
 
       // Act
-      var result = await readModel.SelectAllWithInactiveAsync(ct);
+      var result = await readModel.SelectAllAsync(
+         includeInactive: true,
+         ct: ct
+      );
 
       // Assert
       result.IsSuccess.Should().BeTrue();
