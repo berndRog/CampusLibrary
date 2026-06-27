@@ -1,6 +1,6 @@
-# API-Dokumentation
+# API-Dokumentation — Teil 3
 
-Dieses Dokument beschreibt die öffentliche HTTP-API der aktuellen `CampusLibraryApi`.
+Dieses Dokument beschreibt die öffentliche HTTP-API von Teil 3 der `CampusLibraryApi`.
 
 Swagger/OpenAPI ist die maßgebliche technische API-Beschreibung. Dieses Dokument bietet eine didaktische Übersicht für Studierende.
 
@@ -19,7 +19,7 @@ API-Präfix:
 /camplib/v1
 ```
 
-Die aktuelle API enthält zwei Endpoint-Gruppen:
+Endpoint-Gruppen:
 
 ```text
 Readers
@@ -36,11 +36,11 @@ https://localhost:8010/swagger
 
 Für manuelle API-Tests sollte die Datenbank zuerst zurückgesetzt oder gelöscht werden.
 
-Reihenfolge:
+Empfohlene Reihenfolge:
 
 ```text
-1. Books.http
-2. Readers.http
+1. Readers.http
+2. Books.http
 ```
 
 # Readers API
@@ -55,7 +55,7 @@ Die technische Identitätsreferenz wird durch `Subject` repräsentiert.
 GET /camplib/v1/readers
 ```
 
-Erfolgreiche Antwort:
+Antwort:
 
 ```http
 200 OK
@@ -67,7 +67,7 @@ Erfolgreiche Antwort:
 GET /camplib/v1/readers/with-inactive
 ```
 
-Erfolgreiche Antwort:
+Antwort:
 
 ```http
 200 OK
@@ -79,18 +79,10 @@ Erfolgreiche Antwort:
 GET /camplib/v1/readers/{id}
 ```
 
-Beispiel:
-
-```http
-GET /camplib/v1/readers/10000000-0000-0000-0000-000000000000
-```
-
 Mögliche Antworten:
 
 ```http
 200 OK
-401 Unauthorized
-403 Forbidden
 404 Not Found
 ```
 
@@ -105,8 +97,6 @@ Mögliche Antworten:
 ```http
 200 OK
 400 Bad Request
-401 Unauthorized
-403 Forbidden
 404 Not Found
 ```
 
@@ -116,19 +106,11 @@ Mögliche Antworten:
 GET /camplib/v1/readers/email?email={email}
 ```
 
-Beispiel:
-
-```http
-GET /camplib/v1/readers/email?email=e.mustermann@t-online.de
-```
-
 Mögliche Antworten:
 
 ```http
 200 OK
 400 Bad Request
-401 Unauthorized
-403 Forbidden
 404 Not Found
 ```
 
@@ -136,15 +118,16 @@ Mögliche Antworten:
 
 ```http
 POST /camplib/v1/readers
+Content-Type: application/json
 ```
 
-Request Body:
+Beispiel:
 
 ```json
 {
   "firstname": "Erika",
   "lastname": "Mustermann",
-  "email": "e.mustermann@t-online.de",
+  "email": "e.mustermann@example.com",
   "addressDto": {
     "street": "Hauptstr. 12",
     "postalCode": "29556",
@@ -161,8 +144,6 @@ Mögliche Antworten:
 ```http
 201 Created
 400 Bad Request
-401 Unauthorized
-403 Forbidden
 409 Conflict
 ```
 
@@ -170,21 +151,7 @@ Mögliche Antworten:
 
 ```http
 PUT /camplib/v1/readers/{id}
-```
-
-Request Body:
-
-```json
-{
-  "lastname": "Meier",
-  "email": "e.meier@gmx.de",
-  "addressDto": {
-    "street": "Neue Straße 5",
-    "postalCode": "30123",
-    "city": "Hannover",
-    "country": "DE"
-  }
-}
+Content-Type: application/json
 ```
 
 Mögliche Antworten:
@@ -192,8 +159,6 @@ Mögliche Antworten:
 ```http
 200 OK
 400 Bad Request
-401 Unauthorized
-403 Forbidden
 404 Not Found
 409 Conflict
 ```
@@ -204,17 +169,21 @@ Mögliche Antworten:
 DELETE /camplib/v1/readers/{id}
 ```
 
-Erfolgreiche Antwort:
+Der Endpunkt deaktiviert den Reader. Er löscht den Datensatz nicht physisch.
+
+Mögliche Antworten:
 
 ```http
 204 No Content
+404 Not Found
+409 Conflict
 ```
 
-Ein deaktivierter Reader ist in normalen Reader-Abfragen verborgen, bleibt aber über `with-inactive`-Endpunkte sichtbar.
+# Books API
 
-# Catalog API
+Ein Book repräsentiert ein bibliografisches Werk. Ein BookItem repräsentiert ein physisches Exemplar.
 
-Die Catalog API verwaltet Books und physische BookItems.
+In Teil 3 gibt es keine Author-API. Autoren werden in `authorsText` gespeichert.
 
 ## Alle aktiven Books abrufen
 
@@ -222,20 +191,10 @@ Die Catalog API verwaltet Books und physische BookItems.
 GET /camplib/v1/books
 ```
 
-Beispielantwort:
+Antwort:
 
-```json
-[
-  {
-    "id": "b0000001-0000-0000-0000-000000000000",
-    "authorsText": "Robert C. Martin",
-    "title": "Clean Code",
-    "subtitle": "A Handbook of Agile Software Craftsmanship",
-    "isbn": "9780132350884",
-    "totalBookItems": 2,
-    "availableBookItems": 2
-  }
-]
+```http
+200 OK
 ```
 
 ## Ein aktives Book nach Id abrufen
@@ -244,68 +203,39 @@ Beispielantwort:
 GET /camplib/v1/books/{id}
 ```
 
-Beispielantwort:
-
-```json
-{
-  "id": "b0000001-0000-0000-0000-000000000000",
-  "authorsText": "Robert C. Martin",
-  "title": "Clean Code",
-  "subtitle": "A Handbook of Agile Software Craftsmanship",
-  "isbn": "9780132350884",
-  "bookItems": [
-    {
-      "id": "be000001-0000-0000-0000-000000000000",
-      "bookId": "b0000001-0000-0000-0000-000000000000",
-      "inventoryNumber": "CL-BOOK-0001",
-      "status": "Available"
-    }
-  ],
-  "totalBookItems": 2,
-  "availableBookItems": 2,
-  "isActive": true,
-  "createdAt": "2025-01-01T00:00:00Z",
-  "updatedAt": "2025-01-01T00:00:00Z"
-}
-```
-
-## Aktive Books suchen
+Mögliche Antworten:
 
 ```http
-GET /camplib/v1/books/search?searchField={searchField}&searchText={searchText}
+200 OK
+404 Not Found
 ```
 
-Beispiele:
+## Books suchen
 
 ```http
 GET /camplib/v1/books/search?searchField=Title&searchText=Clean
-GET /camplib/v1/books/search?searchField=AuthorLastName&searchText=Martin
 GET /camplib/v1/books/search?searchField=Isbn&searchText=9780132350884
+GET /camplib/v1/books/search?searchField=AuthorLastName&searchText=Martin
 ```
 
 Unterstützte Suchfelder:
 
 ```text
 Title
-AuthorLastName
 Isbn
+AuthorLastName
 ```
 
-`AuthorLastName` durchsucht den Autorentext nach der Nachnamenregel.
-
-```text
-Robert C. Martin -> Martin
-Martin Fowler -> Fowler
-Kent Beck -> Beck
-```
+Die API akzeptiert jeweils ein Suchfeld. Wenn kein Book passt, liefert die API `200 OK` mit einer leeren Liste.
 
 ## Book anlegen
 
 ```http
 POST /camplib/v1/books
+Content-Type: application/json
 ```
 
-Request Body:
+Beispiel:
 
 ```json
 {
@@ -317,19 +247,22 @@ Request Body:
 }
 ```
 
-Erfolgreiche Antwort:
+Mögliche Antworten:
 
 ```http
 201 Created
+400 Bad Request
+409 Conflict
 ```
 
-## Physisches BookItem hinzufügen
+## BookItem hinzufügen
 
 ```http
 POST /camplib/v1/books/{bookId}/items
+Content-Type: application/json
 ```
 
-Request Body:
+Beispiel:
 
 ```json
 {
@@ -338,13 +271,14 @@ Request Body:
 }
 ```
 
-Erfolgreiche Antwort:
+Mögliche Antworten:
 
 ```http
 200 OK
+400 Bad Request
+404 Not Found
+409 Conflict
 ```
-
-Ein neues BookItem startet mit Status `Available`.
 
 ## Book deaktivieren
 
@@ -352,48 +286,21 @@ Ein neues BookItem startet mit Status `Available`.
 PATCH /camplib/v1/books/{bookId}/deactivate
 ```
 
-Erfolgreiche Antwort:
+Mögliche Antworten:
 
 ```http
 200 OK
-```
-
-Ein deaktiviertes Book ist in normalen Book-Lese-Endpunkten und Suchen verborgen.
-
-# DTO-Überblick
-
-## BookCreateDto
-
-```csharp
-public sealed record BookCreateDto(
-   string? AuthorsText,
-   string? Title,
-   string? Subtitle,
-   string? Isbn,
-   string? Id
-);
-```
-
-## BookSearchField
-
-```csharp
-public enum BookSearchField {
-   Title = 1,
-   AuthorLastName = 2,
-   Isbn = 3
-}
-```
-
-## Fehlerbehandlung
-
-Die API gibt Fehler als `ProblemDetails` zurück.
-
-Typische Statuscodes:
-
-```text
-400 Bad Request
-401 Unauthorized
-403 Forbidden
 404 Not Found
 409 Conflict
 ```
+
+Deaktivierte Books werden aus normalen Book-Abfragen und Suchergebnissen ausgeblendet.
+
+## Status- und Deaktivierungskonzepte
+
+```text
+Reader und Book verwenden IsActive.
+BookItem verwendet BookItemStatus.
+```
+
+Diese Unterscheidung bereitet das Modell auf Teil 4 vor, in dem auch Loan einen Status und kein `IsActive` verwendet.

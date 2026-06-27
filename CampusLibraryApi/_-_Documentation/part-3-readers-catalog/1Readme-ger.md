@@ -1,4 +1,4 @@
-# CampusLibrary
+# CampusLibrary — Teil 3: Readers + Catalog
 
 Lehrprojekt für eine modular aufgebaute, DDD-orientierte ASP.NET-Core-Web-API.
 
@@ -6,24 +6,14 @@ Englische Version: [1Readme.md](1Readme.md)
 
 ## Aktueller Stand
 
-Die aktuelle Version enthält zwei fachliche Module:
+Diese Version enthält zwei fachliche Module:
 
-* Readers-Modul
-* Catalog-Modul
+* Readers
+* Catalog
 
-Die Anwendung bietet:
+Sie beschreibt den Stand vor Einführung des Loans-Moduls. Das Catalog-Modul ist bereits vereinfacht: Es gibt kein eigenes Author-Aggregate und keine m:n-Beziehung zwischen Book und Author. Autorennamen werden direkt in `Book.AuthorsText` gespeichert.
 
-* ASP.NET Core Web API
-* API-Versionierung
-* Swagger/OpenAPI-Dokumentation
-* SQLite-Persistenz mit EF Core
-* Repository- und ReadModel-Infrastruktur
-* Use Cases für schreibende Workflows
-* ReadModels für lesende Projektionen
-* Controller/API-Tests mit `WebApplicationFactory` und `HttpClient`
-* manuelle `.http`-Dateien für didaktische API-Tests
-
-Finales Testergebnis:
+Finales automatisiertes Testergebnis für diesen Teil:
 
 ```text
 139 Tests
@@ -86,7 +76,7 @@ Typische Operationen sind:
 * Reader inklusive inaktiver Reader abfragen
 * Reader nach Id oder E-Mail suchen
 
-Ein Reader wird durch Änderung seines fachlichen Zustands deaktiviert. Normale Lese-Endpunkte zeigen aktive Reader. Spezielle `with-inactive`-Endpunkte beziehen inaktive Reader mit ein.
+Ein Reader verwendet ein `IsActive`-Flag. Deaktivierung ist eine Soft-Delete-artige fachliche Operation: Der Reader bleibt gespeichert, normale Lese-Endpunkte blenden inaktive Reader jedoch aus. Spezielle `with-inactive`-Endpunkte beziehen sie mit ein.
 
 ## Catalog-Modul
 
@@ -107,141 +97,74 @@ Ein Book repräsentiert das bibliografische Werk. Ein BookItem repräsentiert ei
 
 ## Catalog-Domänenmodell
 
-## Book
+### Book
 
 `Book` ist ein Aggregate Root.
 
 Ein Book enthält:
 
-* Autorentext
+* Autorentext (`AuthorsText`)
 * Titel
 * optionalen Untertitel
 * ISBN
 * physische Exemplare
-* Aktiv-Status
+* `IsActive`
+* Audit-Zeitstempel
 
-Der Autorentext wird als ein String gespeichert.
+Books können deaktiviert werden. Normale Katalogabfragen blenden inaktive Books aus.
 
-Beispiele:
+### BookItem
 
-```text
-Robert C. Martin
-Martin Fowler, Kent Beck
-Erich Gamma, Richard Helm, Ralph Johnson, John Vlissides
-```
-
-Die Domain validiert, dass mindestens ein Autorname angegeben ist.
-
-## BookItem
-
-`BookItem` ist eine Entity innerhalb des `Book`-Aggregates.
+`BookItem` ist eine Entity innerhalb des Book-Aggregates.
 
 Es enthält:
 
+* Id
+* BookId
 * Inventarnummer
 * Status
 
-Der Status wird als Enum modelliert:
+BookItems verwenden kein `IsActive`. Ihr Lebenszyklus wird über `BookItemStatus` ausgedrückt, zum Beispiel `Available`, `Unavailable`, `Lost` oder `Damaged`.
 
-```csharp
-public enum BookItemStatus {
-   Available = 1,
-   Unavailable = 2,
-   Lost = 3,
-   Damaged = 4
-}
-```
+### AuthorsText statt Author-Aggregate
 
-Ein neues BookItem startet mit Status `Available`.
+Teil 3 enthält bewusst kein `Author`-Aggregate.
 
-## ISBN-Value-Object
-
-`IsbnVo` schützt die Regel, dass ein Book eine gültige ISBN haben muss.
-
-Die Domain soll nicht mit beliebigen Strings arbeiten, wenn ein Wert eine bestimmte fachliche Bedeutung hat.
-
-## Beziehung: Book zu BookItem
-
-Die Beziehung zwischen `Book` und `BookItem` ist eine 1:n-Beziehung.
+Das vereinfachte Modell lautet:
 
 ```text
-Book 1 --- n BookItem
+Book
+- AuthorsText
+- Title
+- Subtitle
+- IsbnVo
+- BookItems
 ```
 
-Ein `BookItem` gehört zu einem `Book`. Es wird über das `Book`-Aggregate hinzugefügt.
+Dadurch wird eine zweite m:n-Beziehung vermieden, bevor in einem späteren Teil Authentifizierung und Autorisierung eingeführt werden.
 
-## Commands und Queries
-
-Use Cases verändern den Zustand des Systems.
+Die Suche nach Autorennachnamen wird durch Parsen von `AuthorsText` umgesetzt:
 
 ```text
-ReaderUseCases
-- CreateAsync
-- UpdateAsync
-- DeactivateAsync
-
-BookUseCases
-- CreateAsync
-- AddBookItemAsync
-- DeactivateAsync
+"Martin Fowler, Kent Beck"
+-> Fowler
+-> Beck
 ```
 
-ReadModels liefern Daten für Anzeige, Suche und Auswahl.
+Der letzte durch Leerzeichen getrennte Token jedes komma-separierten Autoreneintrags wird als Nachname behandelt.
+
+## API-Überblick
+
+Endpoint-Gruppen:
 
 ```text
-ReaderReadModel
-- FindByIdAsync
-- FindByEmailAsync
-- SelectAllAsync
-- FindByIdWithInactiveAsync
-- SelectAllWithInactiveAsync
-
-BookReadModel
-- FindByIdAsync
-- SelectAllAsync
-- SearchAsync
+Readers
+Books
 ```
 
-Zentrale Unterscheidung:
+Wichtige Endpunkte:
 
 ```text
-Use Cases verändern Zustand.
-ReadModels lesen und projizieren Daten.
-Repositories laden Aggregate.
-Controller übersetzen HTTP-Requests und Responses.
-```
-
-## Catalog-Suche
-
-Books können nach einem expliziten Suchfeld gesucht werden:
-
-```text
-Title
-AuthorLastName
-Isbn
-```
-
-`AuthorLastName` durchsucht den Autorentext nach der Nachnamenregel. Der Autorentext wird an Kommata getrennt. Jeder Autoren-Token wird an Leerzeichen getrennt. Das letzte Wort jedes Autoren-Tokens gilt als Nachname.
-
-Beispiele:
-
-```text
-Robert C. Martin -> Martin
-Martin Fowler -> Fowler
-Kent Beck -> Beck
-```
-
-## API-Endpunkte
-
-Basisroute:
-
-```text
-/camplib/v1
-```
-
-Readers:
-
-```http
 GET    /camplib/v1/readers
 GET    /camplib/v1/readers/with-inactive
 GET    /camplib/v1/readers/{id}
@@ -250,46 +173,54 @@ GET    /camplib/v1/readers/email?email=...
 POST   /camplib/v1/readers
 PUT    /camplib/v1/readers/{id}
 DELETE /camplib/v1/readers/{id}
+
+GET    /camplib/v1/books
+GET    /camplib/v1/books/{id}
+GET    /camplib/v1/books/search?searchField=Title&searchText=...
+GET    /camplib/v1/books/search?searchField=Isbn&searchText=...
+GET    /camplib/v1/books/search?searchField=AuthorLastName&searchText=...
+POST   /camplib/v1/books
+POST   /camplib/v1/books/{bookId}/items
+PATCH  /camplib/v1/books/{bookId}/deactivate
 ```
 
-Books:
+`DELETE /readers/{id}` führt eine Deaktivierung aus, keine physische Löschung.
 
-```http
-GET   /camplib/v1/books
-GET   /camplib/v1/books/{id}
-GET   /camplib/v1/books/search?searchField=Title&searchText=...
-GET   /camplib/v1/books/search?searchField=AuthorLastName&searchText=...
-GET   /camplib/v1/books/search?searchField=Isbn&searchText=...
-POST  /camplib/v1/books
-POST  /camplib/v1/books/{bookId}/items
-PATCH /camplib/v1/books/{bookId}/deactivate
-```
+## Testing
 
-## Manuelle HTTP-Dateien
+Das Testprojekt deckt ab:
 
-Für manuelle API-Tests sollte die Datenbank zuerst zurückgesetzt oder gelöscht werden.
+* Domain-Tests
+* Value-Object-Tests
+* Use-Case-Mock-Tests
+* Use-Case-Integrationstests
+* Repository-Integrationstests
+* ReadModel-Integrationstests
+* Controller/API-End-to-End-Tests
+* manuelle `.http`-Dateien
 
-Reihenfolge:
-
-```text
-1. Books.http
-2. Readers.http
-```
-
-## Tests
-
-Alle automatisierten Tests ausführen:
+Alle Tests ausführen:
 
 ```bash
 dotnet test
 ```
 
-Finales Ergebnis:
+## Manuelle HTTP-Dateien
+
+Für reproduzierbare manuelle Tests sollte die Datenbank vor dem Ausführen der HTTP-Dateien zurückgesetzt oder gelöscht werden.
+
+Empfohlene Reihenfolge für Teil 3:
 
 ```text
-139 Tests
-0 fehlgeschlagen
-0 übersprungen
+1. Readers.http
+2. Books.http
 ```
 
-Die Tests decken Domain, Value Objects, Use Cases, Repositories, ReadModels, Controller/API-Verhalten und manuelle HTTP-Szenarien ab.
+Für späteres Lehrmaterial ist es sinnvoll, Seed-Aufbau und eigentliche Tests zu trennen, zum Beispiel:
+
+```text
+01_Seed_Readers.http
+02_Seed_Books.http
+11_Readers_Api.http
+12_Books_Api.http
+```

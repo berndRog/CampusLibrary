@@ -1,15 +1,15 @@
-# Testing Strategy — Part 3
+# Testing Strategy — Part 4
 
-This document describes the testing strategy used in Part 3 of the `CampusLibrary` project.
+This document describes the testing strategy used in Part 4 of the `CampusLibrary` project.
 
 The goal is not only to verify correctness, but also to make the different test levels visible for teaching purposes.
 
-Part 3 verifies the Readers module and the Catalog module.
+Part 4 verifies the Readers, Catalog and Loans modules.
 
 Final automated test result:
 
 ```text
-Test summary: total: 139, failed: 0, succeeded: 139, skipped: 0
+Test summary: total: 202, failed: 0, succeeded: 202, skipped: 0
 Build succeeded
 ```
 
@@ -27,6 +27,7 @@ CampusLibraryApi_1_Web
 CampusLibraryApi_2_BuildingBlocks
 CampusLibraryApi_3_Core_Readers
 CampusLibraryApi_3_Core_Catalog
+CampusLibraryApi_3_Core_Loan
 CampusLibraryApi_4_Infrastructure
 ```
 
@@ -41,6 +42,7 @@ Use case mock tests
 Use case integration tests
 Repository integration tests
 ReadModel integration tests
+Cross-module contract integration tests
 Controller/API end-to-end tests
 Manual HTTP files
 ```
@@ -61,8 +63,6 @@ Readers examples:
 Reader.Create(...)
 Reader.UpdateProfile(...)
 Reader.Deactivate(...)
-EmailVo.Create(...)
-AddressVo.Create(...)
 ```
 
 Catalog examples:
@@ -75,6 +75,17 @@ BookItem.Create(...)
 IsbnVo.Create(...)
 ```
 
+Loans examples:
+
+```text
+Loan.Create(...)
+Loan.Renew(...)
+Loan.ReturnAtDesk(...)
+Loan.IsOverdue(...)
+Loan.CanRenew(...)
+LoanPeriodVo.Create(...)
+```
+
 Domain tests focus on:
 
 ```text
@@ -83,37 +94,28 @@ normalization
 invalid input
 domain errors
 aggregate invariants
+status transitions
 value object validation
-active/inactive state
-status values
 UTC timestamps
 ```
 
-## 2. Use case mock tests
+## 2. Use case tests
 
-Use case mock tests verify application workflow orchestration without a real database.
+Use case tests verify application workflow orchestration.
 
-Readers examples:
-
-```text
-ReaderUcCreate
-ReaderUcUpdate
-ReaderUcDeactivate
-```
-
-Catalog examples:
+Loan examples:
 
 ```text
-BookUcCreate
-BookUcAddBookItem
-BookUcDeactivate
+LoanUcBorrow
+LoanUcRenew
+LoanUcReturnAtDesk
 ```
 
 These tests verify:
 
 ```text
+contract calls to Readers and Catalog
 repository calls
-read model checks
 unit of work calls
 error propagation
 mapping from aggregate to DTO
@@ -123,55 +125,81 @@ mapping from aggregate to DTO
 
 Use case integration tests run use cases with real infrastructure wiring and an in-memory database.
 
-They verify that:
+Loan examples:
 
 ```text
-use cases persist changes correctly
-repositories and unit of work work together
-read models can observe persisted changes
-business conflicts are detected
+BorrowAsync_ok_persists_loan_to_database
+BorrowAsync_book_item_already_borrowed_fails
+RenewAsync_ok_persists_new_due_date_and_renewal_count
+ReturnAtDeskAsync_ok_persists_returned_status_and_returned_at
 ```
 
 ## 4. Repository integration tests
 
 Repository integration tests verify loading and storing aggregates through EF Core.
 
-Repositories return aggregates, not DTOs.
-
-Examples:
+Loan repository examples:
 
 ```text
-IReaderRepository
-IBookRepository
+FindByIdAsync
+FindBorrowedByBookItemIdAsync
+FindBorrowedByReaderIdAsync
+Add
+AddRange
 ```
+
+The terminology is intentionally `Borrowed`, not `Active`, because Loans use `LoanStatus.Borrowed` instead of `IsActive`.
 
 ## 5. ReadModel integration tests
 
-ReadModel tests verify query-side projections.
-
-ReadModels return DTOs and may hide inactive records from normal queries.
+Loan read model tests verify query-side projections enriched through contracts.
 
 Examples:
 
 ```text
-IReaderReadModel
-IBookReadModel
+FindByIdAsync -> LoanDetailDto
+FindAllBorrowedAsync -> IReadOnlyList<LoanListItemDto>
 ```
 
-Important behavior:
+The read model tests must insert Readers, Books/BookItems and Loans, because the Loan read model uses `IReaderLoanContract` and `IBookItemLoanContract` to enrich DTOs.
+
+## 6. Cross-module contract integration tests
+
+Contract tests verify that Infrastructure implementations correctly expose read-only information across module boundaries.
+
+Examples:
 
 ```text
-normal reader queries return active readers only
-with-inactive reader queries include inactive readers
-normal book queries return active books only
-book search ignores inactive books
+ReaderLoanContractIntT
+BookItemLoanContractIntT
 ```
 
-## 6. Controller/API end-to-end tests
+These tests verify:
+
+```text
+Reader exists and may borrow
+Reader not found
+Reader not active
+BookItem exists
+BookItem not found
+BookItem not available for loan
+```
+
+## 7. Controller/API end-to-end tests
 
 Controller/API tests use `WebApplicationFactory` and `HttpClient`.
 
-They verify the HTTP behavior of the public API:
+Loan API examples:
+
+```text
+GET    /camplib/v1/loans
+GET    /camplib/v1/loans/{id}
+POST   /camplib/v1/loans
+PATCH  /camplib/v1/loans/{id}/renew
+PATCH  /camplib/v1/loans/{id}/return-at-desk
+```
+
+Tests verify:
 
 ```text
 status codes
@@ -183,34 +211,38 @@ conflict errors
 not found errors
 ```
 
-Examples:
+Important test rule:
 
 ```text
-ReadersControllerE2eT
-BooksControllerE2eT
+First assert the HTTP status code.
+Then read JSON.
 ```
 
-## 7. Manual HTTP files
+This avoids hiding 404/500 errors behind JSON parsing exceptions.
 
-Manual HTTP files are used for demonstration and exploratory testing.
+## 8. Manual HTTP files
 
-Part 3 manual flow:
+Part 4 manual flow:
 
 ```text
 1. Reset/delete database
 2. Run Readers.http
 3. Run Books.http
+4. Run Loans.http
 ```
 
-Recommended improvement for larger teaching units:
+Recommended teaching structure:
 
 ```text
 01_Seed_Readers.http
 02_Seed_Books.http
+03_Seed_Loans.http
 11_Readers_Api.http
 12_Books_Api.http
+13_Loans_Api.http
 91_Readers_Destructive.http
 92_Books_Destructive.http
+93_Loans_Destructive.http
 ```
 
 This separates setup from actual tests.
@@ -224,6 +256,7 @@ Domain tests: Is the rule correct?
 Use case tests: Is the workflow correct?
 Repository tests: Is persistence correct?
 ReadModel tests: Is the query projection correct?
+Contract tests: Are module boundaries respected?
 API tests: Is the HTTP contract correct?
 Manual HTTP files: Can students explore the API manually?
 ```

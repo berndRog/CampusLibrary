@@ -1,6 +1,6 @@
 # Architecture: CampusLibrary Part 3 — Readers + Catalog Modular Monolith
 
-This document describes the architecture of the current CampusLibraryApi.
+This document describes the architecture of Part 3 of `CampusLibraryApi`.
 
 The application is a project-based modular monolith with two business modules: Readers and Catalog. It is deployed as one ASP.NET Core application and uses one database.
 
@@ -92,7 +92,7 @@ CampusLibraryApiTest
 
 ## Modular monolith
 
-The application has one deployable unit, one database and one runtime process. The code is still modular because business capabilities are separated into projects and modules.
+The application has one deployable unit, one database and one runtime process. The code is modular because business capabilities are separated into projects and modules.
 
 ```text
 Readers contains reader-specific code.
@@ -102,254 +102,144 @@ Infrastructure implements technical adapters.
 Web exposes the HTTP API.
 ```
 
-## Project responsibilities
+## Dependency direction
 
-## CampusLibraryApi
+```text
+Web/API
+  -> Core modules
+  -> BuildingBlocks
 
-The executable application project. It is the composition root and wires all modules together.
+Infrastructure
+  -> Core modules
+  -> BuildingBlocks
 
-Responsibilities:
+Core modules
+  -> BuildingBlocks
+```
 
-* configure host and middleware
-* register controllers
-* register Swagger/OpenAPI
-* register API versioning
-* register Core modules and Infrastructure
-* start the application
+Core modules do not reference Web or Infrastructure.
 
-## CampusLibraryApi_1_Web
+## Ports and adapters
 
-The HTTP adapter layer.
+The Core modules define ports. Infrastructure implements outbound ports.
 
-Responsibilities:
+Examples:
 
-* define routes
-* receive request DTOs
-* call read models for GET requests
-* call use cases for write requests
-* translate `Result<T>` into HTTP responses
-* return DTOs or ProblemDetails
-* document the API for Swagger/OpenAPI
+```text
+IReaderRepository    -> ReaderRepositoryEf
+IReaderReadModel     -> ReaderReadModelEf
+IBookRepository      -> BookRepositoryEf
+IBookReadModel       -> BookReadModelEf
+IReaderDbContext     -> AppDbContext
+ICatalogDbContext    -> AppDbContext
+```
 
-## CampusLibraryApi_2_BuildingBlocks
+Controllers call use case facades or read models. They do not call EF Core directly.
 
-Reusable architectural types:
+## Write model and read model
 
-* Result
-* DomainError
-* Entity
-* AggregateRoot
-* IClock
-* IUnitOfWork
+The project intentionally separates write-side behavior and query-side projections.
 
-BuildingBlocks are independent from concrete business modules.
+Write side:
 
-## CampusLibraryApi_3_Core_Readers
+```text
+Controller -> UseCase -> Repository -> Aggregate -> UnitOfWork
+```
 
-The Readers business module.
+Read side:
 
-It contains the Reader domain model, application use cases, DTOs, mappings and ports.
+```text
+Controller -> ReadModel -> DTO projection
+```
 
-## CampusLibraryApi_3_Core_Catalog
+Repositories return aggregates. ReadModels return DTOs.
 
-The Catalog business module.
+## Readers module
 
-It contains the Book domain model, application use cases, DTOs, mappings and ports.
+Readers owns the Reader aggregate and related value objects.
 
-The Catalog Core module is independent from HTTP, EF Core, SQLite and Swagger.
+Reader uses `IsActive` to support deactivation. Normal read model queries return only active readers. Additional `with-inactive` queries include inactive readers.
 
-## CampusLibraryApi_4_Infrastructure
+Typical use cases:
 
-The technical adapter layer.
+```text
+ReaderUcCreate
+ReaderUcUpdate
+ReaderUcDeactivate
+```
 
-Responsibilities:
+## Catalog module
 
-* EF Core DbContext
+Catalog owns Books and BookItems.
+
+Book is an aggregate root. BookItem is an entity inside the Book aggregate.
+
+Important modeling decisions:
+
+```text
+Book uses IsActive.
+BookItem uses BookItemStatus.
+There is no Author aggregate.
+Authors are represented as Book.AuthorsText.
+```
+
+This keeps Part 3 focused on one aggregate with a one-to-many child entity.
+
+## IsActive versus Status
+
+The project uses two different modeling concepts:
+
+```text
+Reader / Book:
+- IsActive
+- deactivation hides records from normal read models
+
+BookItem:
+- Status
+- describes the state of a physical copy
+```
+
+This distinction becomes important when Loans are introduced in Part 4.
+
+## Infrastructure
+
+Infrastructure implements persistence and technical adapters.
+
+It contains:
+
 * EF Core configurations
-* repository implementations
-* read model implementations
-* UnitOfWork implementation
-* migrations
+* `AppDbContext`
+* repositories
+* read models
+* unit of work
+* clock implementation
 * seed data
 
-Infrastructure depends on Core modules because it implements their ports.
+The same database is used by all modules, but module ownership is expressed through ports and code boundaries.
 
-## Domain model
+## Composition root
 
-## Reader
+The executable `CampusLibraryApi` project wires everything together.
 
-`Reader` is an aggregate root.
+It registers:
 
-A Reader has:
+* controllers
+* API versioning
+* Swagger/OpenAPI
+* Core modules
+* Infrastructure
+* EF Core and SQLite
 
-* firstname
-* lastname
-* email
-* address
-* subject
-* active state
-* created timestamp
-* updated timestamp
+## Teaching focus of Part 3
 
-Email and address are modeled with value objects.
+Part 3 shows how a second module is added to the modular monolith without introducing distributed systems complexity.
 
-## Book
+Students see:
 
-`Book` is an aggregate root.
-
-A Book has:
-
-* authors text
-* title
-* optional subtitle
-* ISBN
-* book items
-* active state
-* created timestamp
-* updated timestamp
-
-State changes happen through domain methods:
-
-```csharp
-Book.Create(...)
-Book.AddBookItem(...)
-Book.Deactivate(...)
-```
-
-## AuthorsText
-
-`AuthorsText` stores author names as text.
-
-Examples:
-
-```text
-Robert C. Martin
-Martin Fowler, Kent Beck
-Erich Gamma, Richard Helm, Ralph Johnson, John Vlissides
-```
-
-For search, the text is interpreted by a lastname rule:
-
-```text
-Split by comma.
-Split each author token by spaces.
-Use the last word as lastname.
-```
-
-Examples:
-
-```text
-Robert C. Martin -> Martin
-Martin Fowler -> Fowler
-Kent Beck -> Beck
-```
-
-## BookItem
-
-`BookItem` is an entity inside the Book aggregate.
-
-It represents a physical copy of a book.
-
-A new BookItem starts with status `Available`.
-
-## IsbnVo
-
-`IsbnVo` is a value object that validates and normalizes ISBN values.
-
-## Relationship: Book to BookItem
-
-```text
-Book 1 --- n BookItem
-```
-
-The Book aggregate protects consistency for its BookItems.
-
-## Deactivation
-
-Readers and Books use an active state.
-
-```text
-IsActive = false
-```
-
-Repositories can load aggregates by id. ReadModels decide what is visible in normal queries.
-
-## Repositories and ReadModels
-
-Repositories are used on the write side. They load aggregates and keep EF Core tracking for workflows.
-
-ReadModels are used on the read side. They project database data into DTOs and usually use no tracking.
-
-```text
-Repository -> domain-oriented write access
-ReadModel  -> DTO-oriented query access
-```
-
-## Use cases and read models
-
-```text
-GET requests                -> ReadModel
-POST / PUT / PATCH / DELETE -> Use Case
-```
-
-Catalog examples:
-
-```text
-GET /camplib/v1/books
--> IBookReadModel.SelectAllAsync
-
-POST /camplib/v1/books
--> IBookUseCases.CreateAsync
-
-POST /camplib/v1/books/{bookId}/items
--> IBookUseCases.AddBookItemAsync
-
-PATCH /camplib/v1/books/{bookId}/deactivate
--> IBookUseCases.DeactivateAsync
-```
-
-## Database model
-
-Current tables:
-
-```text
-Readers
-Books
-BookItems
-```
-
-Books columns:
-
-```text
-Id
-Authors
-Title
-Subtitle
-Isbn
-IsActive
-CreatedAt
-UpdatedAt
-```
-
-The `Authors` column stores `Book.AuthorsText`.
-
-BookItems columns:
-
-```text
-Id
-InventoryNumber
-Status
-BookId
-```
-
-## Dependency rules
-
-```text
-BuildingBlocks depends on no business module.
-Readers depends on BuildingBlocks.
-Catalog depends on BuildingBlocks.
-Infrastructure depends on BuildingBlocks, Readers and Catalog.
-Web depends on Readers, Catalog and BuildingBlocks.
-The executable API project wires all projects together.
-Tests may reference all required projects.
-```
+* two independent Core modules
+* one shared runtime
+* one shared database
+* clear module ownership
+* aggregate boundaries
+* read/write separation
+* API and integration testing

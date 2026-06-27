@@ -1,15 +1,15 @@
-# Teststrategie — Teil 3
+# Teststrategie — Teil 4
 
-Dieses Dokument beschreibt die Teststrategie in Teil 3 des Projekts `CampusLibrary`.
+Dieses Dokument beschreibt die Teststrategie in Teil 4 des Projekts `CampusLibrary`.
 
 Ziel ist nicht nur die Prüfung der Korrektheit, sondern auch die Sichtbarkeit der unterschiedlichen Testebenen für den Unterricht.
 
-Teil 3 prüft das Readers-Modul und das Catalog-Modul.
+Teil 4 prüft die Module Readers, Catalog und Loans.
 
 Finales automatisiertes Testergebnis:
 
 ```text
-Test summary: total: 139, failed: 0, succeeded: 139, skipped: 0
+Test summary: total: 202, failed: 0, succeeded: 202, skipped: 0
 Build succeeded
 ```
 
@@ -27,6 +27,7 @@ CampusLibraryApi_1_Web
 CampusLibraryApi_2_BuildingBlocks
 CampusLibraryApi_3_Core_Readers
 CampusLibraryApi_3_Core_Catalog
+CampusLibraryApi_3_Core_Loan
 CampusLibraryApi_4_Infrastructure
 ```
 
@@ -41,6 +42,7 @@ Use-Case-Mock-Tests
 Use-Case-Integrationstests
 Repository-Integrationstests
 ReadModel-Integrationstests
+Modulübergreifende Contract-Integrationstests
 Controller/API-End-to-End-Tests
 Manuelle HTTP-Dateien
 ```
@@ -61,8 +63,6 @@ Readers-Beispiele:
 Reader.Create(...)
 Reader.UpdateProfile(...)
 Reader.Deactivate(...)
-EmailVo.Create(...)
-AddressVo.Create(...)
 ```
 
 Catalog-Beispiele:
@@ -75,6 +75,17 @@ BookItem.Create(...)
 IsbnVo.Create(...)
 ```
 
+Loans-Beispiele:
+
+```text
+Loan.Create(...)
+Loan.Renew(...)
+Loan.ReturnAtDesk(...)
+Loan.IsOverdue(...)
+Loan.CanRenew(...)
+LoanPeriodVo.Create(...)
+```
+
 Domain-Tests konzentrieren sich auf:
 
 ```text
@@ -83,37 +94,28 @@ Normalisierung
 ungültige Eingaben
 Domain-Fehler
 Aggregate-Invarianten
+Statusübergänge
 Value-Object-Validierung
-Aktiv/Inaktiv-Zustand
-Statuswerte
 UTC-Zeitstempel
 ```
 
-## 2. Use-Case-Mock-Tests
+## 2. Use-Case-Tests
 
-Use-Case-Mock-Tests prüfen die Orchestrierung von Application Workflows ohne echte Datenbank.
+Use-Case-Tests prüfen die Orchestrierung von Application Workflows.
 
-Readers-Beispiele:
-
-```text
-ReaderUcCreate
-ReaderUcUpdate
-ReaderUcDeactivate
-```
-
-Catalog-Beispiele:
+Loan-Beispiele:
 
 ```text
-BookUcCreate
-BookUcAddBookItem
-BookUcDeactivate
+LoanUcBorrow
+LoanUcRenew
+LoanUcReturnAtDesk
 ```
 
 Diese Tests prüfen:
 
 ```text
+Contract-Aufrufe zu Readers und Catalog
 Repository-Aufrufe
-ReadModel-Prüfungen
 UnitOfWork-Aufrufe
 Fehlerweitergabe
 Mapping von Aggregate zu DTO
@@ -123,55 +125,81 @@ Mapping von Aggregate zu DTO
 
 Use-Case-Integrationstests führen Use Cases mit echter Infrastructure-Verdrahtung und In-Memory-Datenbank aus.
 
-Sie prüfen:
+Loan-Beispiele:
 
 ```text
-Use Cases persistieren Änderungen korrekt
-Repositories und UnitOfWork arbeiten zusammen
-ReadModels können persistierte Änderungen sehen
-fachliche Konflikte werden erkannt
+BorrowAsync_ok_persists_loan_to_database
+BorrowAsync_book_item_already_borrowed_fails
+RenewAsync_ok_persists_new_due_date_and_renewal_count
+ReturnAtDeskAsync_ok_persists_returned_status_and_returned_at
 ```
 
 ## 4. Repository-Integrationstests
 
 Repository-Integrationstests prüfen das Laden und Speichern von Aggregates über EF Core.
 
-Repositories geben Aggregate zurück, keine DTOs.
-
-Beispiele:
+Loan-Repository-Beispiele:
 
 ```text
-IReaderRepository
-IBookRepository
+FindByIdAsync
+FindBorrowedByBookItemIdAsync
+FindBorrowedByReaderIdAsync
+Add
+AddRange
 ```
+
+Die Begrifflichkeit lautet bewusst `Borrowed` und nicht `Active`, weil Loans `LoanStatus.Borrowed` statt `IsActive` verwenden.
 
 ## 5. ReadModel-Integrationstests
 
-ReadModel-Tests prüfen lesende Projektionen.
-
-ReadModels geben DTOs zurück und können inaktive Datensätze aus normalen Abfragen ausblenden.
+Loan-ReadModel-Tests prüfen lesende Projektionen, die über Contracts angereichert werden.
 
 Beispiele:
 
 ```text
-IReaderReadModel
-IBookReadModel
+FindByIdAsync -> LoanDetailDto
+FindAllBorrowedAsync -> IReadOnlyList<LoanListItemDto>
 ```
 
-Wichtiges Verhalten:
+Die ReadModel-Tests müssen Readers, Books/BookItems und Loans einfügen, weil das Loan-ReadModel `IReaderLoanContract` und `IBookItemLoanContract` zur DTO-Anreicherung verwendet.
+
+## 6. Modulübergreifende Contract-Integrationstests
+
+Contract-Tests prüfen, dass die Infrastructure-Implementierungen lesende Informationen korrekt über Modulgrenzen bereitstellen.
+
+Beispiele:
 
 ```text
-normale Reader-Abfragen liefern nur aktive Reader
-with-inactive Reader-Abfragen beziehen inaktive Reader mit ein
-normale Book-Abfragen liefern nur aktive Books
-Book-Suche ignoriert inaktive Books
+ReaderLoanContractIntT
+BookItemLoanContractIntT
 ```
 
-## 6. Controller/API-End-to-End-Tests
+Diese Tests prüfen:
+
+```text
+Reader existiert und darf ausleihen
+Reader nicht gefunden
+Reader nicht aktiv
+BookItem existiert
+BookItem nicht gefunden
+BookItem nicht ausleihbar
+```
+
+## 7. Controller/API-End-to-End-Tests
 
 Controller/API-Tests verwenden `WebApplicationFactory` und `HttpClient`.
 
-Sie prüfen das HTTP-Verhalten der öffentlichen API:
+Loan-API-Beispiele:
+
+```text
+GET    /camplib/v1/loans
+GET    /camplib/v1/loans/{id}
+POST   /camplib/v1/loans
+PATCH  /camplib/v1/loans/{id}/renew
+PATCH  /camplib/v1/loans/{id}/return-at-desk
+```
+
+Tests prüfen:
 
 ```text
 Statuscodes
@@ -183,34 +211,38 @@ Konfliktfehler
 Not-Found-Fehler
 ```
 
-Beispiele:
+Wichtige Testregel:
 
 ```text
-ReadersControllerE2eT
-BooksControllerE2eT
+Zuerst den HTTP-Statuscode prüfen.
+Danach JSON lesen.
 ```
 
-## 7. Manuelle HTTP-Dateien
+Damit werden 404/500-Fehler nicht durch JSON-Parsing-Exceptions verdeckt.
 
-Manuelle HTTP-Dateien werden für Demonstration und exploratives Testen verwendet.
+## 8. Manuelle HTTP-Dateien
 
-Manueller Ablauf in Teil 3:
+Manueller Ablauf in Teil 4:
 
 ```text
 1. Datenbank zurücksetzen/löschen
 2. Readers.http ausführen
 3. Books.http ausführen
+4. Loans.http ausführen
 ```
 
-Empfohlene Verbesserung für größere Lehreinheiten:
+Empfohlene Lehrstruktur:
 
 ```text
 01_Seed_Readers.http
 02_Seed_Books.http
+03_Seed_Loans.http
 11_Readers_Api.http
 12_Books_Api.http
+13_Loans_Api.http
 91_Readers_Destructive.http
 92_Books_Destructive.http
+93_Loans_Destructive.http
 ```
 
 Dadurch werden Setup und eigentliche Tests getrennt.
@@ -224,6 +256,7 @@ Domain-Tests: Ist die Regel korrekt?
 Use-Case-Tests: Ist der Workflow korrekt?
 Repository-Tests: Funktioniert die Persistenz?
 ReadModel-Tests: Ist die lesende Projektion korrekt?
+Contract-Tests: Werden Modulgrenzen eingehalten?
 API-Tests: Ist der HTTP-Vertrag korrekt?
 Manuelle HTTP-Dateien: Können Studierende die API selbst erkunden?
 ```
