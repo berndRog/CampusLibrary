@@ -1,29 +1,19 @@
-# CampusLibrary
+# CampusLibrary — Part 3: Readers + Catalog
 
-Teaching project for a modular DDD-oriented ASP.NET Core Web API.
+Teaching project for a modular, DDD-oriented ASP.NET Core Web API.
 
 German version: [1Readme-ger.md](1Readme-ger.md)
 
 ## Current status
 
-The current version contains two functional modules:
+This version contains two functional modules:
 
-* Readers module
-* Catalog module
+* Readers
+* Catalog
 
-The application provides:
+It represents the state before the Loans module is introduced. The Catalog module has already been simplified: there is no separate Author aggregate and no many-to-many Book-Author relationship. Author names are stored directly in `Book.AuthorsText`.
 
-* ASP.NET Core Web API
-* API versioning
-* Swagger/OpenAPI documentation
-* SQLite persistence with EF Core
-* repository and read model infrastructure
-* write-side use cases
-* query-side read models
-* controller/API tests with `WebApplicationFactory` and `HttpClient`
-* manual `.http` files for didactic API testing
-
-Final automated test result:
+Final automated test result for this part:
 
 ```text
 139 tests
@@ -53,7 +43,7 @@ CampusLibraryApiTest
 
 The solution is a project-based modular monolith.
 
-The Web/API layer exposes HTTP endpoints. The Core modules contain domain model, use cases, DTOs and ports. BuildingBlocks contains reusable abstractions. Infrastructure implements EF Core persistence, repositories, read models and database configuration. Tests verify behavior across domain, application, infrastructure and API boundaries.
+The Web/API layer exposes HTTP endpoints. The Core modules contain the domain model, use cases, DTOs and ports. BuildingBlocks contains reusable abstractions. Infrastructure implements EF Core persistence, repositories, read models and database configuration. Tests verify behavior across domain, application, infrastructure and API boundaries.
 
 Central dependency rule:
 
@@ -86,7 +76,7 @@ Typical operations are:
 * query readers including inactive readers
 * find readers by id or email
 
-A Reader is deactivated by changing its business state. Normal read endpoints show active readers. Special `with-inactive` endpoints include inactive readers.
+A Reader uses an `IsActive` flag. Deactivation is a soft-delete style business operation: the reader remains stored, but normal read endpoints hide inactive readers. Special `with-inactive` endpoints include them.
 
 ## Catalog module
 
@@ -103,145 +93,78 @@ It contains:
 * Books controller
 * Catalog tests
 
-A Book represents the bibliographic work. A BookItem represents a physical copy of a book.
+A Book represents the bibliographic work. A BookItem represents one physical copy of a book.
 
 ## Catalog domain model
 
-## Book
+### Book
 
 `Book` is an aggregate root.
 
-A book contains:
+A Book contains:
 
-* author text
+* author text (`AuthorsText`)
 * title
 * optional subtitle
 * ISBN
 * physical book items
-* active state
+* `IsActive`
+* audit timestamps
 
-The author text is stored as one string.
+Books can be deactivated. Normal catalog queries hide inactive books.
 
-Examples:
+### BookItem
 
-```text
-Robert C. Martin
-Martin Fowler, Kent Beck
-Erich Gamma, Richard Helm, Ralph Johnson, John Vlissides
-```
-
-The domain validates that at least one author name is provided.
-
-## BookItem
-
-`BookItem` is an entity inside the `Book` aggregate.
+`BookItem` is an entity inside the Book aggregate.
 
 It contains:
 
+* id
+* book id
 * inventory number
 * status
 
-The status is modeled as an enum:
+BookItems do not use `IsActive`. Their lifecycle is represented by `BookItemStatus`, for example `Available`, `Unavailable`, `Lost` or `Damaged`.
 
-```csharp
-public enum BookItemStatus {
-   Available = 1,
-   Unavailable = 2,
-   Lost = 3,
-   Damaged = 4
-}
-```
+### AuthorsText instead of Author aggregate
 
-A new book item starts with status `Available`.
+Part 3 deliberately does not contain an `Author` aggregate.
 
-## ISBN value object
-
-`IsbnVo` protects the rule that a book must have a valid ISBN.
-
-The domain should not work with arbitrary strings when a value has a specific business meaning.
-
-## Relationship: Book to BookItem
-
-The relationship between `Book` and `BookItem` is one-to-many.
+The simplified model is:
 
 ```text
-Book 1 --- n BookItem
+Book
+- AuthorsText
+- Title
+- Subtitle
+- IsbnVo
+- BookItems
 ```
 
-A `BookItem` belongs to a `Book`. It is added through the `Book` aggregate.
+This avoids a second many-to-many relationship before introducing authentication and authorization in a later part.
 
-## Commands and queries
-
-Use cases change the state of the system.
+Author-last-name search is implemented by parsing `AuthorsText`:
 
 ```text
-ReaderUseCases
-- CreateAsync
-- UpdateAsync
-- DeactivateAsync
-
-BookUseCases
-- CreateAsync
-- AddBookItemAsync
-- DeactivateAsync
+"Martin Fowler, Kent Beck"
+-> Fowler
+-> Beck
 ```
 
-Read models return data for display, search and selection.
+The last whitespace-separated token of each comma-separated author entry is treated as the last name.
+
+## API overview
+
+Endpoint groups:
 
 ```text
-ReaderReadModel
-- FindByIdAsync
-- FindByEmailAsync
-- SelectAllAsync
-- FindByIdWithInactiveAsync
-- SelectAllWithInactiveAsync
-
-BookReadModel
-- FindByIdAsync
-- SelectAllAsync
-- SearchAsync
+Readers
+Books
 ```
 
-Central distinction:
+Important endpoints:
 
 ```text
-Use cases change state.
-Read models read and project data.
-Repositories load aggregates.
-Controllers translate HTTP requests and responses.
-```
-
-## Catalog search
-
-Books can be searched by one explicit search field:
-
-```text
-Title
-AuthorLastName
-Isbn
-```
-
-`AuthorLastName` searches the author text by lastname rule. The author text is split by commas. Each author token is split by spaces. The last word of each author token is treated as the lastname.
-
-Examples:
-
-```text
-Robert C. Martin -> Martin
-Martin Fowler -> Fowler
-Kent Beck -> Beck
-```
-
-## API endpoints
-
-Base route:
-
-```text
-/camplib/v1
-```
-
-Readers:
-
-```http
 GET    /camplib/v1/readers
 GET    /camplib/v1/readers/with-inactive
 GET    /camplib/v1/readers/{id}
@@ -250,46 +173,54 @@ GET    /camplib/v1/readers/email?email=...
 POST   /camplib/v1/readers
 PUT    /camplib/v1/readers/{id}
 DELETE /camplib/v1/readers/{id}
+
+GET    /camplib/v1/books
+GET    /camplib/v1/books/{id}
+GET    /camplib/v1/books/search?searchField=Title&searchText=...
+GET    /camplib/v1/books/search?searchField=Isbn&searchText=...
+GET    /camplib/v1/books/search?searchField=AuthorLastName&searchText=...
+POST   /camplib/v1/books
+POST   /camplib/v1/books/{bookId}/items
+PATCH  /camplib/v1/books/{bookId}/deactivate
 ```
 
-Books:
-
-```http
-GET   /camplib/v1/books
-GET   /camplib/v1/books/{id}
-GET   /camplib/v1/books/search?searchField=Title&searchText=...
-GET   /camplib/v1/books/search?searchField=AuthorLastName&searchText=...
-GET   /camplib/v1/books/search?searchField=Isbn&searchText=...
-POST  /camplib/v1/books
-POST  /camplib/v1/books/{bookId}/items
-PATCH /camplib/v1/books/{bookId}/deactivate
-```
-
-## Manual HTTP files
-
-For manual API tests, reset or delete the database first.
-
-Execution order:
-
-```text
-1. Books.http
-2. Readers.http
-```
+`DELETE /readers/{id}` performs a deactivation, not a physical delete.
 
 ## Testing
 
-Run all automated tests:
+The test project covers:
+
+* domain tests
+* value object tests
+* use case mock tests
+* use case integration tests
+* repository integration tests
+* read model integration tests
+* controller/API end-to-end tests
+* manual `.http` files
+
+Run all tests:
 
 ```bash
 dotnet test
 ```
 
-Final result:
+## Manual HTTP files
+
+For reproducible manual tests, reset or delete the database before running the HTTP files.
+
+Recommended execution order for Part 3:
 
 ```text
-139 tests
-0 failed
-0 skipped
+1. Readers.http
+2. Books.http
 ```
 
-The tests cover domain, value objects, use cases, repositories, read models, controller/API behavior and manual HTTP scenarios.
+For future teaching material it is useful to separate seed setup and actual tests, for example:
+
+```text
+01_Seed_Readers.http
+02_Seed_Books.http
+11_Readers_Api.http
+12_Books_Api.http
+```

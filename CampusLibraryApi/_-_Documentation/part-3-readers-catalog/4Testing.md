@@ -1,10 +1,10 @@
-# Testing Strategy
+# Testing Strategy — Part 3
 
-This document describes the testing strategy used in the `CampusLibrary` project.
+This document describes the testing strategy used in Part 3 of the `CampusLibrary` project.
 
 The goal is not only to verify correctness, but also to make the different test levels visible for teaching purposes.
 
-The current test suite verifies the Readers module and the Catalog module.
+Part 3 verifies the Readers module and the Catalog module.
 
 Final automated test result:
 
@@ -85,28 +85,13 @@ domain errors
 aggregate invariants
 value object validation
 active/inactive state
+status values
 UTC timestamps
-```
-
-## Catalog domain tests
-
-Catalog domain tests verify:
-
-```text
-Book can be created with valid AuthorsText, title and ISBN
-Book cannot be created without valid AuthorsText
-Book cannot be created with invalid ISBN
-AuthorsText is normalized
-BookItem can be added to Book
-BookItem starts with status Available
-duplicate inventory numbers are rejected
-Book can be deactivated
-CreatedAt and UpdatedAt use UTC timestamps
 ```
 
 ## 2. Use case mock tests
 
-Use case mock tests verify application workflow orchestration.
+Use case mock tests verify application workflow orchestration without a real database.
 
 Readers examples:
 
@@ -124,238 +109,121 @@ BookUcAddBookItem
 BookUcDeactivate
 ```
 
-Typical mocked ports:
+These tests verify:
 
 ```text
-IReaderRepository
-IBookRepository
-IUnitOfWork
-IClock
-ILogger<T>
-```
-
-Use case mock tests verify:
-
-```text
-input validation
-optional id handling
 repository calls
-uniqueness checks
-domain method calls
-UnitOfWork calls
-returned DTOs
-error results
+read model checks
+unit of work calls
+error propagation
+mapping from aggregate to DTO
 ```
 
 ## 3. Use case integration tests
 
-Use case integration tests verify use cases with real persistence adapters.
+Use case integration tests run use cases with real infrastructure wiring and an in-memory database.
 
-They use:
-
-```text
-real repository implementation
-real UnitOfWork
-SQLite test database
-EF Core tracking
-real EF Core mappings
-```
-
-Catalog integration examples:
+They verify that:
 
 ```text
-creating a Book persists Book and ISBN
-creating a Book persists AuthorsText
-creating a Book without AuthorsText fails
-adding a BookItem persists the BookItem
-adding a duplicate inventory number fails
-deactivating a Book updates IsActive
+use cases persist changes correctly
+repositories and unit of work work together
+read models can observe persisted changes
+business conflicts are detected
 ```
 
-## 4. Infrastructure tests
+## 4. Repository integration tests
 
-Infrastructure tests verify persistence adapters.
+Repository integration tests verify loading and storing aggregates through EF Core.
 
-Typical areas:
-
-```text
-ReaderRepositoryEf
-ReaderReadModelEf
-BookRepositoryEf
-BookReadModelEf
-AppDbContext
-EF Core mappings
-SQLite behavior
-```
-
-Repositories belong to the write side and return domain objects.
-
-ReadModels belong to the read side and return DTOs.
-
-```text
-Repository -> aggregate-oriented write access
-ReadModel  -> DTO-oriented query access
-```
-
-## Repository tests
-
-Readers repository tests verify:
-
-```text
-add Reader
-find Reader by id
-find Reader by email
-check subject uniqueness
-load deactivated Reader as aggregate
-```
-
-Catalog repository tests verify:
-
-```text
-add Book
-find Book by id
-check ISBN uniqueness
-check inventory number uniqueness
-load Book with BookItems
-load deactivated Book as aggregate
-```
-
-## ReadModel tests
-
-Reader read model tests verify:
-
-```text
-select all active readers
-select all readers including inactive readers
-find active reader by id
-find reader by id including inactive readers
-find reader by email
-```
-
-Catalog read model tests verify:
-
-```text
-select all active books
-find active book by id
-search active books by title
-search active books by author lastname
-search active books by ISBN
-hide inactive books from normal queries
-```
-
-## Catalog search tests
-
-Book search supports:
-
-```text
-Title
-AuthorLastName
-Isbn
-```
-
-`AuthorLastName` uses the lastname rule for AuthorsText.
+Repositories return aggregates, not DTOs.
 
 Examples:
 
 ```text
-Robert C. Martin -> Martin
-Martin Fowler -> Fowler
-Kent Beck -> Beck
+IReaderRepository
+IBookRepository
 ```
 
-A regression test verifies that a search for `Martin` returns `Clean Code`, because its author text contains `Robert C. Martin`. It does not return `Refactoring`, because its author text contains `Martin Fowler`, where `Fowler` is the lastname.
+## 5. ReadModel integration tests
 
-## 5. Controller/API end-to-end tests
+ReadModel tests verify query-side projections.
 
-Controller/API end-to-end tests use:
+ReadModels return DTOs and may hide inactive records from normal queries.
+
+Examples:
 
 ```text
-WebApplicationFactory<Program>
-TestBaseFactory
-TestBaseEndToEnd
-TestAuthHandler
-HttpClient
+IReaderReadModel
+IBookReadModel
 ```
 
-They verify:
+Important behavior:
 
 ```text
-routing
-model binding
-controller actions
+normal reader queries return active readers only
+with-inactive reader queries include inactive readers
+normal book queries return active books only
+book search ignores inactive books
+```
+
+## 6. Controller/API end-to-end tests
+
+Controller/API tests use `WebApplicationFactory` and `HttpClient`.
+
+They verify the HTTP behavior of the public API:
+
+```text
 status codes
-JSON serialization
-ProblemDetails mapping
-dependency injection
-database integration
-HTTP contract from the outside
+JSON response bodies
+Created responses and Location headers
+routing
+validation errors
+conflict errors
+not found errors
 ```
 
-Reader API tests cover:
+Examples:
 
 ```text
-GET    /camplib/v1/readers
-GET    /camplib/v1/readers/with-inactive
-GET    /camplib/v1/readers/{id}
-GET    /camplib/v1/readers/{id}/with-inactive
-GET    /camplib/v1/readers/email?email=...
-POST   /camplib/v1/readers
-PUT    /camplib/v1/readers/{id}
-DELETE /camplib/v1/readers/{id}
+ReadersControllerE2eT
+BooksControllerE2eT
 ```
 
-Book API tests cover:
+## 7. Manual HTTP files
+
+Manual HTTP files are used for demonstration and exploratory testing.
+
+Part 3 manual flow:
 
 ```text
-GET   /camplib/v1/books
-GET   /camplib/v1/books/{id}
-GET   /camplib/v1/books/search?searchField=Title&searchText=...
-GET   /camplib/v1/books/search?searchField=AuthorLastName&searchText=...
-GET   /camplib/v1/books/search?searchField=Isbn&searchText=...
-POST  /camplib/v1/books
-POST  /camplib/v1/books/{bookId}/items
-PATCH /camplib/v1/books/{bookId}/deactivate
+1. Reset/delete database
+2. Run Readers.http
+3. Run Books.http
 ```
 
-## Manual HTTP files
-
-Manual HTTP files make API behavior visible for students.
-
-Execution order after a database reset:
+Recommended improvement for larger teaching units:
 
 ```text
-1. Books.http
-2. Readers.http
+01_Seed_Readers.http
+02_Seed_Books.http
+11_Readers_Api.http
+12_Books_Api.http
+91_Readers_Destructive.http
+92_Books_Destructive.http
 ```
 
-## Test database
+This separates setup from actual tests.
 
-Automated tests use SQLite through the test infrastructure.
+## Didactic value
 
-The test factory replaces selected services:
+The test suite shows that different kinds of tests answer different questions:
 
 ```text
-AppDbContext
-IUnitOfWork
-IClock
-TestSeed
-Authentication
+Domain tests: Is the rule correct?
+Use case tests: Is the workflow correct?
+Repository tests: Is persistence correct?
+ReadModel tests: Is the query projection correct?
+API tests: Is the HTTP contract correct?
+Manual HTTP files: Can students explore the API manually?
 ```
-
-A fake clock is used to make timestamps deterministic.
-
-## Test seed
-
-The test seed provides stable demo and test data.
-
-Typical Catalog data:
-
-```text
-Book1
-Book2
-Book3
-Book4
-BookItems for Books
-```
-
-Stable seed data keeps examples consistent across domain tests, integration tests, API tests and manual HTTP files.

@@ -1,12 +1,12 @@
-# Teststrategie
+# Teststrategie — Teil 3
 
-Dieses Dokument beschreibt die Teststrategie im Projekt `CampusLibrary`.
+Dieses Dokument beschreibt die Teststrategie in Teil 3 des Projekts `CampusLibrary`.
 
 Ziel ist nicht nur die Prüfung der Korrektheit, sondern auch die Sichtbarkeit der unterschiedlichen Testebenen für den Unterricht.
 
-Die aktuelle Testsuite prüft das Readers-Modul und das Catalog-Modul.
+Teil 3 prüft das Readers-Modul und das Catalog-Modul.
 
-Finales Testergebnis:
+Finales automatisiertes Testergebnis:
 
 ```text
 Test summary: total: 139, failed: 0, succeeded: 139, skipped: 0
@@ -85,28 +85,13 @@ Domain-Fehler
 Aggregate-Invarianten
 Value-Object-Validierung
 Aktiv/Inaktiv-Zustand
+Statuswerte
 UTC-Zeitstempel
-```
-
-## Catalog-Domain-Tests
-
-Catalog-Domain-Tests prüfen:
-
-```text
-Book kann mit gültigem AuthorsText, Titel und ISBN erzeugt werden
-Book kann nicht ohne gültigen AuthorsText erzeugt werden
-Book kann nicht mit ungültiger ISBN erzeugt werden
-AuthorsText wird normalisiert
-BookItem kann zu Book hinzugefügt werden
-BookItem startet mit Status Available
-doppelte Inventarnummern werden abgelehnt
-Book kann deaktiviert werden
-CreatedAt und UpdatedAt verwenden UTC-Zeitstempel
 ```
 
 ## 2. Use-Case-Mock-Tests
 
-Use-Case-Mock-Tests prüfen die Orchestrierung von Application Workflows.
+Use-Case-Mock-Tests prüfen die Orchestrierung von Application Workflows ohne echte Datenbank.
 
 Readers-Beispiele:
 
@@ -124,238 +109,121 @@ BookUcAddBookItem
 BookUcDeactivate
 ```
 
-Typische gemockte Ports:
+Diese Tests prüfen:
 
 ```text
-IReaderRepository
-IBookRepository
-IUnitOfWork
-IClock
-ILogger<T>
-```
-
-Use-Case-Mock-Tests prüfen:
-
-```text
-Eingabevalidierung
-optionale Ids
 Repository-Aufrufe
-Eindeutigkeitsprüfungen
-Domänenmethoden-Aufrufe
+ReadModel-Prüfungen
 UnitOfWork-Aufrufe
-zurückgegebene DTOs
-Fehlerergebnisse
+Fehlerweitergabe
+Mapping von Aggregate zu DTO
 ```
 
 ## 3. Use-Case-Integrationstests
 
-Use-Case-Integrationstests prüfen Use Cases mit echten Persistenzadaptern.
-
-Sie verwenden:
-
-```text
-echte Repository-Implementierung
-echte UnitOfWork
-SQLite-Testdatenbank
-EF-Core-Tracking
-echte EF-Core-Mappings
-```
-
-Catalog-Integrationsbeispiele:
-
-```text
-das Erzeugen eines Books persistiert Book und ISBN
-das Erzeugen eines Books persistiert AuthorsText
-das Erzeugen eines Books ohne AuthorsText schlägt fehl
-das Hinzufügen eines BookItems persistiert das BookItem
-eine doppelte Inventarnummer schlägt fehl
-das Deaktivieren eines Books aktualisiert IsActive
-```
-
-## 4. Infrastructure-Tests
-
-Infrastructure-Tests prüfen Persistenzadapter.
-
-Typische Bereiche:
-
-```text
-ReaderRepositoryEf
-ReaderReadModelEf
-BookRepositoryEf
-BookReadModelEf
-AppDbContext
-EF-Core-Mappings
-SQLite-Verhalten
-```
-
-Repositories gehören zur Schreibseite und liefern Domänenobjekte.
-
-ReadModels gehören zur Leseseite und liefern DTOs.
-
-```text
-Repository -> aggregate-orientierter Schreibzugriff
-ReadModel  -> DTO-orientierter Lesezugriff
-```
-
-## Repository-Tests
-
-Readers-Repository-Tests prüfen:
-
-```text
-Reader hinzufügen
-Reader nach Id finden
-Reader nach E-Mail finden
-Subject-Eindeutigkeit prüfen
-deaktivierten Reader als Aggregate laden
-```
-
-Catalog-Repository-Tests prüfen:
-
-```text
-Book hinzufügen
-Book nach Id finden
-ISBN-Eindeutigkeit prüfen
-Inventarnummer-Eindeutigkeit prüfen
-Book mit BookItems laden
-deaktiviertes Book als Aggregate laden
-```
-
-## ReadModel-Tests
-
-Reader-ReadModel-Tests prüfen:
-
-```text
-alle aktiven Reader auswählen
-alle Reader inklusive inaktiver Reader auswählen
-aktiven Reader nach Id finden
-Reader nach Id inklusive inaktiver Reader finden
-Reader nach E-Mail finden
-```
-
-Catalog-ReadModel-Tests prüfen:
-
-```text
-alle aktiven Books auswählen
-aktives Book nach Id finden
-aktive Books nach Titel suchen
-aktive Books nach Autoren-Nachname suchen
-aktive Books nach ISBN suchen
-inaktive Books aus normalen Queries ausblenden
-```
-
-## Catalog-Suchtests
-
-Book-Suche unterstützt:
-
-```text
-Title
-AuthorLastName
-Isbn
-```
-
-`AuthorLastName` verwendet die Nachnamenregel für AuthorsText.
-
-Beispiele:
-
-```text
-Robert C. Martin -> Martin
-Martin Fowler -> Fowler
-Kent Beck -> Beck
-```
-
-Ein Regressionstest prüft, dass eine Suche nach `Martin` `Clean Code` liefert, weil der Autorentext `Robert C. Martin` enthält. `Refactoring` wird dabei nicht geliefert, weil dort `Martin Fowler` enthalten ist und `Fowler` der Nachname ist.
-
-## 5. Controller/API-End-to-End-Tests
-
-Controller/API-End-to-End-Tests verwenden:
-
-```text
-WebApplicationFactory<Program>
-TestBaseFactory
-TestBaseEndToEnd
-TestAuthHandler
-HttpClient
-```
+Use-Case-Integrationstests führen Use Cases mit echter Infrastructure-Verdrahtung und In-Memory-Datenbank aus.
 
 Sie prüfen:
 
 ```text
-Routing
-Model Binding
-Controller Actions
+Use Cases persistieren Änderungen korrekt
+Repositories und UnitOfWork arbeiten zusammen
+ReadModels können persistierte Änderungen sehen
+fachliche Konflikte werden erkannt
+```
+
+## 4. Repository-Integrationstests
+
+Repository-Integrationstests prüfen das Laden und Speichern von Aggregates über EF Core.
+
+Repositories geben Aggregate zurück, keine DTOs.
+
+Beispiele:
+
+```text
+IReaderRepository
+IBookRepository
+```
+
+## 5. ReadModel-Integrationstests
+
+ReadModel-Tests prüfen lesende Projektionen.
+
+ReadModels geben DTOs zurück und können inaktive Datensätze aus normalen Abfragen ausblenden.
+
+Beispiele:
+
+```text
+IReaderReadModel
+IBookReadModel
+```
+
+Wichtiges Verhalten:
+
+```text
+normale Reader-Abfragen liefern nur aktive Reader
+with-inactive Reader-Abfragen beziehen inaktive Reader mit ein
+normale Book-Abfragen liefern nur aktive Books
+Book-Suche ignoriert inaktive Books
+```
+
+## 6. Controller/API-End-to-End-Tests
+
+Controller/API-Tests verwenden `WebApplicationFactory` und `HttpClient`.
+
+Sie prüfen das HTTP-Verhalten der öffentlichen API:
+
+```text
 Statuscodes
-JSON-Serialisierung
-ProblemDetails-Mapping
-Dependency Injection
-Datenbankintegration
-HTTP-Vertrag von außen
+JSON-Antwortkörper
+Created-Antworten und Location Header
+Routing
+Validierungsfehler
+Konfliktfehler
+Not-Found-Fehler
 ```
 
-Reader-API-Tests decken ab:
+Beispiele:
 
 ```text
-GET    /camplib/v1/readers
-GET    /camplib/v1/readers/with-inactive
-GET    /camplib/v1/readers/{id}
-GET    /camplib/v1/readers/{id}/with-inactive
-GET    /camplib/v1/readers/email?email=...
-POST   /camplib/v1/readers
-PUT    /camplib/v1/readers/{id}
-DELETE /camplib/v1/readers/{id}
+ReadersControllerE2eT
+BooksControllerE2eT
 ```
 
-Book-API-Tests decken ab:
+## 7. Manuelle HTTP-Dateien
+
+Manuelle HTTP-Dateien werden für Demonstration und exploratives Testen verwendet.
+
+Manueller Ablauf in Teil 3:
 
 ```text
-GET   /camplib/v1/books
-GET   /camplib/v1/books/{id}
-GET   /camplib/v1/books/search?searchField=Title&searchText=...
-GET   /camplib/v1/books/search?searchField=AuthorLastName&searchText=...
-GET   /camplib/v1/books/search?searchField=Isbn&searchText=...
-POST  /camplib/v1/books
-POST  /camplib/v1/books/{bookId}/items
-PATCH /camplib/v1/books/{bookId}/deactivate
+1. Datenbank zurücksetzen/löschen
+2. Readers.http ausführen
+3. Books.http ausführen
 ```
 
-## Manuelle HTTP-Dateien
-
-Manuelle HTTP-Dateien machen API-Verhalten für Studierende sichtbar.
-
-Reihenfolge nach Datenbank-Reset:
+Empfohlene Verbesserung für größere Lehreinheiten:
 
 ```text
-1. Books.http
-2. Readers.http
+01_Seed_Readers.http
+02_Seed_Books.http
+11_Readers_Api.http
+12_Books_Api.http
+91_Readers_Destructive.http
+92_Books_Destructive.http
 ```
 
-## Testdatenbank
+Dadurch werden Setup und eigentliche Tests getrennt.
 
-Automatisierte Tests verwenden SQLite über die Testinfrastruktur.
+## Didaktischer Wert
 
-Die Test-Factory ersetzt ausgewählte Services:
+Die Testsuite zeigt, dass verschiedene Testarten verschiedene Fragen beantworten:
 
 ```text
-AppDbContext
-IUnitOfWork
-IClock
-TestSeed
-Authentication
+Domain-Tests: Ist die Regel korrekt?
+Use-Case-Tests: Ist der Workflow korrekt?
+Repository-Tests: Funktioniert die Persistenz?
+ReadModel-Tests: Ist die lesende Projektion korrekt?
+API-Tests: Ist der HTTP-Vertrag korrekt?
+Manuelle HTTP-Dateien: Können Studierende die API selbst erkunden?
 ```
-
-Eine Fake Clock macht Zeitstempel deterministisch.
-
-## Test Seed
-
-Der Test Seed stellt stabile Demo- und Testdaten bereit.
-
-Typische Catalog-Daten:
-
-```text
-Book1
-Book2
-Book3
-Book4
-BookItems für Books
-```
-
-Stabile Seed-Daten halten Beispiele über Domain-Tests, Integrationstests, API-Tests und manuelle HTTP-Dateien hinweg konsistent.

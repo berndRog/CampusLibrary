@@ -1,6 +1,6 @@
-# API Documentation
+# API Documentation — Part 3
 
-This document describes the public HTTP API of the current `CampusLibraryApi`.
+This document describes the public HTTP API of Part 3 of `CampusLibraryApi`.
 
 Swagger/OpenAPI is the authoritative technical API description. This document provides a didactic overview for students.
 
@@ -19,7 +19,7 @@ API prefix:
 /camplib/v1
 ```
 
-The current API contains two endpoint groups:
+Endpoint groups:
 
 ```text
 Readers
@@ -36,11 +36,11 @@ https://localhost:8010/swagger
 
 For manual API tests, reset or delete the database first.
 
-Execution order:
+Recommended order:
 
 ```text
-1. Books.http
-2. Readers.http
+1. Readers.http
+2. Books.http
 ```
 
 # Readers API
@@ -55,7 +55,7 @@ The technical identity reference is represented by `Subject`.
 GET /camplib/v1/readers
 ```
 
-Successful response:
+Response:
 
 ```http
 200 OK
@@ -67,7 +67,7 @@ Successful response:
 GET /camplib/v1/readers/with-inactive
 ```
 
-Successful response:
+Response:
 
 ```http
 200 OK
@@ -79,18 +79,10 @@ Successful response:
 GET /camplib/v1/readers/{id}
 ```
 
-Example:
-
-```http
-GET /camplib/v1/readers/10000000-0000-0000-0000-000000000000
-```
-
 Possible responses:
 
 ```http
 200 OK
-401 Unauthorized
-403 Forbidden
 404 Not Found
 ```
 
@@ -105,8 +97,6 @@ Possible responses:
 ```http
 200 OK
 400 Bad Request
-401 Unauthorized
-403 Forbidden
 404 Not Found
 ```
 
@@ -116,19 +106,11 @@ Possible responses:
 GET /camplib/v1/readers/email?email={email}
 ```
 
-Example:
-
-```http
-GET /camplib/v1/readers/email?email=e.mustermann@t-online.de
-```
-
 Possible responses:
 
 ```http
 200 OK
 400 Bad Request
-401 Unauthorized
-403 Forbidden
 404 Not Found
 ```
 
@@ -136,15 +118,16 @@ Possible responses:
 
 ```http
 POST /camplib/v1/readers
+Content-Type: application/json
 ```
 
-Request body:
+Example request:
 
 ```json
 {
   "firstname": "Erika",
   "lastname": "Mustermann",
-  "email": "e.mustermann@t-online.de",
+  "email": "e.mustermann@example.com",
   "addressDto": {
     "street": "Hauptstr. 12",
     "postalCode": "29556",
@@ -161,8 +144,6 @@ Possible responses:
 ```http
 201 Created
 400 Bad Request
-401 Unauthorized
-403 Forbidden
 409 Conflict
 ```
 
@@ -170,21 +151,7 @@ Possible responses:
 
 ```http
 PUT /camplib/v1/readers/{id}
-```
-
-Request body:
-
-```json
-{
-  "lastname": "Meier",
-  "email": "e.meier@gmx.de",
-  "addressDto": {
-    "street": "Neue Straße 5",
-    "postalCode": "30123",
-    "city": "Hannover",
-    "country": "DE"
-  }
-}
+Content-Type: application/json
 ```
 
 Possible responses:
@@ -192,8 +159,6 @@ Possible responses:
 ```http
 200 OK
 400 Bad Request
-401 Unauthorized
-403 Forbidden
 404 Not Found
 409 Conflict
 ```
@@ -204,17 +169,21 @@ Possible responses:
 DELETE /camplib/v1/readers/{id}
 ```
 
-Successful response:
+The endpoint deactivates the reader. It does not physically delete the row.
+
+Possible responses:
 
 ```http
 204 No Content
+404 Not Found
+409 Conflict
 ```
 
-A deactivated reader is hidden from normal reader queries but remains visible through `with-inactive` endpoints.
+# Books API
 
-# Catalog API
+A Book represents a bibliographic work. A BookItem represents one physical copy.
 
-The Catalog API manages books and physical book items.
+There is no Author API in Part 3. Authors are stored in `authorsText`.
 
 ## Get all active books
 
@@ -222,20 +191,10 @@ The Catalog API manages books and physical book items.
 GET /camplib/v1/books
 ```
 
-Example response:
+Response:
 
-```json
-[
-  {
-    "id": "b0000001-0000-0000-0000-000000000000",
-    "authorsText": "Robert C. Martin",
-    "title": "Clean Code",
-    "subtitle": "A Handbook of Agile Software Craftsmanship",
-    "isbn": "9780132350884",
-    "totalBookItems": 2,
-    "availableBookItems": 2
-  }
-]
+```http
+200 OK
 ```
 
 ## Get one active book by id
@@ -244,68 +203,39 @@ Example response:
 GET /camplib/v1/books/{id}
 ```
 
-Example response:
-
-```json
-{
-  "id": "b0000001-0000-0000-0000-000000000000",
-  "authorsText": "Robert C. Martin",
-  "title": "Clean Code",
-  "subtitle": "A Handbook of Agile Software Craftsmanship",
-  "isbn": "9780132350884",
-  "bookItems": [
-    {
-      "id": "be000001-0000-0000-0000-000000000000",
-      "bookId": "b0000001-0000-0000-0000-000000000000",
-      "inventoryNumber": "CL-BOOK-0001",
-      "status": "Available"
-    }
-  ],
-  "totalBookItems": 2,
-  "availableBookItems": 2,
-  "isActive": true,
-  "createdAt": "2025-01-01T00:00:00Z",
-  "updatedAt": "2025-01-01T00:00:00Z"
-}
-```
-
-## Search active books
+Possible responses:
 
 ```http
-GET /camplib/v1/books/search?searchField={searchField}&searchText={searchText}
+200 OK
+404 Not Found
 ```
 
-Examples:
+## Search books
 
 ```http
 GET /camplib/v1/books/search?searchField=Title&searchText=Clean
-GET /camplib/v1/books/search?searchField=AuthorLastName&searchText=Martin
 GET /camplib/v1/books/search?searchField=Isbn&searchText=9780132350884
+GET /camplib/v1/books/search?searchField=AuthorLastName&searchText=Martin
 ```
 
 Supported search fields:
 
 ```text
 Title
-AuthorLastName
 Isbn
+AuthorLastName
 ```
 
-`AuthorLastName` searches the author text by lastname rule.
-
-```text
-Robert C. Martin -> Martin
-Martin Fowler -> Fowler
-Kent Beck -> Beck
-```
+The API accepts one search field at a time. If no book matches, the response is `200 OK` with an empty list.
 
 ## Create a book
 
 ```http
 POST /camplib/v1/books
+Content-Type: application/json
 ```
 
-Request body:
+Example request:
 
 ```json
 {
@@ -317,19 +247,22 @@ Request body:
 }
 ```
 
-Successful response:
+Possible responses:
 
 ```http
 201 Created
+400 Bad Request
+409 Conflict
 ```
 
-## Add a physical book item
+## Add a BookItem
 
 ```http
 POST /camplib/v1/books/{bookId}/items
+Content-Type: application/json
 ```
 
-Request body:
+Example request:
 
 ```json
 {
@@ -338,13 +271,14 @@ Request body:
 }
 ```
 
-Successful response:
+Possible responses:
 
 ```http
 200 OK
+400 Bad Request
+404 Not Found
+409 Conflict
 ```
-
-A new book item starts with status `Available`.
 
 ## Deactivate a book
 
@@ -352,48 +286,21 @@ A new book item starts with status `Available`.
 PATCH /camplib/v1/books/{bookId}/deactivate
 ```
 
-Successful response:
+Possible responses:
 
 ```http
 200 OK
-```
-
-A deactivated book is hidden from normal book read endpoints and searches.
-
-# DTO overview
-
-## BookCreateDto
-
-```csharp
-public sealed record BookCreateDto(
-   string? AuthorsText,
-   string? Title,
-   string? Subtitle,
-   string? Isbn,
-   string? Id
-);
-```
-
-## BookSearchField
-
-```csharp
-public enum BookSearchField {
-   Title = 1,
-   AuthorLastName = 2,
-   Isbn = 3
-}
-```
-
-## Error handling
-
-The API returns errors as `ProblemDetails`.
-
-Typical status codes:
-
-```text
-400 Bad Request
-401 Unauthorized
-403 Forbidden
 404 Not Found
 409 Conflict
 ```
+
+Deactivated books are hidden from normal book queries and search results.
+
+## Status and deactivation concepts
+
+```text
+Reader and Book use IsActive.
+BookItem uses BookItemStatus.
+```
+
+This distinction prepares the model for Part 4, where Loan will also use a status instead of `IsActive`.
