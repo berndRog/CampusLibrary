@@ -104,6 +104,6 @@ robust und die Persistenz einfacher.
 
 In Teil 3 des CampusLibrary-Projekts ist IsbnVo ein gutes erstes Beispiel
 für ein Value Object im neuen Catalog-Modul. Es ergänzt die Entities Book,
-Author, BookAuthor und BookItem um eine fachlich bedeutsame Regel, ohne
+und BookItem um eine fachlich bedeutsame Regel, ohne
 bereits Controller, Datenbankzugriffe oder UseCases einzubeziehen.
 */

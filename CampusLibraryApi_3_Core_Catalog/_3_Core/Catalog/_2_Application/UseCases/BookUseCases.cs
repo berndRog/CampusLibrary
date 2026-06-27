@@ -19,20 +19,20 @@ public sealed class BookUseCases(
       );
 
    public async Task<Result<BookItemDto>> AddBookItemAsync(
-      Guid bookId,
+      Guid id,
       BookItemAddDto? dto,
       CancellationToken ct = default
    ) => await bookUcAddBookItem.ExecuteAsync(
-         bookId: bookId,
+         bookId: id,
          bookItemAddDto: dto,
          ct: ct
       );
    
    public async Task<Result<BookDto>> DeactivateAsync(
-      Guid bookId,
+      Guid id,
       CancellationToken ct = default
    ) => await bookUcDeactivate.ExecuteAsync(
-         bookId: bookId,
+         bookId: id,
          ct: ct
       );
 }

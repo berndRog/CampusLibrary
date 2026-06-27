@@ -15,14 +15,14 @@ public interface IBookUseCases {
 
    // Adds a physical BookItem to an existing Book.
    Task<Result<BookItemDto>> AddBookItemAsync(
-      Guid bookId,
+      Guid id,
       BookItemAddDto? dto,
       CancellationToken ct = default
    );
    
    // Deactivates a Book without physically deleting it from the database.
    Task<Result<BookDto>> DeactivateAsync(
-      Guid bookId,
+      Guid id,
       CancellationToken ct = default
    );
 }
@@ -37,7 +37,6 @@ Die Methoden verändern den Zustand des Systems:
 
 - ein Book wird angelegt
 - ein BookItem wird hinzugefügt
-- ein Author wird einem Book zugeordnet
 - ein Book wird deaktiviert
 
 Such- und Anzeigeoperationen gehören nicht in diese Schnittstelle. Sie werden
@@ -49,5 +48,5 @@ Damit wird die Trennung zwischen Command-Seite und Query-Seite sichtbar:
 - IBookReadModel: Lesen, Suchen, Anzeigen
 
 Der Controller verwendet weiterhin nur Schnittstellen. Er kennt aber nicht die
-konkreten UseCase-Klassen wie BookUcCreate oder BookUcAssignAuthor.
+konkreten UseCase-Klassen wie BookUcCreate.
 */

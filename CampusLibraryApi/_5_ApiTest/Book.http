@@ -42,132 +42,11 @@
 
 
 ### 1. Create seed books =======================================================
-
-### Create seed book 1: Clean Code
-POST {{baseUrl}}/books
-Content-Type: application/json
-Accept: application/json
-
-{
-  "authorsText": "Robert C. Martin",
-  "title": "Clean Code",
-  "subtitle": "A Handbook of Agile Software Craftsmanship",
-  "isbn": "{{book1Isbn}}",
-  "id": "{{book1Id}}"
-}
+### Book_Post
+### BookItem_Post
 
 
-### Create seed book 2: Domain-Driven Design
-POST {{baseUrl}}/books
-Content-Type: application/json
-Accept: application/json
-
-{
-  "authorsText": "Eric Evans",
-  "title": "Domain-Driven Design",
-  "subtitle": "Tackling Complexity in the Heart of Software",
-  "isbn": "{{book2Isbn}}",
-  "id": "{{book2Id}}"
-}
-
-
-### Create seed book 3: Refactoring
-POST {{baseUrl}}/books
-Content-Type: application/json
-Accept: application/json
-
-{
-  "authorsText": "Martin Fowler, Kent Beck",
-  "title": "Refactoring",
-  "subtitle": "Improving the Design of Existing Code",
-  "isbn": "{{book3Isbn}}",
-  "id": "{{book3Id}}"
-}
-
-
-### Create seed book 4: Design Patterns
-POST {{baseUrl}}/books
-Content-Type: application/json
-Accept: application/json
-
-{
-  "authorsText": "Erich Gamma, Richard Helm, Ralph Johnson, John Vlissides",
-  "title": "Design Patterns",
-  "subtitle": "Elements of Reusable Object-Oriented Software",
-  "isbn": "{{book4Isbn}}",
-  "id": "{{book4Id}}"
-}
-
-
-### 2. Add seed BookItems to seed books =======================================
-
-### Add BookItem 1 to Clean Code
-POST {{baseUrl}}/books/{{book1Id}}/items
-Content-Type: application/json
-Accept: application/json
-
-{
-  "inventoryNumber": "CL-BOOK-0001",
-  "id": "{{bookItem1Id}}"
-}
-
-
-### Add BookItem 2 to Clean Code
-POST {{baseUrl}}/books/{{book1Id}}/items
-Content-Type: application/json
-Accept: application/json
-
-{
-  "inventoryNumber": "CL-BOOK-0002",
-  "id": "{{bookItem2Id}}"
-}
-
-
-### Add BookItem 3 to Domain-Driven Design
-POST {{baseUrl}}/books/{{book2Id}}/items
-Content-Type: application/json
-Accept: application/json
-
-{
-  "inventoryNumber": "CL-BOOK-0003",
-  "id": "{{bookItem3Id}}"
-}
-
-
-### Add BookItem 4 to Refactoring
-POST {{baseUrl}}/books/{{book3Id}}/items
-Content-Type: application/json
-Accept: application/json
-
-{
-  "inventoryNumber": "CL-BOOK-0004",
-  "id": "{{bookItem4Id}}"
-}
-
-
-### Add BookItem 5 to Design Patterns
-POST {{baseUrl}}/books/{{book4Id}}/items
-Content-Type: application/json
-Accept: application/json
-
-{
-  "inventoryNumber": "CL-BOOK-0005",
-  "id": "{{bookItem5Id}}"
-}
-
-
-### Add BookItem 6 to Design Patterns
-POST {{baseUrl}}/books/{{book4Id}}/items
-Content-Type: application/json
-Accept: application/json
-
-{
-  "inventoryNumber": "CL-BOOK-0006",
-  "id": "{{bookItem6Id}}"
-}
-
-
-### 3. Verify seed books =======================================================
+### Verify seed books =======================================================
 
 ### Get seed book 1: Clean Code
 GET {{baseUrl}}/books/{{book1Id}}
@@ -190,7 +69,7 @@ GET {{baseUrl}}/books
 Accept: application/json
 
 
-### 4. Search books by title ===================================================
+### Search books by title ===================================================
 
 ### Search Clean Code by title
 GET {{baseUrl}}/books/search?searchField=Title&searchText=Clean
@@ -214,7 +93,7 @@ GET {{baseUrl}}/books/search?searchField=Title&searchText=NoSuchBook
 Accept: application/json
 
 
-### 5. Search books by ISBN ====================================================
+### Search books by ISBN ====================================================
 
 ### Search Clean Code by ISBN
 GET {{baseUrl}}/books/search?searchField=Isbn&searchText={{book1Isbn}}

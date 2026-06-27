@@ -165,39 +165,7 @@ public static class CatalogErrors {
          "Author: AuthorCreateDtoRequired",
          "An AuthorCreateDto object must be provided."
       );
-
-
-   // BookAuthor join entity
-   // ------------------------------------------------------------------------
-   public static readonly DomainError BookAuthorIdRequired =
-      new(
-         WebErrorStatus.BadRequest,
-         "Catalog: Book Author Id Required",
-         "The book author id is required."
-      );
    
-   public static readonly DomainError InvalidBookAuthorId =
-      new(
-         WebErrorStatus.BadRequest,
-         "Catalog: Invalid Book Author Id",
-         "The given book author Id is invalid."
-      );
-   
-   public static readonly DomainError AuthorAlreadyAssigned =
-      new(
-         WebErrorStatus.Conflict,
-         "Catalog: Book Author Already Assigned",
-         "The author is already assigned to this book."
-      );
-
-   public static readonly DomainError BookAuthorNotFound =
-      new(
-         WebErrorStatus.NotFound,
-         "Catalog: Book Author NotFound",
-         "The book-author assignment was not found."
-      );
-   
-
    // BookItem entity
    // ------------------------------------------------------------------------
    public static readonly DomainError BookItemIdRequired =
@@ -255,11 +223,5 @@ public static class CatalogErrors {
          "Book: BookAddItemDtoRequired",
          "A BookAddItemDto object must be provided."
       );
-
-   public static readonly DomainError BookAssignAuthorDtoRequired =
-      new(
-         WebErrorStatus.BadRequest,
-         "Book: BookAssignAuthorDtoRequired",
-         "A BookAssignAuthorDto object must be provided."
-      );
+   
 }

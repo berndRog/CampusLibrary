@@ -58,20 +58,29 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       actualBookDto.Subtitle.Should().Be(book1.Subtitle);
       actualBookDto.Isbn.Should().Be(book1.IsbnVo.Value);
       actualBookDto.IsActive.Should().BeTrue();
-      actualBookDto.CreatedAt.Should().Be(book1.CreatedAt);
-      actualBookDto.UpdatedAt.Should().Be(book1.UpdatedAt);
 
       actualBookDto.BookItems.Should().HaveCount(book1.BookItems.Count);
 
       actualBookDto.BookItems
-         .Select(bi => bi.InventoryNumber)
+         .Select(item => item.InventoryNumber)
          .Should()
-         .BeEquivalentTo(book1.BookItems.Select(bi => bi.InventoryNumber));
+         .BeEquivalentTo(
+            book1.BookItems.Select(item => item.InventoryNumber)
+         );
 
-      actualBookDto.TotalBookItems.Should().Be(book1.BookItems.Count);
+      actualBookDto.BookItems
+         .Select(item => item.Status)
+         .Should()
+         .BeEquivalentTo(
+            book1.BookItems.Select(item => (int)item.Status)
+         );
 
-      actualBookDto.AvailableBookItems.Should().Be(
-         book1.BookItems.Count(bi => bi.Status == BookItemStatus.Available)
+      actualBookDto.TotalItems.Should().Be(book1.BookItems.Count);
+
+      actualBookDto.AvailableItems.Should().Be(
+         book1.BookItems.Count(
+            item => item.Status == BookItemStatus.Available
+         )
       );
    }
 
@@ -95,7 +104,7 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
    }
 
    [Fact]
-   public async Task FindByIdAsync_deactivated_book_returns_failure() {
+   public async Task FindByIdAsync_deactivated_book_returns_failure_by_default() {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var repository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
@@ -106,7 +115,9 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       // Arrange
       var book1 = seed.Book1();
 
-      repository.Add(book1);
+      repository.Add(
+         book: book1
+      );
 
       await unitOfWork.SaveAllChangesAsync(
          "Book1 inserted",
@@ -137,6 +148,53 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
    }
 
    [Fact]
+   public async Task FindByIdAsync_deactivated_book_returns_success_if_includeInactive_is_true() {
+      using var scope = Root.CreateDefaultScope();
+      var ct = TestContext.Current.CancellationToken;
+      var repository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
+      var readModel = scope.ServiceProvider.GetRequiredService<IBookReadModel>();
+      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
+
+      // Arrange
+      var book1 = seed.Book1();
+
+      repository.Add(
+         book: book1
+      );
+
+      await unitOfWork.SaveAllChangesAsync(
+         "Book1 inserted",
+         ct
+      );
+
+      var resultDeactivated = book1.Deactivate(
+         updatedAt: book1.CreatedAt.AddDays(1)
+      );
+
+      resultDeactivated.IsSuccess.Should().BeTrue();
+
+      await unitOfWork.SaveAllChangesAsync(
+         "Book1 deactivated",
+         ct
+      );
+
+      unitOfWork.ClearChangeTracker();
+
+      // Act
+      var result = await readModel.FindByIdAsync(
+         id: book1.Id,
+         includeInactive: true,
+         ct: ct
+      );
+
+      // Assert
+      result.IsSuccess.Should().BeTrue();
+      result.Value.Id.Should().Be(book1.Id);
+      result.Value.IsActive.Should().BeFalse();
+   }
+
+   [Fact]
    public async Task SelectAllAsync_ok() {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
@@ -159,9 +217,10 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
 
       unitOfWork.ClearChangeTracker();
 
-      var expBookIds = books
-         .OrderBy(b => b.Title)
-         .Select(b => b.Id)
+      var expectedBookIds = books
+         .OrderBy(book => book.Title)
+         .ThenBy(book => book.Subtitle)
+         .Select(book => book.Id)
          .ToList();
 
       // Act
@@ -178,20 +237,25 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       actualBookDtos.Count.Should().Be(books.Count);
 
       var actualBookIds = actualBookDtos
-         .Select(b => b.Id)
+         .Select(book => book.Id)
          .ToList();
 
       actualBookIds.Should().BeEquivalentTo(
-         expBookIds,
+         expectedBookIds,
          options => options.WithStrictOrdering()
       );
 
-      actualBookDtos.Should().OnlyContain(b =>
-         !string.IsNullOrWhiteSpace(b.AuthorsText));
+      actualBookDtos.Should().OnlyContain(book =>
+         !string.IsNullOrWhiteSpace(book.AuthorsText)
+      );
+
+      actualBookDtos.Should().OnlyContain(book =>
+         book.IsActive
+      );
    }
 
    [Fact]
-   public async Task SelectAllAsync_does_not_return_deactivated_books() {
+   public async Task SelectAllAsync_does_not_return_deactivated_books_by_default() {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
@@ -233,10 +297,63 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       // Assert
       result.IsSuccess.Should().BeTrue();
 
-      var actualBookDtos = result.Value;
+      result.Value.Should().NotContain(book =>
+         book.Id == deactivatedBook.Id
+      );
 
-      actualBookDtos.Should().NotContain(b => b.Id == deactivatedBook.Id);
-      actualBookDtos.Count.Should().Be(books.Count - 1);
+      result.Value.Count.Should().Be(books.Count - 1);
+   }
+
+   [Fact]
+   public async Task SelectAllAsync_returns_deactivated_books_if_includeInactive_is_true() {
+      using var scope = Root.CreateDefaultScope();
+      var ct = TestContext.Current.CancellationToken;
+      var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
+      var readModel = scope.ServiceProvider.GetRequiredService<IBookReadModel>();
+      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
+
+      // Arrange
+      var books = seed.Books;
+      var deactivatedBook = books[0];
+
+      bookRepository.AddRange(
+         books: books
+      );
+
+      await unitOfWork.SaveAllChangesAsync(
+         "Books inserted",
+         ct
+      );
+
+      var resultDeactivated = deactivatedBook.Deactivate(
+         updatedAt: deactivatedBook.CreatedAt.AddDays(1)
+      );
+
+      resultDeactivated.IsSuccess.Should().BeTrue();
+
+      await unitOfWork.SaveAllChangesAsync(
+         "Book deactivated",
+         ct
+      );
+
+      unitOfWork.ClearChangeTracker();
+
+      // Act
+      var result = await readModel.SelectAllAsync(
+         includeInactive: true,
+         ct: ct
+      );
+
+      // Assert
+      result.IsSuccess.Should().BeTrue();
+
+      result.Value.Should().Contain(book =>
+         book.Id == deactivatedBook.Id &&
+         book.IsActive == false
+      );
+
+      result.Value.Count.Should().Be(books.Count);
    }
 
    [Fact]
@@ -280,18 +397,22 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       var actualBookDtos = result.Value;
 
       actualBookDtos.Should().NotBeNull();
-      actualBookDtos.Should().ContainSingle(b => b.Id == book1.Id);
+      actualBookDtos.Should().ContainSingle(book => book.Id == book1.Id);
 
-      var actualBookDto = actualBookDtos.Single(b => b.Id == book1.Id);
+      var actualBookDto = actualBookDtos.Single(book => book.Id == book1.Id);
 
       actualBookDto.AuthorsText.Should().Be(book1.AuthorsText);
       actualBookDto.Title.Should().Be(book1.Title);
       actualBookDto.Subtitle.Should().Be(book1.Subtitle);
       actualBookDto.Isbn.Should().Be(book1.IsbnVo.Value);
-      actualBookDto.TotalBookItems.Should().Be(book1.BookItems.Count);
+      actualBookDto.IsActive.Should().BeTrue();
 
-      actualBookDto.AvailableBookItems.Should().Be(
-         book1.BookItems.Count(bi => bi.Status == BookItemStatus.Available)
+      actualBookDto.TotalItems.Should().Be(book1.BookItems.Count);
+
+      actualBookDto.AvailableItems.Should().Be(
+         book1.BookItems.Count(
+            item => item.Status == BookItemStatus.Available
+         )
       );
    }
 
@@ -343,6 +464,7 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       actualBookDto.Id.Should().Be(book1.Id);
       actualBookDto.AuthorsText.Should().Be(book1.AuthorsText);
       actualBookDto.Isbn.Should().Be(book1.IsbnVo.Value);
+      actualBookDto.IsActive.Should().BeTrue();
    }
 
    [Fact]
@@ -369,12 +491,12 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
 
       unitOfWork.ClearChangeTracker();
 
-      var expBookIds = books
-         .Where(b => ContainsAuthorLastname(
-            authorsText: b.AuthorsText,
+      var expectedBookIds = books
+         .Where(book => ContainsAuthorLastname(
+            authorsText: book.AuthorsText,
             searchText: searchText
          ))
-         .Select(b => b.Id)
+         .Select(book => book.Id)
          .OrderBy(id => id)
          .ToList();
 
@@ -393,14 +515,14 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       result.IsSuccess.Should().BeTrue();
 
       var actualBookIds = result.Value
-         .Select(b => b.Id)
+         .Select(book => book.Id)
          .OrderBy(id => id)
          .ToList();
 
       actualBookIds.Should().NotBeEmpty();
 
       actualBookIds.Should().BeEquivalentTo(
-         expBookIds,
+         expectedBookIds,
          options => options.WithStrictOrdering()
       );
    }
@@ -484,7 +606,7 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
    }
 
    [Fact]
-   public async Task SearchAsync_does_not_return_deactivated_books() {
+   public async Task SearchAsync_does_not_return_deactivated_books_by_default() {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
@@ -531,17 +653,76 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
 
       // Assert
       result.IsSuccess.Should().BeTrue();
-      result.Value.Should().NotContain(b => b.Id == deactivatedBook.Id);
+
+      result.Value.Should().NotContain(book =>
+         book.Id == deactivatedBook.Id
+      );
+   }
+
+   [Fact]
+   public async Task SearchAsync_returns_deactivated_books_if_includeInactive_is_true() {
+      using var scope = Root.CreateDefaultScope();
+      var ct = TestContext.Current.CancellationToken;
+      var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
+      var readModel = scope.ServiceProvider.GetRequiredService<IBookReadModel>();
+      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
+
+      // Arrange
+      var books = seed.Books;
+      var deactivatedBook = books[0];
+
+      bookRepository.AddRange(
+         books: books
+      );
+
+      await unitOfWork.SaveAllChangesAsync(
+         "Books inserted",
+         ct
+      );
+
+      var resultDeactivated = deactivatedBook.Deactivate(
+         updatedAt: deactivatedBook.CreatedAt.AddDays(1)
+      );
+
+      resultDeactivated.IsSuccess.Should().BeTrue();
+
+      await unitOfWork.SaveAllChangesAsync(
+         "Book deactivated",
+         ct
+      );
+
+      unitOfWork.ClearChangeTracker();
+
+      var search = new BookSearchDto(
+         SearchField: BookSearchField.Title,
+         SearchText: deactivatedBook.Title
+      );
+
+      // Act
+      var result = await readModel.SearchAsync(
+         search: search,
+         includeInactive: true,
+         ct: ct
+      );
+
+      // Assert
+      result.IsSuccess.Should().BeTrue();
+
+      result.Value.Should().Contain(book =>
+         book.Id == deactivatedBook.Id &&
+         book.IsActive == false
+      );
    }
 
    private static bool ContainsAuthorLastname(
       string authorsText,
       string searchText
    ) {
-      if (string.IsNullOrWhiteSpace(authorsText))
+      if(string.IsNullOrWhiteSpace(authorsText))
          return false;
 
-      if (string.IsNullOrWhiteSpace(searchText))
+      if(string.IsNullOrWhiteSpace(searchText))
          return false;
 
       var normalizedSearchText = Normalize(
@@ -554,13 +735,14 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
          .Any(lastname =>
             Normalize(
                value: lastname
-            ).Contains(normalizedSearchText));
+            ).Contains(normalizedSearchText)
+         );
    }
 
    private static IEnumerable<string> ExtractAuthorLastnames(
       string authorsText
    ) {
-      if (string.IsNullOrWhiteSpace(authorsText))
+      if(string.IsNullOrWhiteSpace(authorsText))
          yield break;
 
       var authorTokens = authorsText.Split(
@@ -568,14 +750,13 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
          options: StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
       );
 
-      foreach (var authorToken in authorTokens) {
-
+      foreach(var authorToken in authorTokens) {
          var nameParts = authorToken.Split(
             separator: ' ',
             options: StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries
          );
 
-         if (nameParts.Length == 0)
+         if(nameParts.Length == 0)
             continue;
 
          yield return nameParts[^1];

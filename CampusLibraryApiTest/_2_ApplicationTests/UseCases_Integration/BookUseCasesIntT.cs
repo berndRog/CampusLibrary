@@ -174,7 +174,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
 
       // Act
       var resultAddBookItem = await useCases.AddBookItemAsync(
-         bookId: book1.Id,
+         id: book1.Id,
          dto: dto,
          ct: ct
       );
@@ -197,8 +197,8 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
          .Should()
          .ContainSingle(bi => bi.InventoryNumber == dto.InventoryNumber);
 
-      actualBookDetailDto.TotalBookItems.Should().Be(1);
-      actualBookDetailDto.AvailableBookItems.Should().Be(1);
+      actualBookDetailDto.TotalItems.Should().Be(1);
+      actualBookDetailDto.AvailableItems.Should().Be(1);
    }
 
    [Fact]
@@ -238,7 +238,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
 
       // Act
       var resultAddBookItem = await useCases.AddBookItemAsync(
-         bookId: book2.Id,
+         id: book2.Id,
          dto: dto,
          ct: ct
       );
@@ -265,7 +265,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
 
       // Act
       var resultAddBookItem = await useCases.AddBookItemAsync(
-         bookId: unknownBookId,
+         id: unknownBookId,
          dto: dto,
          ct: ct
       );
@@ -301,7 +301,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
 
       // Act
       var resultDeactivate = await useCases.DeactivateAsync(
-         bookId: book1.Id,
+         id: book1.Id,
          ct: ct
       );
 
@@ -338,7 +338,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
 
       // Act
       var resultDeactivate = await useCases.DeactivateAsync(
-         bookId: unknownBookId,
+         id: unknownBookId,
          ct: ct
       );
 

@@ -193,7 +193,6 @@ Zum Book-Aggregate gehören aktuell:
 
 * Book als Aggregate Root
 * BookItem als untergeordnete Entity für ein physisches Exemplar
-* Author als zugeordnetes eigenständiges Aggregate Root
 * IsbnVo als Value Object für die ISBN
 
 BookItem ist kein eigenes Aggregate Root. Ein Exemplar gehört fachlich immer
@@ -207,17 +206,10 @@ sein müssen. Diese Prüfung gehört deshalb in den Use Case oder in ein
 Repository und wird zusätzlich durch einen Unique Index in der Datenbank
 abgesichert.
 
-Die Beziehung zwischen Book und Author ist eine m:n-Beziehung. Da die
-Zuordnung aktuell keine eigene fachliche Bedeutung und keine eigenen
-Attribute hat, wird keine eigene Domain-Klasse BookAuthor modelliert.
-Stattdessen enthält Book eine Liste von Authors. EF Core bildet diese
-Beziehung später mit einer Join-Tabelle ab.
-
-Das unterscheidet Book-Author von einem späteren Loan-Modell. Ein Loan ist
-nicht nur eine Verbindung zwischen Reader und BookItem, sondern ein eigener
-fachlicher Vorgang mit Ausleihdatum, Rückgabefrist, Rückgabedatum und Status.
-Loan hätte daher eine eigene fachliche Bedeutung und vermutlich eine eigene
-Identität.
+Ein Loan ist nicht nur eine Verbindung zwischen Reader und BookItem, sondern 
+ein eigener fachlicher Vorgang mit Ausleihdatum, Rückgabefrist, Rückgabedatum 
+und Status. Loan hätte daher eine eigene fachliche Bedeutung und vermutlich 
+eine eigene Identität.
 
 Author bleibt dennoch ein eigenes Aggregate Root. Ein Author kann unabhängig
 von einem einzelnen Book existieren und mehreren Books zugeordnet werden.
