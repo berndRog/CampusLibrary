@@ -48,5 +48,9 @@
     <ProjectReference Include="..\CampusLibraryApi_3_Core_Readers\CampusLibraryApi_3_Core_Readers.csproj" />
     <ProjectReference Include="..\CampusLibraryApi_4_Infrastructure\CampusLibraryApi_4_Infrastructure.csproj" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <Folder Include="_-_Documentation\part-5-client-noauth\" />
+  </ItemGroup>
 
 </Project>
