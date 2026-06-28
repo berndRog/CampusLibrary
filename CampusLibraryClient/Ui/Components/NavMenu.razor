@@ -1,0 +1,27 @@
+<nav class="nav-menu">
+   <a href="/" class="brand">CampusLibrary</a>
+
+   <NavLink href="/catalog/books" Match="NavLinkMatch.Prefix">
+      Catalog
+   </NavLink>
+
+   <NavLink href="/readers" Match="NavLinkMatch.Prefix">
+      Readers
+   </NavLink>
+
+   <NavLink href="/loans" Match="NavLinkMatch.Prefix">
+      Loans
+   </NavLink>
+
+   @* Part 8 preparation:
+      Wrap links in AuthorizeView when role/policy based navigation is introduced.
+
+      <AuthorizeView Policy="@CampusLibraryPolicies.CanManageReaders">
+         <Authorized>
+            <NavLink href="/readers" Match="NavLinkMatch.Prefix">
+               Readers
+            </NavLink>
+         </Authorized>
+      </AuthorizeView>
+   *@
+</nav>

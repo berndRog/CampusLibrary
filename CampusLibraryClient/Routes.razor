@@ -1,0 +1,25 @@
+<Router AppAssembly="typeof(Program).Assembly">
+   <Found Context="routeData">
+      @* Part 5: normal routing, no active authorization checks in the UI. *@
+      <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
+      <FocusOnNavigate RouteData="routeData" Selector="h1" />
+
+      @* Part 8 preparation:
+         Replace RouteView with AuthorizeRouteView when protected UI routes are introduced.
+
+         <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
+            <NotAuthorized>
+               <p>You are not authorized to access this page.</p>
+               <p><a href="/identity/login?returnUrl=%2Fentry">Login</a></p>
+            </NotAuthorized>
+         </AuthorizeRouteView>
+      *@
+   </Found>
+   <NotFound>
+      <PageTitle>Not found</PageTitle>
+      <LayoutView Layout="typeof(MainLayout)">
+         <h1>Page not found</h1>
+         <p>The requested page does not exist.</p>
+      </LayoutView>
+   </NotFound>
+</Router>

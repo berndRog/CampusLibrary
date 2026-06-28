@@ -1,0 +1,66 @@
+@page "/readers"
+@rendermode InteractiveServer
+@inherits BasePage
+@* Part 8: protect this page with [Authorize(Policy = CampusLibraryPolicies.CanManageReaders)]. *@
+
+@inject IReaderClient ReaderClient
+
+<PageTitle>Readers</PageTitle>
+
+<h1>Readers</h1>
+
+<button @onclick="LoadAsync">Reload</button>
+
+<ErrorAlert Error="Error" />
+
+@if(IsLoading) {
+   <p>Loading readers...</p>
+}
+else if(_readers.Count == 0) {
+   <p>No readers found.</p>
+}
+else {
+   <table>
+      <thead>
+         <tr>
+            <th>Firstname</th>
+            <th>Lastname</th>
+            <th>Email</th>
+            <th>Subject</th>
+            <th>Status</th>
+         </tr>
+      </thead>
+      <tbody>
+         @foreach(ReaderDto reader in _readers) {
+            <tr>
+               <td>@reader.Firstname</td>
+               <td>@reader.Lastname</td>
+               <td>@reader.Email</td>
+               <td>@reader.Subject</td>
+               <td>@(reader.IsActive ? "Active" : "Inactive")</td>
+            </tr>
+         }
+      </tbody>
+   </table>
+}
+
+@code {
+
+   private IReadOnlyList<ReaderDto> _readers = [];
+
+   protected override async Task OnInitializedAsync() =>
+      await LoadAsync();
+
+   private async Task LoadAsync() {
+      StartLoading();
+
+      Result<IEnumerable<ReaderDto>> result = await ReaderClient.GetAllAsync();
+
+      if(result.IsSuccess && result.Value is not null)
+         _readers = result.Value.ToList();
+      else
+         Error = result.Error;
+
+      StopLoading();
+   }
+}

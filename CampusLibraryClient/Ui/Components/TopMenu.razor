@@ -1,0 +1,21 @@
+<div class="top-menu">
+   <span>Part 5: no active authentication</span>
+</div>
+
+@* Part 6 preparation:
+   Replace the static text above with AuthorizeView when login/logout is activated.
+
+   <AuthorizeView>
+      <Authorized Context="auth">
+         <div class="top-menu">
+            <span>Hello, @auth.User.Identity?.Name</span>
+            <a href="/identity/logout">Logout</a>
+         </div>
+      </Authorized>
+      <NotAuthorized>
+         <div class="top-menu">
+            <a href="/identity/login?returnUrl=%2Fentry">Login</a>
+         </div>
+      </NotAuthorized>
+   </AuthorizeView>
+*@

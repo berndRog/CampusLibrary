@@ -1,0 +1,17 @@
+@if(Error is not null) {
+   <div class="alert alert-danger">
+      <strong>@Error.Title</strong>
+      @if(!string.IsNullOrWhiteSpace(Error.Detail)) {
+         <span> - @Error.Detail</span>
+      }
+      @if(!string.IsNullOrWhiteSpace(Error.ErrorCode)) {
+         <small> (@Error.ErrorCode)</small>
+      }
+   </div>
+}
+
+@code {
+
+   [Parameter]
+   public ApiError? Error { get; set; }
+}

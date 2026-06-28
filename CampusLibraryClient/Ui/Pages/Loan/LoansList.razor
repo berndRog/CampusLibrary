@@ -1,0 +1,97 @@
+@page "/loans"
+@rendermode InteractiveServer
+@inherits BasePage
+@* Part 8: protect this page with [Authorize(Policy = CampusLibraryPolicies.CanManageLoans)]. *@
+
+@inject ILoanClient LoanClient
+
+<PageTitle>Loans</PageTitle>
+
+<h1>Borrowed loans</h1>
+
+<button @onclick="LoadAsync">Reload</button>
+
+<ErrorAlert Error="Error" />
+
+@if(IsLoading) {
+   <p>Loading loans...</p>
+}
+else if(_loans.Count == 0) {
+   <p>No borrowed loans found.</p>
+}
+else {
+   <table>
+      <thead>
+         <tr>
+            <th>Reader</th>
+            <th>Title</th>
+            <th>Inventory</th>
+            <th>Loan date</th>
+            <th>Due date</th>
+            <th>Status</th>
+            <th>Overdue</th>
+            <th>Actions</th>
+         </tr>
+      </thead>
+      <tbody>
+         @foreach(LoanListItemDto loan in _loans) {
+            <tr>
+               <td>@loan.Firstname @loan.Lastname</td>
+               <td>@loan.Title</td>
+               <td>@loan.InventoryNumber</td>
+               <td>@loan.LoanDate.ToString("yyyy-MM-dd")</td>
+               <td>@loan.DueDate.ToString("yyyy-MM-dd")</td>
+               <td>@loan.Status</td>
+               <td>@(loan.IsOverdue ? "Yes" : "No")</td>
+               <td>
+                  <button @onclick="() => RenewAsync(loan.Id)">Renew</button>
+                  <button @onclick="() => ReturnAtDeskAsync(loan.Id)">Return</button>
+               </td>
+            </tr>
+         }
+      </tbody>
+   </table>
+}
+
+@code {
+
+   private IReadOnlyList<LoanListItemDto> _loans = [];
+
+   protected override async Task OnInitializedAsync() =>
+      await LoadAsync();
+
+   private async Task LoadAsync() {
+      StartLoading();
+
+      Result<IEnumerable<LoanListItemDto>> result = await LoanClient.GetBorrowedAsync();
+
+      if(result.IsSuccess && result.Value is not null)
+         _loans = result.Value.ToList();
+      else
+         Error = result.Error;
+
+      StopLoading();
+   }
+
+   private async Task RenewAsync(Guid id) {
+      Result<LoanDto> result = await LoanClient.RenewAsync(id);
+
+      if(result.IsFailure) {
+         Error = result.Error;
+         return;
+      }
+
+      await LoadAsync();
+   }
+
+   private async Task ReturnAtDeskAsync(Guid id) {
+      Result<LoanDto> result = await LoanClient.ReturnAtDeskAsync(id);
+
+      if(result.IsFailure) {
+         Error = result.Error;
+         return;
+      }
+
+      await LoadAsync();
+   }
+}

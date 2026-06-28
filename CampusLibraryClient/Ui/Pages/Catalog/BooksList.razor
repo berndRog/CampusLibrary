@@ -1,0 +1,101 @@
+@page "/catalog/books"
+@rendermode InteractiveServer
+@inherits BasePage
+
+@inject IBookClient BookClient
+
+<PageTitle>Books</PageTitle>
+
+<h1>Books</h1>
+
+<div class="toolbar">
+   <select @bind="_searchField">
+      <option value="Title">Title</option>
+      <option value="AuthorLastName">Author last name</option>
+      <option value="Isbn">ISBN</option>
+   </select>
+   <input placeholder="Search text" @bind="_searchText" />
+   <button @onclick="SearchAsync">Search</button>
+   <button @onclick="LoadAsync">Reset</button>
+</div>
+
+<ErrorAlert Error="Error" />
+
+@if(IsLoading) {
+   <p>Loading books...</p>
+}
+else if(_books.Count == 0) {
+   <p>No books found.</p>
+}
+else {
+   <table>
+      <thead>
+         <tr>
+            <th>Title</th>
+            <th>Subtitle</th>
+            <th>Authors</th>
+            <th>ISBN</th>
+            <th>Items</th>
+            <th>Status</th>
+         </tr>
+      </thead>
+      <tbody>
+         @foreach(BookListItemDto book in _books) {
+            <tr>
+               <td>@book.Title</td>
+               <td>@book.Subtitle</td>
+               <td>@book.AuthorsText</td>
+               <td>@book.Isbn</td>
+               <td>@book.AvailableItems / @book.TotalItems</td>
+               <td>@(book.IsActive ? "Active" : "Inactive")</td>
+            </tr>
+         }
+      </tbody>
+   </table>
+}
+
+@code {
+
+   private IReadOnlyList<BookListItemDto> _books = [];
+
+   private BookSearchField _searchField = BookSearchField.Title;
+
+   private string? _searchText;
+
+   protected override async Task OnInitializedAsync() =>
+      await LoadAsync();
+
+   private async Task LoadAsync() {
+      StartLoading();
+
+      Result<IEnumerable<BookListItemDto>> result = await BookClient.GetAllAsync();
+
+      if(result.IsSuccess && result.Value is not null)
+         _books = result.Value.ToList();
+      else
+         Error = result.Error;
+
+      StopLoading();
+   }
+
+   private async Task SearchAsync() {
+      if(string.IsNullOrWhiteSpace(_searchText)) {
+         await LoadAsync();
+         return;
+      }
+
+      StartLoading();
+
+      Result<IEnumerable<BookListItemDto>> result = await BookClient.SearchAsync(
+         searchField: _searchField,
+         searchText: _searchText
+      );
+
+      if(result.IsSuccess && result.Value is not null)
+         _books = result.Value.ToList();
+      else
+         Error = result.Error;
+
+      StopLoading();
+   }
+}
