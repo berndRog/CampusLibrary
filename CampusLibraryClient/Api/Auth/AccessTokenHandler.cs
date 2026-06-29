@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
-using CampusLibraryClient.Shared.Logging;
+using CampusLibrary.Shared.Logging;
 using Microsoft.AspNetCore.Authentication;
 
 namespace CampusLibraryClient.Api.Auth;

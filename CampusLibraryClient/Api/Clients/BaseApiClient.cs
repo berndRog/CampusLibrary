@@ -4,7 +4,7 @@ using System.Text.Json;
 using CampusLibraryClient.Api.Auth;
 using CampusLibraryClient.Api.Errors;
 using CampusLibraryClient.Core;
-using CampusLibraryClient.Shared.Logging;
+using CampusLibrary.Shared.Logging;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CampusLibraryClient.Api.Clients;

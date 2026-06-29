@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Text.Json.Serialization;
-using CampusLibraryClient.Shared.Logging;
+using CampusLibrary.Shared.Logging;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 namespace CampusLibraryClient.Api.Auth;

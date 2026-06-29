@@ -10,4 +10,21 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.0" />
   </ItemGroup>
 
+
+
+  <!-- Link shared logging files from solution-level Shared/Logging. -->
+  <ItemGroup>
+    <!-- Remove old local logging files if they still exist in the client project. -->
+    <Compile Remove="Shared\Logging\AppDiagnosticsLogger.cs" />
+    <Compile Remove="Shared\Logging\OutgoingHttpLoggingHandler.cs" />
+    <Compile Remove="Shared\Logging\SharedWebAppLogging.cs" />
+    <Compile Remove="Shared\Logging\TokenRefreshEvent.cs" />
+    <Compile Remove="Api\Auth\OutgoingHttpLoggingHandler.cs" />
+
+    <Compile Include="..\Shared\Logging\AppDiagnosticsLogger.cs" Link="Shared\Logging\AppDiagnosticsLogger.cs" />
+    <Compile Include="..\Shared\Logging\OutgoingHttpLoggingHandler.cs" Link="Shared\Logging\OutgoingHttpLoggingHandler.cs" />
+    <Compile Include="..\Shared\Logging\SharedWebAppLogging.cs" Link="Shared\Logging\SharedWebAppLogging.cs" />
+    <Compile Include="..\Shared\Logging\TokenRefreshEvent.cs" Link="Shared\Logging\TokenRefreshEvent.cs" />
+  </ItemGroup>
+  
 </Project>

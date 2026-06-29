@@ -3,7 +3,7 @@ using CampusLibraryClient.Api.Auth;
 using CampusLibraryClient.Api.Clients;
 using CampusLibraryClient.Api.Contracts;
 using CampusLibraryClient.Core;
-using CampusLibraryClient.Shared.Logging;
+using CampusLibrary.Shared.Logging;
 
 namespace CampusLibraryClient.Extensions;
 

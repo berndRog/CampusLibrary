@@ -1,7 +1,7 @@
 using CampusLibraryClient.Api.Auth;
 using CampusLibraryClient.Core;
 using CampusLibraryClient.Extensions;
-using CampusLibraryClient.Shared.Logging;
+using CampusLibrary.Shared.Logging;
 
 namespace CampusLibraryClient;
 
