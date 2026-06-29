@@ -1,0 +1,33 @@
+@startuml
+title First Login triggers Customer Provisioning
+
+actor User
+participant "BlazoSSR\nClient" as Client
+participant "Middleware\nOIDC" as Middleware
+participant "Identity&Access\nServer" as IdP
+participant "BankingAPI\nREST API" as API
+participant "Banking\nDatabase" as Database
+
+User -> Client : Login
+Client -> Middleware : Challenge()
+
+Middleware -> IdP : /connect/authorize
+User -> IdP : authenticate
+IdP -> Middleware : id_token (sub claim)
+Middleware -> Client : Auth cookie
+
+== First authenticated request ==
+
+Client -> API : GET /customers/me/profile
+API -> Database : FindBySubject(sub)
+
+alt Owner exists
+    Database -> API : CustomerProfile
+    API -> Client : 200 OK
+else First login
+    Database -> Database : Create Customer\nsub, email, name
+    Database -> API : CustomerProfile
+    API -> Client : 200 OK (provisioned)
+end
+
+@enduml

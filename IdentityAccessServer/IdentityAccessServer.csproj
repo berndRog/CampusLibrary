@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <UserSecretsId>3a9b7c0c-4a5d-4f4a-9e7f-9d2c6c9a7f42</UserSecretsId>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.8" />
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="[3.50.3]" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.8">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="10.0.2" />
+    <PackageReference Include="NuGet.Packaging" Version="7.6.0" PrivateAssets="all" />
+    <PackageReference Include="NuGet.Protocol" Version="7.6.0" PrivateAssets="all" />
+    
+    <!-- OpenIddict-Server: das brauchst du wirklich -->
+    <PackageReference Include="OpenIddict" Version="7.5.0" />
+    <PackageReference Include="OpenIddict.AspNetCore" Version="7.5.0" />
+    <PackageReference Include="OpenIddict.EntityFrameworkCore" Version="7.5.0" />
+    <PackageReference Include="OpenIddict.Server.AspNetCore" Version="7.5.0" />
+  </ItemGroup>
+
+  <!-- Link shared logging files from solution-level Shared/Logging. -->
+  <ItemGroup>
+    <Compile Include="..\Shared\Logging\AppDiagnosticsLogger.cs" Link="Shared\Logging\AppDiagnosticsLogger.cs" />
+    <Compile Include="..\Shared\Logging\OutgoingHttpLoggingHandler.cs" Link="Shared\Logging\OutgoingHttpLoggingHandler.cs" />
+    <Compile Include="..\Shared\Logging\SharedWebAppLogging.cs" Link="Shared\Logging\SharedWebAppLogging.cs" />
+    <Compile Include="..\Shared\Logging\TokenRefreshEvent.cs" Link="Shared\Logging\TokenRefreshEvent.cs" />
+  </ItemGroup>
+
+</Project>

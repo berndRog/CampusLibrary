@@ -1,0 +1,81 @@
+@host = https://localhost:7010
+@tokenEndpoint = {{host}}/connect/token
+@devUsersEndpoint = {{host}}/dev/users
+@devClientId = dev-token-client
+@customerEmail = customer.test.{{$timestamp}}@mail.local
+@employeeEmail = employee.test.{{$timestamp}}@banking.de
+@password = Geh1m_
+@apiScope = banking-api
+
+### 1) Dev-only: create a disposable customer user
+POST {{devUsersEndpoint}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{customerEmail}}",
+  "password": "{{password}}",
+  "confirmPassword": "{{password}}",
+  "accountType": "customer"
+}
+
+> {%
+   client.test("Customer created", function() {
+      client.assert(response.status === 201, "Expected HTTP 201");
+   });
+ %}
+
+### 2) Get a bearer token for the disposable customer
+POST {{tokenEndpoint}}
+Content-Type: application/x-www-form-urlencoded
+Accept: application/json
+
+grant_type=dev_password&client_id={{devClientId}}&email={{customerEmail}}&password={{password}}&scope={{apiScope}}
+
+> {%
+   client.test("Customer token created", function() {
+      client.assert(response.status === 200, "Expected HTTP 200");
+      client.assert(!!response.body.access_token, "Missing access_token");
+   });
+
+   client.global.set("customerAccessToken", response.body.access_token);
+ %}
+
+### 3) Dev-only: create an employee with explicit AdminRights bitmask
+# 32 = ViewEmployees, 64 = ManageEmployees, 4 = ManageCustomers
+POST {{devUsersEndpoint}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{employeeEmail}}",
+  "password": "{{password}}",
+  "confirmPassword": "{{password}}",
+  "accountType": "employee",
+  "adminRights": 100,
+  "mustChangePassword": true
+}
+
+> {%
+   client.test("Employee created", function() {
+      client.assert(response.status === 201, "Expected HTTP 201");
+   });
+ %}
+
+### 4) Duplicate email -> 409 Conflict
+POST {{devUsersEndpoint}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{customerEmail}}",
+  "password": "{{password}}",
+  "accountType": "customer"
+}
+
+> {%
+   client.test("Duplicate user rejected", function() {
+      client.assert(response.status === 409, "Expected HTTP 409");
+   });
+ %}
+

@@ -1,0 +1,42 @@
+@startuml
+title OIDC Login Flow (Authorization Code + PKCE)
+
+actor User
+participant "   Browser    \nLaptop" as Browser
+participant "   BlazorSSR  \nClient" as Client
+participant "OIDC Middleware\nClient" as Middleware
+participant "Identity&Access\nServer" as IdP
+participant "Banking API\nREST API" as API
+
+User -> Browser : Open protected page
+Browser -> Client : GET /
+Client -> Middleware : Not authenticated
+Middleware -> Browser : Redirect to /identity/login
+
+Browser -> Client : GET /identity/login
+Client -> Middleware : Challenge()
+
+Middleware -> Middleware : create state, nonce,\ncode_verifier + code_challenge
+Middleware -> Browser : Redirect to IdP /connect/authorize
+Browser -> IdP : /connect/authorize\nresponse_type=code\nscope=openid profile\nstate, nonce, code_challenge
+
+IdP -> User : Login page
+User -> IdP : Enter credentials
+
+IdP -> Browser : Redirect to /signin-oidc?code=...
+Browser -> Client : GET /signin-oidc?code=...
+Client -> Middleware : Process callback
+
+Middleware -> IdP : /connect/token\ngrant_type=authorization_code\ncode + code_verifier
+IdP -> Middleware : id_token + access_token
+
+Middleware -> Middleware : validate tokens\ncreate ClaimsPrincipal
+Middleware -> Browser : Auth cookie created
+
+User -> Browser : Open /dispatcher
+Browser -> Client : GET /dispatcher
+Client -> API : GET /customers/me/profile\nBearer access_token
+API -> Client : 200 OK
+Client -> Browser : Render page
+
+@enduml

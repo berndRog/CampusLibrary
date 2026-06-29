@@ -1,0 +1,30 @@
+@startuml
+title Update Owner Profile (Domain Data only)
+
+actor User
+participant "Blazor SSR Client" as Client
+participant "Banking API" as API
+participant "Owners UseCase" as UC
+participant "Owner Aggregate" as Owner
+database DB
+participant "Identity Provider" as IdP
+
+User -> Client : Edit profile form
+User -> Client : Save
+
+Client -> API : PUT /customers/me/profile
+API -> UC : UpsertProfile(cmd)
+
+UC -> Owner : Load by subject
+Owner -> Owner : Change address/email/name
+Owner -> DB : Save changes
+
+UC -> API : Updated profile
+API -> Client : 200 OK
+
+note right of IdP
+NO call to Identity Provider
+Identity is unchanged
+end note
+
+@enduml

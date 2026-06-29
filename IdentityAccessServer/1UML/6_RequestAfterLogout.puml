@@ -1,0 +1,20 @@
+@startuml
+title Request After Logout
+
+actor User
+participant "Blazor SSR Client" as Client
+participant "OIDC Middleware" as Middleware
+participant "Identity Provider" as IdP
+
+User -> Client : GET /dispatcher
+Client -> Middleware : No cookie
+
+Middleware -> User : redirect /identity/login
+User -> IdP : authenticate again
+
+note right
+Without IdP logout:
+user would be logged in instantly (SSO cookie)
+end note
+
+@enduml

@@ -1,0 +1,29 @@
+@startuml
+title OAuth/OIDC - Authorization Code Flow mit PKCE
+
+actor User
+participant "Browser" as Browser
+participant "BlazorSSR\nClient" as Client
+participant "Identity&Access\nServer" as IdP
+participant "BankingAPI\nREST API" as API
+
+User -> Client: Seite aufrufen / Login starten
+Client -> Client: code_verifier + code_challenge
+
+Client -> Browser: Redirect Authorization Endpoint\n+ client_id + redirect_uri\n+ scope + code_challenge
+Browser -> IdP: Authorization Request
+
+IdP -> User: Login 
+User -> IdP: Zugangsdaten (Credentials) 
+
+IdP -> Browser: Redirect zurück zur Client App\n+ authorization_code
+Browser -> Client: authorization_code
+
+Client -> IdP: Token Request\nauthz_code + code_verifier
+IdP -> Client: ID Token + Access Token\n+ ggf. Refresh Token
+
+Client -> Client: lokale Session erzeugen: Cookie
+Client -> API: API Request: Authorization: Bearer Access Token
+API -> Client: geschützte Daten
+
+@enduml

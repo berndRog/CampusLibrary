@@ -1,0 +1,20 @@
+@startuml
+title OIDC Logout Flow (RP Initiated Logout)
+
+actor User
+participant "Blazor SSR Client" as Client
+participant "OIDC Middleware" as Middleware
+participant "Identity Provider\n(OpenIddict)" as IdP
+
+User -> Client : Click "Logout"
+Client -> Middleware : SignOut()
+
+Middleware -> IdP : /connect/endsession
+IdP -> IdP : Clear SSO session
+
+IdP -> Middleware : redirect /signout-callback-oidc
+Middleware -> Client : redirect "/"
+
+Client -> User : Anonymous homepage
+
+@enduml

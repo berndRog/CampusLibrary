@@ -1,0 +1,30 @@
+@startuml
+title Register new user (Identity only)
+
+actor User
+participant "Browser" as Browser
+participant "Identity UI" as UI
+participant "Identity Provider" as IdP
+database "Identity DB" as IDDB
+participant "Banking App" as App
+
+User -> Browser : Open /register
+Browser -> UI : GET register page
+
+User -> UI : Submit email + password
+UI -> IdP : Create account
+
+IdP -> IDDB : Insert user
+IDDB --> IdP : OK
+
+IdP -> Browser : Redirect to login
+Browser -> IdP : Login
+IdP -> Browser : ID Token
+
+Browser -> App : First visit
+note right of App
+User NOT known yet
+(no domain user)
+end note
+
+@enduml

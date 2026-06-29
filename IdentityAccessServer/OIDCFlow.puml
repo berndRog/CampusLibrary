@@ -1,0 +1,36 @@
+@startuml
+title Authorization Endpoint – OIDC Challenge (Authenticated User)
+
+autonumber
+hide footbox
+
+actor User
+participant Browser
+participant "Client (MVC / Blazor)" as Client
+participant "Authorization Server\n(/connect/authorize)" as AS
+
+User -> Browser: Open protected page
+Browser -> Client: GET /protected
+
+Client -> Client: [Authorize] detects anonymous
+Client -> Browser: 302 Challenge (OIDC)
+
+note over Client
+OIDC Challenge includes:
+- response_type=code
+- client_id
+- redirect_uri
+- scope=openid profile api
+- code_challenge (PKCE)
+- state
+end note
+
+Browser -> AS: GET /connect/authorize\n(with OIDC parameters)
+AS -> AS: Authenticate Identity cookie
+
+AS -> AS: Create ClaimsPrincipal
+AS -> AS: Set scopes, resources, destinations
+
+AS -> Browser: 302 Redirect to redirect_uri\n(authorization code)
+
+@enduml

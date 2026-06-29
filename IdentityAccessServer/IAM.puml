@@ -1,0 +1,33 @@
+@startuml
+top to bottom direction
+skinparam rectangle {
+  BackgroundColor #FFFFFF
+  BorderColor #2C3E50
+  FontSize 14
+}
+
+rectangle "Provisioning\n(Bereitstellung der Identity)" as P
+rectangle "Authentisierung\n(Authentication / AuthN)\nWer bist du?" as A
+rectangle "Autorisierung\n(Authorization / AuthZ)\nWas darfst du?" as Z
+rectangle "Token\n(Entscheidungs-Transport)" as T
+rectangle "Login\n(Session / Anmeldung)" as L
+rectangle "Single Sign-On\n(Token-Wiederverwendung)" as S
+rectangle "Logout\n(Session beenden)" as O
+rectangle "Deprovisioning\n(Identity entfernen)" as D
+
+P
+↓
+A
+↓
+Z
+↓
+T
+↓
+L
+↓
+S
+↓
+O
+↓
+D
+@enduml
