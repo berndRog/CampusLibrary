@@ -1,0 +1,40 @@
+@host = https://localhost:7010
+@tokenEndpoint = {{host}}/connect/token
+@devUsersEndpoint = {{host}}/dev/users
+@devClientId = dev-token-client
+@readerEmail = reader.test.{{$timestamp}}@mail.local
+@employeeEmail = librarian.test.{{$timestamp}}@mail.local
+@password = Geh1m_
+@apiScope = campus_library_api
+
+### 1) Dev-only: create a disposable reader user
+POST {{devUsersEndpoint}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{readerEmail}}",
+  "password": "{{password}}",
+  "confirmPassword": "{{password}}",
+  "accountType": "customer"
+}
+
+### 2) Get a bearer token for CampusLibraryApi
+POST {{tokenEndpoint}}
+Content-Type: application/x-www-form-urlencoded
+Accept: application/json
+
+grant_type=dev_password&client_id={{devClientId}}&email={{readerEmail}}&password={{password}}&scope=openid profile {{apiScope}}
+
+### 3) Dev-only: create a librarian/employee user
+POST {{devUsersEndpoint}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{employeeEmail}}",
+  "password": "{{password}}",
+  "confirmPassword": "{{password}}",
+  "accountType": "employee",
+  "adminRights": 511
+}

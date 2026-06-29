@@ -3,8 +3,7 @@
   <PropertyGroup>
     <NuGetAudit>false</NuGetAudit>
   </PropertyGroup>
-
-
+  
   <PropertyGroup>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>
@@ -13,8 +12,6 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
-
-  
   
   <ItemGroup>
     <!-- API Versioning -->
@@ -32,6 +29,14 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9"/>
     <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="[3.50.3]" />
   </ItemGroup>
+
+  <!-- Link shared logging files from solution-level Shared/Logging. -->
+  <ItemGroup>
+    <Compile Include="..\Shared\Logging\AppDiagnosticsLogger.cs" Link="Shared\Logging\AppDiagnosticsLogger.cs" />
+    <Compile Include="..\Shared\Logging\OutgoingHttpLoggingHandler.cs" Link="Shared\Logging\OutgoingHttpLoggingHandler.cs" />
+    <Compile Include="..\Shared\Logging\SharedWebAppLogging.cs" Link="Shared\Logging\SharedWebAppLogging.cs" />
+    <Compile Include="..\Shared\Logging\TokenRefreshEvent.cs" Link="Shared\Logging\TokenRefreshEvent.cs" />
+  </ItemGroup>
   
   <ItemGroup>
     <Content Update="appsettings.Development.json">
@@ -47,10 +52,6 @@
     <ProjectReference Include="..\CampusLibraryApi_2_BuildingBlocks\CampusLibraryApi_2_BuildingBlocks.csproj" />
     <ProjectReference Include="..\CampusLibraryApi_3_Core_Readers\CampusLibraryApi_3_Core_Readers.csproj" />
     <ProjectReference Include="..\CampusLibraryApi_4_Infrastructure\CampusLibraryApi_4_Infrastructure.csproj" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <Folder Include="_-_Documentation\part-5-client-noauth\" />
   </ItemGroup>
 
 </Project>
