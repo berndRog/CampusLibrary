@@ -1,0 +1,188 @@
+@page "/catalog/books/{BookId:guid}/borrow"
+@rendermode InteractiveServer
+@inherits BasePage
+
+@inject IBookClient BookClient
+@inject ILoanClient LoanClient
+@inject ICurrentUserProvider CurrentUserProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Borrow book</PageTitle>
+
+<h1>Borrow book</h1>
+
+<ErrorAlert Error="Error" />
+
+@if(IsLoading || _currentUser is null) {
+   <p>Loading borrow details...</p>
+}
+else if(!_currentUser.IsReader) {
+   <p>
+      Borrowing books is available from the reader perspective.
+      In Part 5 this is controlled by DevIdentity.
+   </p>
+   <button @onclick="Cancel">Back to catalog</button>
+}
+else if(_book is null) {
+   <p>Book not found.</p>
+   <button @onclick="Cancel">Back to catalog</button>
+}
+else {
+   <section class="card">
+      <h2>Book</h2>
+      <dl>
+         <dt>Title</dt>
+         <dd>@_book.Title</dd>
+
+         <dt>Subtitle</dt>
+         <dd>@_book.Subtitle</dd>
+
+         <dt>Authors</dt>
+         <dd>@_book.AuthorsText</dd>
+
+         <dt>ISBN</dt>
+         <dd>@_book.Isbn</dd>
+
+         <dt>Availability</dt>
+         <dd>@_book.AvailableItems / @_book.TotalItems</dd>
+      </dl>
+   </section>
+
+   <section class="card">
+      <h2>Reader</h2>
+      <dl>
+         <dt>Name</dt>
+         <dd>@_currentUser.DisplayName</dd>
+
+         <dt>Email</dt>
+         <dd>@_currentUser.Email</dd>
+
+         <dt>Reader Id</dt>
+         <dd>@_currentUser.ReaderId</dd>
+      </dl>
+   </section>
+
+   <section class="card">
+      <h2>Planned loan</h2>
+      <dl>
+         <dt>Loan date</dt>
+         <dd>@DateTime.Today.ToString("yyyy-MM-dd")</dd>
+
+         <dt>Due date</dt>
+         <dd>@DateTime.Today.AddDays(28).ToString("yyyy-MM-dd")</dd>
+
+         <dt>Book item</dt>
+         <dd>
+            @if(_availableItems.Count == 0) {
+               <span>No available book item found.</span>
+            }
+            else {
+               <select @bind="_selectedBookItemId">
+                  @foreach(BookItemDto item in _availableItems) {
+                     <option value="@item.Id">
+                        @item.InventoryNumber (@item.Id)
+                     </option>
+                  }
+               </select>
+            }
+         </dd>
+      </dl>
+   </section>
+
+   <div class="toolbar">
+      <button @onclick="Cancel">Cancel</button>
+      <button
+         @onclick="ConfirmBorrowAsync"
+         disabled="@(_availableItems.Count == 0 || IsLoading)">
+         Complete loan
+      </button>
+   </div>
+}
+
+@code {
+
+   [Parameter]
+   public Guid BookId { get; set; }
+
+   private const int AvailableBookItemStatus = 1;
+
+   private BookDetailDto? _book;
+
+   private IReadOnlyList<BookItemDto> _availableItems = [];
+
+   private Guid _selectedBookItemId;
+
+   private CurrentUserInfo? _currentUser;
+
+   protected override async Task OnInitializedAsync() {
+      StartLoading();
+
+      _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
+
+      Result<BookDetailDto> result = await BookClient.GetByIdAsync(
+         id: BookId
+      );
+
+      if(result.IsSuccess && result.Value is not null) {
+         _book = result.Value;
+
+         _availableItems = (_book.BookItems ?? [])
+            .Where(item => item.Status == AvailableBookItemStatus)
+            .ToList();
+
+         if(_availableItems.Count > 0)
+            _selectedBookItemId = _availableItems[0].Id;
+      }
+      else {
+         Error = result.Error;
+      }
+
+      StopLoading();
+   }
+
+   private async Task ConfirmBorrowAsync() {
+      if(_currentUser?.ReaderId is null) {
+         Error = new ApiError(
+            Status: 400,
+            Title: "Missing reader",
+            Detail: "The current reader has no ReaderId. Check DevIdentity or the login claims."
+         );
+
+         return;
+      }
+
+      if(_selectedBookItemId == Guid.Empty) {
+         Error = new ApiError(
+            Status: 400,
+            Title: "Missing book item",
+            Detail: "Select an available book item before completing the loan."
+         );
+
+         return;
+      }
+
+      StartLoading();
+
+      LoanCreateDto dto = new(
+         ReaderId: _currentUser.ReaderId.Value,
+         BookItemId: _selectedBookItemId
+      );
+
+      Result<LoanDto> result = await LoanClient.BorrowAsync(
+         dto: dto
+      );
+
+      if(result.IsFailure) {
+         Error = result.Error;
+         StopLoading();
+         return;
+      }
+
+      StopLoading();
+      Navigation.NavigateTo("/my/loans");
+   }
+
+   private void Cancel() {
+      Navigation.NavigateTo("/catalog/books");
+   }
+}

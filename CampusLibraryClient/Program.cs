@@ -2,6 +2,7 @@ using CampusLibraryClient.Api.Auth;
 using CampusLibraryClient.Core;
 using CampusLibraryClient.Extensions;
 using CampusLibrary.Shared.Logging;
+using CampusLibraryClient.Security;
 
 namespace CampusLibraryClient;
 
@@ -12,6 +13,7 @@ public static class Program {
       WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
       bool authNEnabled = builder.Configuration.GetValue<bool>(FeatureFlags.AuthNEnabled);
+      bool devIdentityEnabled = builder.Configuration.GetValue<bool>(FeatureFlags.DevIdentityEnabled);
       bool apiAccessTokenEnabled = builder.Configuration.GetValue<bool>(FeatureFlags.ApiAccessTokenEnabled);
       bool authZEnabled = builder.Configuration.GetValue<bool>(FeatureFlags.AuthZEnabled);
 
@@ -47,6 +49,20 @@ public static class Program {
       if(apiAccessTokenEnabled) {
          // Part 8: forwards the current user's access token to CampusLibraryApi.
          builder.Services.AddTransient<AccessTokenHandler>();
+      }
+
+
+
+      if(authNEnabled) {
+         // Part 6: the current user comes from the authenticated ClaimsPrincipal.
+         builder.Services.AddScoped<ICurrentUserProvider, ClaimsCurrentUserProvider>();
+      }
+      else if(devIdentityEnabled) {
+         // Part 5: a demo identity can simulate reader or employee UI flows.
+         builder.Services.AddScoped<ICurrentUserProvider, DevCurrentUserProvider>();
+      }
+      else {
+         builder.Services.AddScoped<ICurrentUserProvider, AnonymousCurrentUserProvider>();
       }
 
       // Optional outgoing request logging for teaching and debugging.

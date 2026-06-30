@@ -1,27 +1,45 @@
+@inject ICurrentUserProvider CurrentUserProvider
+
 <nav class="nav-menu">
    <a href="/" class="brand">CampusLibrary</a>
 
-   <NavLink href="/catalog/books" Match="NavLinkMatch.Prefix">
-      Catalog
-   </NavLink>
+   @if(_currentUser is null) {
+      <span>Loading navigation...</span>
+   }
+   else {
+      <NavLink href="/catalog/books" Match="NavLinkMatch.Prefix">
+         Catalog
+      </NavLink>
 
-   <NavLink href="/readers" Match="NavLinkMatch.Prefix">
-      Readers
-   </NavLink>
+      @if(_currentUser.IsReader) {
+         <NavLink href="/my/loans" Match="NavLinkMatch.Prefix">
+            My loans
+         </NavLink>
+      }
 
-   <NavLink href="/loans" Match="NavLinkMatch.Prefix">
-      Loans
-   </NavLink>
+      @if(_currentUser.IsEmployee) {
+         <NavLink href="/readers" Match="NavLinkMatch.Prefix">
+            Readers
+         </NavLink>
+
+         <NavLink href="/loans" Match="NavLinkMatch.Prefix">
+            All loans
+         </NavLink>
+      }
+   }
 
    @* Part 8 preparation:
       Wrap links in AuthorizeView when role/policy based navigation is introduced.
-
-      <AuthorizeView Policy="@CampusLibraryPolicies.CanManageReaders">
-         <Authorized>
-            <NavLink href="/readers" Match="NavLinkMatch.Prefix">
-               Readers
-            </NavLink>
-         </Authorized>
-      </AuthorizeView>
+      The route structure can remain the same because the UI already separates
+      reader pages from employee pages.
    *@
 </nav>
+
+@code {
+
+   private CurrentUserInfo? _currentUser;
+
+   protected override async Task OnInitializedAsync() {
+      _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
+   }
+}

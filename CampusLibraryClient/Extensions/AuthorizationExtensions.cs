@@ -16,12 +16,12 @@ public static class AuthorizationExtensions {
 
          options.AddPolicy(
             name: CampusLibraryPolicies.CanBorrowBooks,
-            configurePolicy: policy => policy.RequireRole(CampusLibraryRoles.Student)
+            configurePolicy: policy => policy.RequireRole(CampusLibraryRoles.Reader)
          );
 
          options.AddPolicy(
             name: CampusLibraryPolicies.CanReadOwnLoans,
-            configurePolicy: policy => policy.RequireRole(CampusLibraryRoles.Student)
+            configurePolicy: policy => policy.RequireRole(CampusLibraryRoles.Reader)
          );
 
          options.AddPolicy(

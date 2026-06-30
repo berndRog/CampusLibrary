@@ -1,21 +1,51 @@
+@inject ICurrentUserProvider CurrentUserProvider
+
 <div class="top-menu">
-   <span>Part 5: no active authentication</span>
+   @if(_currentUser is null) {
+      <span>Loading user...</span>
+   }
+   else if(_currentUser.IsAuthenticated) {
+      <span>
+         @_currentUser.DisplayName
+         (@_currentUser.AccountType)
+      </span>
+
+      @if(!_authNEnabled) {
+         <span class="muted">DevIdentity, no real login</span>
+      }
+      else {
+         <a href="/identity/logout">Logout</a>
+      }
+   }
+   else {
+      <span>Anonymous</span>
+
+      @if(_authNEnabled) {
+         <a href="/identity/login?returnUrl=%2Fentry">Login</a>
+      }
+      else {
+         <span class="muted">Part 5: no active authentication</span>
+      }
+   }
 </div>
 
-@* Part 6 preparation:
-   Replace the static text above with AuthorizeView when login/logout is activated.
+@code {
 
-   <AuthorizeView>
-      <Authorized Context="auth">
-         <div class="top-menu">
-            <span>Hello, @auth.User.Identity?.Name</span>
-            <a href="/identity/logout">Logout</a>
-         </div>
-      </Authorized>
-      <NotAuthorized>
-         <div class="top-menu">
-            <a href="/identity/login?returnUrl=%2Fentry">Login</a>
-         </div>
-      </NotAuthorized>
-   </AuthorizeView>
+   [Inject]
+   private IConfiguration Configuration { get; set; } = default!;
+
+   private CurrentUserInfo? _currentUser;
+
+   private bool _authNEnabled;
+
+   protected override async Task OnInitializedAsync() {
+      _authNEnabled = Configuration.GetValue<bool>(FeatureFlags.AuthNEnabled);
+      _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
+   }
+}
+
+@* Part 6 preparation:
+   When AuthNEnabled=true, the same TopMenu can use ClaimsCurrentUserProvider.
+   The UI still asks ICurrentUserProvider, so the DevIdentity source can be
+   removed without rewriting the pages.
 *@

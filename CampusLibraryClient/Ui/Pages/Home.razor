@@ -1,4 +1,7 @@
 @page "/"
+@rendermode InteractiveServer
+
+@inject ICurrentUserProvider CurrentUserProvider
 
 <PageTitle>CampusLibraryClient</PageTitle>
 
@@ -8,6 +11,52 @@
    This Blazor SSR client calls the CampusLibraryApi through typed API clients.
 </p>
 
-<p>
-   <a href="/catalog/books">Open catalog</a>
-</p>
+@if(_currentUser is null) {
+   <p>Loading current user...</p>
+}
+else {
+   <section class="card">
+      <h2>Current UI perspective</h2>
+
+      <p>
+         <strong>@_currentUser.DisplayName</strong>
+         (@_currentUser.AccountType)
+      </p>
+
+      @if(_currentUser.IsReader) {
+         <p>
+            Reader perspective: search books, borrow available book items and
+            view your own loans.
+         </p>
+         <p>
+            <a href="/catalog/books">Open catalog</a>
+            |
+            <a href="/my/loans">My loans</a>
+         </p>
+      }
+      else if(_currentUser.IsEmployee) {
+         <p>
+            Employee perspective: manage readers and view all active loans.
+         </p>
+         <p>
+            <a href="/readers">Readers</a>
+            |
+            <a href="/loans">All loans</a>
+         </p>
+      }
+      else {
+         <p>
+            No active identity. Enable DevIdentity for Part 5 or AuthN for Part 6.
+         </p>
+      }
+   </section>
+}
+
+@code {
+
+   private CurrentUserInfo? _currentUser;
+
+   protected override async Task OnInitializedAsync() {
+      _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
+   }
+}

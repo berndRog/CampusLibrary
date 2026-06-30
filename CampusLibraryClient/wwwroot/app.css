@@ -78,3 +78,30 @@ th, td {
    border: 1px solid #f5c2c7;
    color: #842029;
 }
+
+
+.card {
+   border: 1px solid #ddd;
+   border-radius: .35rem;
+   margin: 1rem 0;
+   padding: 1rem;
+}
+
+.card h2 {
+   margin-top: 0;
+}
+
+dl {
+   display: grid;
+   grid-template-columns: 10rem 1fr;
+   gap: .5rem 1rem;
+}
+
+dt {
+   font-weight: 700;
+}
+
+.muted {
+   color: #666;
+   font-size: .9rem;
+}

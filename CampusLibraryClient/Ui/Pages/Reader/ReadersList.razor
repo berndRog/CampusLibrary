@@ -4,17 +4,25 @@
 @* Part 8: protect this page with [Authorize(Policy = CampusLibraryPolicies.CanManageReaders)]. *@
 
 @inject IReaderClient ReaderClient
+@inject ICurrentUserProvider CurrentUserProvider
 
 <PageTitle>Readers</PageTitle>
 
 <h1>Readers</h1>
 
+<p>
+   Employee view. Readers are managed by library staff.
+</p>
+
 <button @onclick="LoadAsync">Reload</button>
 
 <ErrorAlert Error="Error" />
 
-@if(IsLoading) {
+@if(IsLoading || _currentUser is null) {
    <p>Loading readers...</p>
+}
+else if(!_currentUser.IsEmployee) {
+   <p>This page is intended for employees.</p>
 }
 else if(_readers.Count == 0) {
    <p>No readers found.</p>
@@ -48,8 +56,12 @@ else {
 
    private IReadOnlyList<ReaderDto> _readers = [];
 
-   protected override async Task OnInitializedAsync() =>
+   private CurrentUserInfo? _currentUser;
+
+   protected override async Task OnInitializedAsync() {
+      _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
       await LoadAsync();
+   }
 
    private async Task LoadAsync() {
       StartLoading();

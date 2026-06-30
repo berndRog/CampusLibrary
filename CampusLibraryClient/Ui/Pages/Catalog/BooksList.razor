@@ -3,10 +3,17 @@
 @inherits BasePage
 
 @inject IBookClient BookClient
+@inject ICurrentUserProvider CurrentUserProvider
+@inject NavigationManager Navigation
 
 <PageTitle>Books</PageTitle>
 
 <h1>Books</h1>
+
+<p>
+   The catalog is visible for readers and employees. Readers can borrow a book
+   when at least one book item is available.
+</p>
 
 <div class="toolbar">
    <select @bind="_searchField">
@@ -21,7 +28,7 @@
 
 <ErrorAlert Error="Error" />
 
-@if(IsLoading) {
+@if(IsLoading || _currentUser is null) {
    <p>Loading books...</p>
 }
 else if(_books.Count == 0) {
@@ -37,6 +44,7 @@ else {
             <th>ISBN</th>
             <th>Items</th>
             <th>Status</th>
+            <th>Action</th>
          </tr>
       </thead>
       <tbody>
@@ -48,6 +56,22 @@ else {
                <td>@book.Isbn</td>
                <td>@book.AvailableItems / @book.TotalItems</td>
                <td>@(book.IsActive ? "Active" : "Inactive")</td>
+               <td>
+                  @if(_currentUser.IsReader && book.AvailableItems > 0) {
+                     <button @onclick="() => NavigateToBorrow(book.Id)">
+                        Borrow
+                     </button>
+                  }
+                  else if(_currentUser.IsReader) {
+                     <span>Not available</span>
+                  }
+                  else if(_currentUser.IsEmployee) {
+                     <span>Employee view</span>
+                  }
+                  else {
+                     <span>No action</span>
+                  }
+               </td>
             </tr>
          }
       </tbody>
@@ -62,8 +86,12 @@ else {
 
    private string? _searchText;
 
-   protected override async Task OnInitializedAsync() =>
+   private CurrentUserInfo? _currentUser;
+
+   protected override async Task OnInitializedAsync() {
+      _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
       await LoadAsync();
+   }
 
    private async Task LoadAsync() {
       StartLoading();
@@ -97,5 +125,9 @@ else {
          Error = result.Error;
 
       StopLoading();
+   }
+
+   private void NavigateToBorrow(Guid bookId) {
+      Navigation.NavigateTo($"/catalog/books/{bookId}/borrow");
    }
 }
