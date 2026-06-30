@@ -1,96 +1,25 @@
 @baseUrl = https://localhost:8010/camplib/v1
 
-### ============================================================
-### Loans API
-### Seed-based manual API test
-### ============================================================
-###
-### Important:
-### The database should be deleted/reset before running this file.
-###
-### Run order:
-### 1. Readers.http
-### 2. Books.http
-### 3. Loans.http
-###
-### This file assumes:
-### - Readers already exist.
-### - Books and BookItems already exist.
-###
-### Current Loans behavior:
-### - Loans do not use IsActive.
-### - Loans use LoanStatus.
-### - Borrowed = 1
-### - Returned = 2
-### - Cancelled = 3
-###
-### Current routes:
-### - GET   /loans
-### - GET   /loans/{id}
-### - POST  /loans
-### - PATCH /loans/{id}/renew
-### - PATCH /loans/{id}/return-at-desk
-###
-### There is intentionally no /loans/active route.
-### ============================================================
-
-
 ### Reader ids from Readers.http =============================================
 
 @reader1Id = 10000000-0000-0000-0000-000000000000
 @reader2Id = 20000000-0000-0000-0000-000000000000
-@unknownReaderId = 99999999-9999-9999-9999-999999999999
-
 
 ### BookItem ids from Books.http =============================================
-
 @bookItem1Id = be000001-0000-0000-0000-000000000000
 @bookItem2Id = be000002-0000-0000-0000-000000000000
 @bookItem3Id = be000003-0000-0000-0000-000000000000
 @bookItem4Id = be000004-0000-0000-0000-000000000000
-@unknownBookItemId = be999999-0000-0000-0000-000000000000
-
 
 ### Loan ids =================================================================
-
 @loan1Id = a1000001-0000-0000-0000-000000000000
 @loan2Id = a1000002-0000-0000-0000-000000000000
 @loan3Id = a1000003-0000-0000-0000-000000000000
-@duplicateLoanId = a1000009-0000-0000-0000-000000000000
-@unknownLoanId = a1999999-0000-0000-0000-000000000000
-
-
-### 1. Verify empty loans collection ==========================================
-
-### Get borrowed loans before borrowing
-### Expected: 200 OK with empty list
-GET {{baseUrl}}/loans
-Accept: application/json
-
-
-### Get unknown loan by id
-### Expected: 404 Not Found
-GET {{baseUrl}}/loans/{{unknownLoanId}}
-Accept: application/json
-
-
-### Get invalid loan id
-### Expected: 404 Not Found by routing because "not-a-guid" does not match {id:guid}
-GET {{baseUrl}}/loans/not-a-guid
-Accept: application/json
 
 
 ### 2. Borrow book items =======================================================
 
 ### Borrow BookItem 1 for Reader 1
-### Expected: 201 Created
-### Expected body:
-### - id = loan1Id
-### - readerId = reader1Id
-### - bookItemId = bookItem1Id
-### - status = 1
-### - returnedAt = null
-### - renewalCount = 0
 POST {{baseUrl}}/loans
 Content-Type: application/json
 Accept: application/json
@@ -103,10 +32,6 @@ Accept: application/json
 
 
 ### Borrow BookItem 3 for Reader 2
-### Expected: 201 Created
-### Expected body:
-### - status = 1
-### - returnedAt = null
 POST {{baseUrl}}/loans
 Content-Type: application/json
 Accept: application/json
@@ -119,8 +44,6 @@ Accept: application/json
 
 
 ### Borrow BookItem 4 for Reader 1
-### Expected: 201 Created
-### This loan is used as another borrowed loan in the list endpoint.
 POST {{baseUrl}}/loans
 Content-Type: application/json
 Accept: application/json
@@ -130,198 +53,3 @@ Accept: application/json
   "readerId": "{{reader1Id}}",
   "bookItemId": "{{bookItem4Id}}"
 }
-
-
-### 3. Verify borrowed loans ===================================================
-
-### Get loan 1 by id
-### Expected: 200 OK
-### Expected detail data:
-### - reader data is included
-### - book item data is included
-### - status = 1
-### - isOverdue = false
-### - canRenew = true
-GET {{baseUrl}}/loans/{{loan1Id}}
-Accept: application/json
-
-
-### Get all borrowed loans
-### Expected: 200 OK
-### Expected:
-### - loan1, loan2 and loan3 are included
-### - status = 1 for all entries
-GET {{baseUrl}}/loans
-Accept: application/json
-
-
-### 4. Conflict tests ==========================================================
-
-### Borrow already borrowed BookItem 1 again
-### Expected: 409 Conflict
-POST {{baseUrl}}/loans
-Content-Type: application/json
-Accept: application/json
-
-{
-  "id": "{{duplicateLoanId}}",
-  "readerId": "{{reader1Id}}",
-  "bookItemId": "{{bookItem1Id}}"
-}
-
-
-### 5. Negative borrow tests ===================================================
-
-### Borrow for unknown reader
-### Expected: 404 Not Found
-POST {{baseUrl}}/loans
-Content-Type: application/json
-Accept: application/json
-
-{
-  "id": null,
-  "readerId": "{{unknownReaderId}}",
-  "bookItemId": "{{bookItem2Id}}"
-}
-
-
-### Borrow unknown BookItem
-### Expected: 404 Not Found
-POST {{baseUrl}}/loans
-Content-Type: application/json
-Accept: application/json
-
-{
-  "id": null,
-  "readerId": "{{reader1Id}}",
-  "bookItemId": "{{unknownBookItemId}}"
-}
-
-
-### Borrow with empty reader id
-### Expected: 400 Bad Request
-POST {{baseUrl}}/loans
-Content-Type: application/json
-Accept: application/json
-
-{
-  "id": null,
-  "readerId": "00000000-0000-0000-0000-000000000000",
-  "bookItemId": "{{bookItem2Id}}"
-}
-
-
-### Borrow with empty book item id
-### Expected: 400 Bad Request
-POST {{baseUrl}}/loans
-Content-Type: application/json
-Accept: application/json
-
-{
-  "id": null,
-  "readerId": "{{reader1Id}}",
-  "bookItemId": "00000000-0000-0000-0000-000000000000"
-}
-
-
-### Borrow with invalid loan id
-### Expected: 400 Bad Request
-POST {{baseUrl}}/loans
-Content-Type: application/json
-Accept: application/json
-
-{
-  "id": "not-a-guid",
-  "readerId": "{{reader1Id}}",
-  "bookItemId": "{{bookItem2Id}}"
-}
-
-
-### 6. Renew loan =============================================================
-
-### Renew borrowed loan 1
-### Expected: 200 OK
-### Expected:
-### - status = 1
-### - renewalCount = 1
-### - dueDate is extended by LoanRules.StandardRenewalDays
-PATCH {{baseUrl}}/loans/{{loan1Id}}/renew
-Accept: application/json
-
-
-### Get renewed loan 1 by id
-### Expected: 200 OK
-### Expected:
-### - renewalCount = 1
-### - canRenew = true if max renewals is not reached
-GET {{baseUrl}}/loans/{{loan1Id}}
-Accept: application/json
-
-
-### Renew unknown loan
-### Expected: 404 Not Found
-PATCH {{baseUrl}}/loans/{{unknownLoanId}}/renew
-Accept: application/json
-
-
-### Renew invalid loan id
-### Expected: 404 Not Found by routing because "not-a-guid" does not match {id:guid}
-PATCH {{baseUrl}}/loans/not-a-guid/renew
-Accept: application/json
-
-
-### 7. Return loan at desk =====================================================
-### Run these after the renew tests.
-### They change the state of loan 1 from Borrowed to Returned.
-
-
-### Return loan 1 at desk
-### Expected: 200 OK
-### Expected:
-### - status = 2
-### - returnedAt is not null
-PATCH {{baseUrl}}/loans/{{loan1Id}}/return-at-desk
-Accept: application/json
-
-
-### Get returned loan 1 by id
-### Expected: 200 OK
-### Expected:
-### - status = 2
-### - returnedAt is not null
-### - canRenew = false
-GET {{baseUrl}}/loans/{{loan1Id}}
-Accept: application/json
-
-
-### Get all borrowed loans after returning loan 1
-### Expected: 200 OK
-### Expected:
-### - loan1 is no longer included
-### - loan2 and loan3 are still included
-GET {{baseUrl}}/loans
-Accept: application/json
-
-
-### Return already returned loan 1
-### Expected: 409 Conflict
-PATCH {{baseUrl}}/loans/{{loan1Id}}/return-at-desk
-Accept: application/json
-
-
-### Renew returned loan 1
-### Expected: 409 Conflict
-PATCH {{baseUrl}}/loans/{{loan1Id}}/renew
-Accept: application/json
-
-
-### Return unknown loan
-### Expected: 404 Not Found
-PATCH {{baseUrl}}/loans/{{unknownLoanId}}/return-at-desk
-Accept: application/json
-
-
-### Return invalid loan id
-### Expected: 404 Not Found by routing because "not-a-guid" does not match {id:guid}
-PATCH {{baseUrl}}/loans/not-a-guid/return-at-desk
-Accept: application/json

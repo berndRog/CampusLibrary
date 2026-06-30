@@ -80,57 +80,6 @@ GET {{baseUrl}}/loans/not-a-guid
 Accept: application/json
 
 
-### 2. Borrow book items =======================================================
-
-### Borrow BookItem 1 for Reader 1
-### Expected: 201 Created
-### Expected body:
-### - id = loan1Id
-### - readerId = reader1Id
-### - bookItemId = bookItem1Id
-### - status = 1
-### - returnedAt = null
-### - renewalCount = 0
-POST {{baseUrl}}/loans
-Content-Type: application/json
-Accept: application/json
-
-{
-  "id": "{{loan1Id}}",
-  "readerId": "{{reader1Id}}",
-  "bookItemId": "{{bookItem1Id}}"
-}
-
-
-### Borrow BookItem 3 for Reader 2
-### Expected: 201 Created
-### Expected body:
-### - status = 1
-### - returnedAt = null
-POST {{baseUrl}}/loans
-Content-Type: application/json
-Accept: application/json
-
-{
-  "id": "{{loan2Id}}",
-  "readerId": "{{reader2Id}}",
-  "bookItemId": "{{bookItem3Id}}"
-}
-
-
-### Borrow BookItem 4 for Reader 1
-### Expected: 201 Created
-### This loan is used as another borrowed loan in the list endpoint.
-POST {{baseUrl}}/loans
-Content-Type: application/json
-Accept: application/json
-
-{
-  "id": "{{loan3Id}}",
-  "readerId": "{{reader1Id}}",
-  "bookItemId": "{{bookItem4Id}}"
-}
-
 
 ### 3. Verify borrowed loans ===================================================
 
