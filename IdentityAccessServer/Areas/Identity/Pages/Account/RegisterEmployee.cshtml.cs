@@ -40,7 +40,7 @@ public sealed class RegisterEmployeeModel : PageModel {
 
    public string BankingEmployeesUrl {
       get {
-         var baseUrl = _configuration["IdentityAccessServer:WebBlazorSsr:BaseUrl"]?.TrimEnd('/');
+         var baseUrl = _configuration["IdentityAccessServer:BankingClientSsr:BaseUrl"]?.TrimEnd('/');
          return string.IsNullOrWhiteSpace(baseUrl)
             ? "/Identity/Account/RegisterEmployee"
             : $"{baseUrl}/employees?returnUrl=%2Femployee";

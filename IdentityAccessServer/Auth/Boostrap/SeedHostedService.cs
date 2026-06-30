@@ -1,5 +1,5 @@
-using IdentityAccessServer.Auth.Options;
 using IdentityAccessServer.Auth.Dev;
+using IdentityAccessServer.Auth.Options;
 using Microsoft.Extensions.Options;
 using OpenIddict.Abstractions;
 using static OpenIddict.Abstractions.OpenIddictConstants;
@@ -7,16 +7,9 @@ using static OpenIddict.Abstractions.OpenIddictConstants;
 namespace IdentityAccessServer.Auth.Seeding;
 
 /// <summary>
-/// Seeds demo OpenIddict data idempotently.
-///
-/// The server keeps the older Banking clients and additionally
-/// registers CampusLibrary-specific clients:
-/// - CampusLibrary Blazor SSR client (confidential, Authorization Code)
-/// - CampusLibrary Android Compose app (public, Authorization Code + PKCE)
-///
-/// IMPORTANT:
-/// - Resources/Audiences are derived from the scope definitions.
-/// - Clients are only allowed to request scopes explicitly added here.
+/// Seeds demo OpenIddict data idempotently:
+/// - API scopes and resource mappings
+/// - OIDC clients for browser, SSR, mobile and service scenarios
 /// </summary>
 public sealed class SeedHostedService(
    IServiceProvider sp,
@@ -29,55 +22,53 @@ public sealed class SeedHostedService(
 
       using var scope = sp.CreateScope();
 
-      var options = scope.ServiceProvider
+      IdentityAccessServerOptions options = scope.ServiceProvider
          .GetRequiredService<IOptions<IdentityAccessServerOptions>>().Value;
 
-      var apps = scope.ServiceProvider
+      IOpenIddictApplicationManager apps = scope.ServiceProvider
          .GetRequiredService<IOpenIddictApplicationManager>();
 
-      var scopes = scope.ServiceProvider
+      IOpenIddictScopeManager scopes = scope.ServiceProvider
          .GetRequiredService<IOpenIddictScopeManager>();
 
       // ------------------------------------------------------------
-      // Local helper: Create OR Update (idempotent)
+      // Local helper: Create OR Update clients (idempotent)
       // ------------------------------------------------------------
       async Task UpsertAsync(
          OpenIddictApplicationDescriptor descriptor,
-         bool requiresSecret
+         bool requiresSecret,
+         string? secretConfigurationKey = null
       ) {
-         var existing = await apps.FindByClientIdAsync(
-            descriptor.ClientId!, ct);
+         object? existing = await apps.FindByClientIdAsync(descriptor.ClientId!, ct);
+
+         if(requiresSecret && string.IsNullOrWhiteSpace(descriptor.ClientSecret)) {
+            string keyText = string.IsNullOrWhiteSpace(secretConfigurationKey)
+               ? "configuration / user-secrets / environment variables"
+               : $"'{secretConfigurationKey}'";
+
+            throw new InvalidOperationException(
+               $"Client '{descriptor.ClientId}' is confidential but no ClientSecret was provided. " +
+               $"Set it via {keyText}.");
+         }
 
          if(existing is null) {
-            if(requiresSecret && string.IsNullOrWhiteSpace(descriptor.ClientSecret))
-               throw new InvalidOperationException(
-                  $"Client '{descriptor.ClientId}' is confidential but no ClientSecret was provided. " +
-                  "Set it via configuration/user-secrets."
-               );
-
             await apps.CreateAsync(descriptor, ct);
 
-            logger.LogInformation("Created OpenIddict client: {ClientId}",
-               descriptor.ClientId);
+            logger.LogInformation(
+               message: "Created OpenIddict client: {ClientId}",
+               descriptor.ClientId
+            );
             return;
          }
 
-         if(requiresSecret && string.IsNullOrWhiteSpace(descriptor.ClientSecret))
-            throw new InvalidOperationException(
-               $"Client '{descriptor.ClientId}' exists and is confidential but no ClientSecret was provided. " +
-               "Set it via configuration/user-secrets."
-            );
-
-         await apps.UpdateAsync(
-            application: existing,
-            descriptor: descriptor,
-            cancellationToken: ct
-         );
+         await apps.UpdateAsync(existing, descriptor, ct);
 
          logger.LogInformation(
-            "Updated OpenIddict client: {ClientId}", descriptor.ClientId);
+            message: "Updated OpenIddict client: {ClientId}",
+            descriptor.ClientId
+         );
       }
-      
+
       // ------------------------------------------------------------
       // Local helper: Seed scopes (idempotent)
       // ------------------------------------------------------------
@@ -86,9 +77,9 @@ public sealed class SeedHostedService(
          string resourceName,
          string displayName
       ) {
-         var existing = await scopes.FindByNameAsync(scopeName, ct);
+         object? existing = await scopes.FindByNameAsync(scopeName, ct);
 
-         // Scope -> Resource mapping (THIS is what drives aud/resources in tokens)
+         // Scope -> Resource mapping. This is what later drives aud/resources in tokens.
          var descriptor = new OpenIddictScopeDescriptor {
             Name = scopeName,
             DisplayName = displayName,
@@ -99,39 +90,34 @@ public sealed class SeedHostedService(
             await scopes.CreateAsync(descriptor, ct);
 
             logger.LogInformation(
-               "Created OpenIddict scope: {Scope} -> {Resource}",
-               scopeName, resourceName);
+               message: "Created OpenIddict scope: {Scope} -> {Resource}",
+               scopeName,
+               resourceName
+            );
             return;
          }
 
-         await scopes.UpdateAsync(
-            scope: existing,
-            descriptor: descriptor,
-            cancellationToken: ct
-         );
+         await scopes.UpdateAsync(existing, descriptor, ct);
 
          logger.LogInformation(
-            "Updated OpenIddict scope: {Scope} -> {Resource}",
-            scopeName, resourceName);
+            message: "Updated OpenIddict scope: {Scope} -> {Resource}",
+            scopeName,
+            resourceName
+         );
       }
 
       // ------------------------------------------------------------
       // Local helper: Add API scopes to a client descriptor
-      //
-      // NOTE:
-      // - OpenIddict application permissions decide which scopes a client is allowed to request.
-      // - The actual aud/resources are derived later from the scope definitions (above).
       // ------------------------------------------------------------
       void AddApiScopes(
-         OpenIddictApplicationDescriptor descriptor, 
+         OpenIddictApplicationDescriptor descriptor,
          params string[] apiKeys
       ) {
-         foreach (var key in apiKeys) {
-            if (!options.Apis.TryGetValue(key, out var api))
+         foreach(string key in apiKeys) {
+            if(!options.Apis.TryGetValue(key, out ApiOptions? api))
                throw new InvalidOperationException(
                   $"IdentityAccessServerOptions.Apis does not contain key '{key}'. " +
-                  $"Check appsettings: IdentityAccessServer:Apis:{key}"
-               );
+                  $"Check appsettings: IdentityAccessServer:Apis:{key}");
 
             descriptor.Permissions.Add(Permissions.Prefixes.Scope + api.Scope);
          }
@@ -140,16 +126,14 @@ public sealed class SeedHostedService(
       // ------------------------------------------------------------
       // 0) Seed API scopes (Scope -> Resource)
       // ------------------------------------------------------------
-      if (options.Apis.Count == 0)
+      if(options.Apis.Count == 0)
          throw new InvalidOperationException(
-            "No APIs configured. Add IdentityAccessServer:Apis:{...} in appsettings.json."
-         );
+            "No APIs configured. Add IdentityAccessServer:Apis:{...} in appsettings.json.");
 
-      foreach(var (key, api) in options.Apis) {
+      foreach((string key, ApiOptions api) in options.Apis) {
          if(string.IsNullOrWhiteSpace(api.Scope) || string.IsNullOrWhiteSpace(api.Resource))
             throw new InvalidOperationException(
-               $"Invalid API config for '{key}'. Scope and Resource are required."
-            );
+               $"Invalid API config for '{key}'. Scope and Resource are required.");
 
          await UpsertScopeAsync(
             scopeName: api.Scope,
@@ -161,14 +145,14 @@ public sealed class SeedHostedService(
       // ------------------------------------------------------------
       // 1) Blazor WASM (Public + Code + PKCE)
       // ------------------------------------------------------------
-      var blazor = new OpenIddictApplicationDescriptor {
+      var blazorWasm = new OpenIddictApplicationDescriptor {
          ClientId = options.BlazorWasm.ClientId,
          DisplayName = "Blazor WASM",
          ClientType = ClientTypes.Public,
 
          RedirectUris = { options.BlazorWasmSignInCallbackUri() },
          PostLogoutRedirectUris = { options.BlazorWasmSignOutCallbackUri() },
-         
+
          Permissions = {
             Permissions.Endpoints.Authorization,
             Permissions.Endpoints.Token,
@@ -184,24 +168,29 @@ public sealed class SeedHostedService(
          Requirements = {
             Requirements.Features.ProofKeyForCodeExchange
          }
-      }; 
+      };
 
-      AddApiScopes(blazor, "BankingApi");
-      AllowRefreshTokens(blazor);
-      await UpsertAsync(blazor, requiresSecret: false);
+      AddApiScopes(blazorWasm, "BankingApi", "CarRentalApi");
+      AllowRefreshTokens(blazorWasm);
+
+      await UpsertAsync(
+         descriptor: blazorWasm,
+         requiresSecret: false
+      );
 
       // ------------------------------------------------------------
       // 2) Web MVC (Confidential + Code)
       // ------------------------------------------------------------
       var webMvc = new OpenIddictApplicationDescriptor {
          ClientId = options.WebMvc.ClientId,
-         ClientSecret = config[IdentityAccessServerSecretKeys.WebMvcClientSecret],
+         ClientSecret = 
+            config[IdentityAccessServerSecretKeys.WebMvcClientSecret],
          DisplayName = "WebClient MVC",
          ClientType = ClientTypes.Confidential,
 
          RedirectUris = { options.WebMvcSignInCallbackUri() },
          PostLogoutRedirectUris = { options.WebMvcSignOutCallbackUri() },
-         
+
          Permissions = {
             Permissions.Endpoints.Authorization,
             Permissions.Endpoints.Token,
@@ -215,21 +204,27 @@ public sealed class SeedHostedService(
          }
       };
 
-      AddApiScopes(webMvc, "BankingApi");
+      AddApiScopes(webMvc, "BankingApi", "CarRentalApi");
       AllowRefreshTokens(webMvc);
-      await UpsertAsync(webMvc, requiresSecret: true);
+
+      await UpsertAsync(
+         descriptor: webMvc,
+         requiresSecret: true,
+         secretConfigurationKey: IdentityAccessServerSecretKeys.WebMvcClientSecret
+      );
 
       // ------------------------------------------------------------
-      // 3) Web BlazorSSR (Confidential + Code)
+      // 3) Banking Blazor SSR (Confidential + Code)
       // ------------------------------------------------------------
-      var webBlazorSsr = new OpenIddictApplicationDescriptor {
-         ClientId = options.WebBlazorSsr.ClientId,
-         ClientSecret = config[IdentityAccessServerSecretKeys.WebBlazorSsrSecret],
-         DisplayName = "WebClient Blazor SSR",
+      var bankingClientSsr = new OpenIddictApplicationDescriptor {
+         ClientId = options.BankingClientSsr.ClientId,
+         ClientSecret = 
+            config[IdentityAccessServerSecretKeys.BankingClientSsrSecret],
+         DisplayName = "Banking Client Blazor SSR",
          ClientType = ClientTypes.Confidential,
 
-         RedirectUris = { options.WebBlazorSsrSignInCallbackUri() },
-         PostLogoutRedirectUris = { options.WebBlazorSsrSignOutCallbackUri() },
+         RedirectUris = { options.BankingClientSsrSignInCallbackUri() },
+         PostLogoutRedirectUris = { options.BankingClientSsrSignOutCallbackUri() },
 
          Permissions = {
             Permissions.Endpoints.Authorization,
@@ -244,52 +239,64 @@ public sealed class SeedHostedService(
          }
       };
 
-      AddApiScopes(webBlazorSsr, "BankingApi");
-      AllowRefreshTokens(webBlazorSsr);
-      await UpsertAsync(webBlazorSsr, requiresSecret: true);
+      AddApiScopes(bankingClientSsr, "BankingApi", "CarRentalApi");
+      AllowRefreshTokens(bankingClientSsr);
+
+      await UpsertAsync(
+         descriptor: bankingClientSsr,
+         requiresSecret: true,
+         secretConfigurationKey: IdentityAccessServerSecretKeys.BankingClientSsrSecret
+      );
 
       // ------------------------------------------------------------
-      // CampusLibrary Blazor SSR client
+      // 4) CampusLibrary Blazor SSR (Confidential + Code)
       // ------------------------------------------------------------
-      var campusLibraryBlazorSsr = new OpenIddictApplicationDescriptor {
-         ClientId = options.CampusLibraryBlazorSsr.ClientId,
-         ClientSecret = config[IdentityAccessServerSecretKeys.CampusLibraryBlazorSsrSecret],
-         DisplayName = "CampusLibraryClient Blazor SSR",
+      var campusLibraryClientSsr = new OpenIddictApplicationDescriptor {
+         ClientId = options.CampusLibraryClientSsr.ClientId,
+         ClientSecret = 
+            config[IdentityAccessServerSecretKeys.CampusLibraryClientSsrSecret],
+         DisplayName = "CampusLibrary Client Blazor SSR",
          ClientType = ClientTypes.Confidential,
 
-         RedirectUris = { options.CampusLibraryBlazorSsrSignInCallbackUri() },
-         PostLogoutRedirectUris = { options.CampusLibraryBlazorSsrSignOutCallbackUri() },
+         RedirectUris = { options.CampusLibraryClientSsrSignInCallbackUri() },
+         PostLogoutRedirectUris = { options.CampusLibraryClientSsrSignOutCallbackUri() },
 
          Permissions = {
             Permissions.Endpoints.Authorization,
             Permissions.Endpoints.Token,
             Permissions.Endpoints.EndSession,
+
             Permissions.GrantTypes.AuthorizationCode,
             Permissions.ResponseTypes.Code,
+
             Permissions.Prefixes.Scope + Scopes.OpenId,
             Permissions.Prefixes.Scope + Scopes.Profile
          }
       };
 
-      AddApiScopes(campusLibraryBlazorSsr, "CampusLibraryApi");
-      AllowRefreshTokens(campusLibraryBlazorSsr);
-      await UpsertAsync(campusLibraryBlazorSsr, requiresSecret: true);
+      AddApiScopes(campusLibraryClientSsr, "CampusLibraryApi");
+      AllowRefreshTokens(campusLibraryClientSsr);
 
-     
+      await UpsertAsync(
+         descriptor: campusLibraryClientSsr,
+         requiresSecret: true,
+         secretConfigurationKey: IdentityAccessServerSecretKeys.CampusLibraryClientSsrSecret
+      );
+
       // ------------------------------------------------------------
-      // 4) Android (Public + Code + PKCE)
+      // 5) CampusLibrary Android (Public + Code + PKCE)
       // ------------------------------------------------------------
-      var android = new OpenIddictApplicationDescriptor {
-         ClientId = options.Android.ClientId,
-         DisplayName = "Android App",
+      var campusLibraryAndroidClient = new OpenIddictApplicationDescriptor {
+         ClientId = options.CampusLibraryAndroidClient.ClientId,
+         DisplayName = "CampusLibrary Android Client",
          ClientType = ClientTypes.Public,
 
          RedirectUris = {
-            options.AndroidCustomSchemeRedirectUri(),
-            options.AndroidLoopbackRedirectUri()
+            options.CampusLibraryAndroidClientCustomSchemeRedirectUri(),
+            options.CampusLibraryAndroidClientLoopbackRedirectUri()
          },
          PostLogoutRedirectUris = {
-            options.AndroidPostLogoutRedirectUri()
+            options.CampusLibraryAndroidClientPostLogoutRedirectUri()
          },
 
          Permissions = {
@@ -309,47 +316,16 @@ public sealed class SeedHostedService(
          }
       };
 
-      AddApiScopes(android, "BankingApi");
-      AllowRefreshTokens(android);
-      await UpsertAsync(android, requiresSecret: false);
+      AddApiScopes(campusLibraryAndroidClient, "CampusLibraryApi");
+      AllowRefreshTokens(campusLibraryAndroidClient);
+
+      await UpsertAsync(
+         descriptor: campusLibraryAndroidClient,
+         requiresSecret: false
+      );
 
       // ------------------------------------------------------------
-      // CampusLibrary Android Compose app
-      // ------------------------------------------------------------
-      var campusLibraryAndroid = new OpenIddictApplicationDescriptor {
-         ClientId = options.CampusLibraryAndroid.ClientId,
-         DisplayName = "CampusLibraryAndroid",
-         ClientType = ClientTypes.Public,
-
-         RedirectUris = {
-            options.CampusLibraryAndroidCustomSchemeRedirectUri(),
-            options.CampusLibraryAndroidLoopbackRedirectUri()
-         },
-         PostLogoutRedirectUris = {
-            options.CampusLibraryAndroidPostLogoutRedirectUri()
-         },
-
-         Permissions = {
-            Permissions.Endpoints.Authorization,
-            Permissions.Endpoints.Token,
-            Permissions.Endpoints.EndSession,
-            Permissions.GrantTypes.AuthorizationCode,
-            Permissions.ResponseTypes.Code,
-            Permissions.Prefixes.Scope + Scopes.OpenId,
-            Permissions.Prefixes.Scope + Scopes.Profile
-         },
-
-         Requirements = {
-            Requirements.Features.ProofKeyForCodeExchange
-         }
-      };
-
-      AddApiScopes(campusLibraryAndroid, "CampusLibraryApi");
-      AllowRefreshTokens(campusLibraryAndroid);
-      await UpsertAsync(campusLibraryAndroid, requiresSecret: false);
-      
-      // ------------------------------------------------------------
-      // 5) Service Client (Confidential + Client Credentials)
+      // 6) Service Client (Confidential + Client Credentials)
       // ------------------------------------------------------------
       var service = new OpenIddictApplicationDescriptor {
          ClientId = options.ServiceClient.ClientId,
@@ -363,15 +339,24 @@ public sealed class SeedHostedService(
          }
       };
 
-      // Service client may call multiple APIs:
-      AddApiScopes(service, "ImagesApi");
+      AddApiScopes(
+         service,
+         "CarRentalApi",
+         "BankingApi",
+         "ImagesApi",
+         "CampusLibraryApi"
+      );
 
-      await UpsertAsync(service, requiresSecret: true);
+      await UpsertAsync(
+         descriptor: service,
+         requiresSecret: true,
+         secretConfigurationKey: IdentityAccessServerSecretKeys.ServiceClientSecret
+      );
 
       // ------------------------------------------------------------
-      // 6) Development-only dev-password client (Public + Custom Token Grant)
+      // 7) Development-only dev-password client (Public + Custom Token Grant)
       // ------------------------------------------------------------
-      if (env.IsDevelopment()) {
+      if(env.IsDevelopment()) {
          var devClient = new OpenIddictApplicationDescriptor {
             ClientId = "dev-token-client",
             DisplayName = "Development Token Client",
@@ -385,18 +370,25 @@ public sealed class SeedHostedService(
             }
          };
 
-         AddApiScopes(devClient, "BankingApi", "ImagesApi", "CampusLibraryApi");
+         AddApiScopes(
+            devClient,
+            "BankingApi",
+            "CarRentalApi",
+            "ImagesApi",
+            "CampusLibraryApi"
+         );
          AllowRefreshTokens(devClient);
 
-         await UpsertAsync(devClient, requiresSecret: false);
+         await UpsertAsync(
+            descriptor: devClient,
+            requiresSecret: false
+         );
       }
    }
 
    public Task StopAsync(CancellationToken ct) => Task.CompletedTask;
 
-   private static void AllowRefreshTokens(
-      OpenIddictApplicationDescriptor descriptor
-   ) {
+   private void AllowRefreshTokens(OpenIddictApplicationDescriptor descriptor) {
       descriptor.Permissions.Add(Permissions.GrantTypes.RefreshToken);
       descriptor.Permissions.Add(Permissions.Prefixes.Scope + Scopes.OfflineAccess);
    }
@@ -407,30 +399,50 @@ public sealed class SeedHostedService(
 DIDAKTIK / LERNZIELE (DE)
 ==========================================================
 
-1) Gleiche Identity-Infrastruktur, mehrere Clients
---------------------------------------------------
-Der IdentityAccessServer registriert nicht nur eine Web-App, sondern mehrere
-Client-Typen:
-- Blazor SSR: vertraulicher Server-Client mit Client Secret
-- Android Compose: öffentlicher Native Client mit PKCE
-- Service Client: Maschinen-zu-Maschinen-Kommunikation
+1) Warum seedet man Scopes UND Clients?
+--------------------------------------
+OpenIddict trennt klar:
+- Scopes: "Welche Berechtigungsbereiche gibt es?" (z.B. campus_library_api)
+- Resources: "Für welche API gilt der Scope?" (z.B. campus-library-api)
+- Clients:  "Welche App darf welche Scopes anfordern?"
 
-2) CampusLibrary wird als eigene API sichtbar
----------------------------------------------
-Der Scope `campus_library_api` ist mit der Resource `campus-library-api`
-verbunden. Dadurch kann die CampusLibraryApi später genau diese Audience prüfen.
+Der Seed sorgt dafür, dass diese Regeln automatisch und reproduzierbar
+in der Datenbank stehen – ohne manuelle Klickarbeit.
 
-3) Schrittweise Einführung
---------------------------
-Part 5: Client nutzt die API anonym.
-Part 6: Client kann Login/Logout.
-Part 7: API validiert Bearer Tokens.
-Part 8: Client sendet Access Tokens an die geschützte API.
+2) Scope -> Resource ist der Schlüssel für 'aud'
+------------------------------------------------
+Die Audience (aud) in Access Tokens entsteht aus den Resources.
+Und Resources kommen hier aus den OpenIddictScopeDescriptor.Resources.
 
-4) Android früh berücksichtigen
+Merksatz:
+- Client fordert Scope an
+- Scope ist mit Resource verknüpft
+- Resource wird zu 'aud' im Token
+
+3) Warum konkrete Client-Namen?
 -------------------------------
-Die Android-App wird bereits als Public Client registriert. Dadurch muss der
-IdentityAccessServer später nicht mehr grundsätzlich umgebaut werden.
+Die Konfiguration enthält mehrere Beispielanwendungen. Deshalb werden
+fachlich spezifische Clients benannt:
+- BankingClientSsr für den Banking Blazor SSR Client
+- CampusLibraryClientSsr für den CampusLibrary Blazor SSR Client
+- CampusLibraryAndroidClient für die spätere Android Compose App
+
+Generische Clients wie BlazorWasm und WebMvc bleiben erhalten, weil sie
+als allgemeine OIDC-Beispiele genutzt werden.
+
+4) Idempotenz (Create OR Update)
+--------------------------------
+Wir können den Seed bei jedem Start ausführen:
+- existiert der Client/Scope -> Update
+- existiert er nicht         -> Create
+
+Damit bleibt die Demo stabil, auch wenn sich Konfigurationen ändern
+(z.B. RedirectUris, neue Scopes, neue Clients).
+
+5) Minimalprinzip
+-----------------
+Wir geben Clients nur die Scopes, die sie wirklich brauchen.
+Das ist eine konkrete Umsetzung von "Least Privilege".
 
 ==========================================================
 */

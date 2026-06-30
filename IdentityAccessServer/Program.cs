@@ -61,7 +61,7 @@ public static class Program {
       ConfigureOpenIddict(builder.Services, authServer, builder.Environment);
       ConfigureMvcAndUi(builder.Services);
 
-      // Seed demo user + standard clients (Blazor, Android, Service)
+      // Seed demo users and standard clients (WASM, MVC, SSR, Android, Service)
      
       builder.Services.AddHostedService<SeedUsersHostedService>();
       builder.Services.AddHostedService<SeedHostedService>();
@@ -72,8 +72,8 @@ public static class Program {
       var allowedOrigins = new[] {
          Origin(authServer.BlazorWasm.BaseUrl),    // https://localhost:6010
          Origin(authServer.WebMvc.BaseUrl),        // https://localhost:6020 (optional)
-         Origin(authServer.WebBlazorSsr.BaseUrl),   // https://localhost:6030 (optional)
-         Origin(authServer.CampusLibraryBlazorSsr.BaseUrl) // https://localhost:7210
+         Origin(authServer.BankingClientSsr.BaseUrl),       // https://localhost:6030 (optional)
+         Origin(authServer.CampusLibraryClientSsr.BaseUrl)  // https://localhost:6040 (optional)
       };
 
       builder.Services.AddCors(options => {

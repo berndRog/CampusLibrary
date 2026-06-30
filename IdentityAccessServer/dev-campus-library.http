@@ -1,40 +1,54 @@
 @host = https://localhost:7010
 @tokenEndpoint = {{host}}/connect/token
-@devUsersEndpoint = {{host}}/dev/users
 @devClientId = dev-token-client
-@readerEmail = reader.test.{{$timestamp}}@mail.local
-@employeeEmail = librarian.test.{{$timestamp}}@mail.local
+@email = admin@mail.local
 @password = Geh1m_
 @apiScope = campus_library_api
 
-### 1) Dev-only: create a disposable reader user
-POST {{devUsersEndpoint}}
-Content-Type: application/json
-Accept: application/json
-
-{
-  "email": "{{readerEmail}}",
-  "password": "{{password}}",
-  "confirmPassword": "{{password}}",
-  "accountType": "customer"
-}
-
-### 2) Get a bearer token for CampusLibraryApi
+### CampusLibrary: Dev-Login -> Access/ID/Refresh Token
+# Voraussetzung:
+# - IdentityAccessServer läuft in Development
+# - SeedHostedService hat CampusLibraryApi und dev-token-client angelegt/aktualisiert
 POST {{tokenEndpoint}}
 Content-Type: application/x-www-form-urlencoded
 Accept: application/json
 
-grant_type=dev_password&client_id={{devClientId}}&email={{readerEmail}}&password={{password}}&scope=openid profile {{apiScope}}
+grant_type=dev_password&client_id={{devClientId}}&email={{email}}&password={{password}}&scope=openid profile offline_access {{apiScope}}
 
-### 3) Dev-only: create a librarian/employee user
-POST {{devUsersEndpoint}}
-Content-Type: application/json
+> {%
+   client.test("Status is 200", function() {
+      client.assert(response.status === 200, "Expected HTTP 200");
+   });
+
+   client.test("Access token returned", function() {
+      client.assert(!!response.body.access_token, "Missing access_token");
+   });
+
+   client.test("ID token returned", function() {
+      client.assert(!!response.body.id_token, "Missing id_token");
+   });
+
+   client.test("Refresh token returned", function() {
+      client.assert(!!response.body.refresh_token, "Missing refresh_token");
+   });
+
+   client.global.set("campusLibraryAccessToken", response.body.access_token);
+   client.global.set("campusLibraryRefreshToken", response.body.refresh_token);
+ %}
+
+### CampusLibrary: Refresh token verwenden
+POST {{tokenEndpoint}}
+Content-Type: application/x-www-form-urlencoded
 Accept: application/json
 
-{
-  "email": "{{employeeEmail}}",
-  "password": "{{password}}",
-  "confirmPassword": "{{password}}",
-  "accountType": "employee",
-  "adminRights": 511
-}
+grant_type=refresh_token&client_id={{devClientId}}&refresh_token={{campusLibraryRefreshToken}}
+
+> {%
+   client.test("Status is 200 on refresh", function() {
+      client.assert(response.status === 200, "Expected HTTP 200");
+   });
+
+   client.test("Refreshed access token returned", function() {
+      client.assert(!!response.body.access_token, "Missing refreshed access_token");
+   });
+ %}

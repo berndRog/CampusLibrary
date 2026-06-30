@@ -53,6 +53,7 @@ public sealed class IdentityAccessServerOptions {
    
    // Convenience accessors for known APIs
    // ----------------------------------------------------------------
+   public ApiOptions CarRentalApi => Apis["CarRentalApi"];
    public ApiOptions BankingApi   => Apis["BankingApi"];
    public ApiOptions ImagesApi    => Apis["ImagesApi"];
    public ApiOptions CampusLibraryApi => Apis["CampusLibraryApi"];
@@ -61,11 +62,10 @@ public sealed class IdentityAccessServerOptions {
    // ------------------------------------------------------------------
    public ClientOptions BlazorWasm { get; init; } = default!;
    public ClientOptions WebMvc { get; init; } = default!;
-   public ClientOptions WebBlazorSsr { get; init; } = default!;
-   public AndroidClientOptions Android { get; init; } = default!;
+   public ClientOptions BankingClientSsr { get; init; } = default!;
+   public ClientOptions CampusLibraryClientSsr { get; init; } = default!;
+   public AndroidClientOptions CampusLibraryAndroidClient { get; init; } = default!;
    public ClientOptions ServiceClient { get; init; } = default!;
-   public ClientOptions CampusLibraryBlazorSsr { get; init; } = default!;
-   public AndroidClientOptions CampusLibraryAndroid { get; init; } = default!;
    
    // Derived redirect URIs
    // ------------------------------------------------------------------
@@ -90,41 +90,29 @@ public sealed class IdentityAccessServerOptions {
    public Uri WebMvcSignOutCallbackUri() =>
       CombineBaseAndPath(WebMvc.BaseUrl, WebMvc.SignOutCallbackPath);
 
-   // Blazor SSR (Confidential client)
-   public Uri WebBlazorSsrSignInCallbackUri() =>
-      CombineBaseAndPath(WebBlazorSsr.BaseUrl, WebBlazorSsr.SignInCallbackPath);
+   // Banking Blazor SSR (Confidential client)
+   public Uri BankingClientSsrSignInCallbackUri() =>
+      CombineBaseAndPath(BankingClientSsr.BaseUrl, BankingClientSsr.SignInCallbackPath);
 
-   public Uri WebBlazorSsrSignOutCallbackUri() =>
-      CombineBaseAndPath(WebBlazorSsr.BaseUrl, WebBlazorSsr.SignOutCallbackPath);
-
-
+   public Uri BankingClientSsrSignOutCallbackUri() =>
+      CombineBaseAndPath(BankingClientSsr.BaseUrl, BankingClientSsr.SignOutCallbackPath);
 
    // CampusLibrary Blazor SSR (Confidential client)
-   public Uri CampusLibraryBlazorSsrSignInCallbackUri() =>
-      CombineBaseAndPath(CampusLibraryBlazorSsr.BaseUrl, CampusLibraryBlazorSsr.SignInCallbackPath);
+   public Uri CampusLibraryClientSsrSignInCallbackUri() =>
+      CombineBaseAndPath(CampusLibraryClientSsr.BaseUrl, CampusLibraryClientSsr.SignInCallbackPath);
 
-   public Uri CampusLibraryBlazorSsrSignOutCallbackUri() =>
-      CombineBaseAndPath(CampusLibraryBlazorSsr.BaseUrl, CampusLibraryBlazorSsr.SignOutCallbackPath);
+   public Uri CampusLibraryClientSsrSignOutCallbackUri() =>
+      CombineBaseAndPath(CampusLibraryClientSsr.BaseUrl, CampusLibraryClientSsr.SignOutCallbackPath);
 
-   // CampusLibrary Android Compose (Public client + PKCE)
-   public Uri CampusLibraryAndroidCustomSchemeRedirectUri() =>
-      new(CampusLibraryAndroid.CustomSchemeRedirectUriString, UriKind.Absolute);
+   // CampusLibrary Android (Public client + PKCE)
+   public Uri CampusLibraryAndroidClientCustomSchemeRedirectUri() =>
+      new(CampusLibraryAndroidClient.CustomSchemeRedirectUriString, UriKind.Absolute);
 
-   public Uri CampusLibraryAndroidLoopbackRedirectUri() =>
-      new(CampusLibraryAndroid.LoopbackRedirectUriString, UriKind.Absolute);
+   public Uri CampusLibraryAndroidClientLoopbackRedirectUri() =>
+      new(CampusLibraryAndroidClient.LoopbackRedirectUriString, UriKind.Absolute);
 
-   public Uri CampusLibraryAndroidPostLogoutRedirectUri() =>
-      new(CampusLibraryAndroid.PostLogoutRedirectUriString, UriKind.Absolute);
-
-   // Android bleibt wie gehabt (weil dort die Strings schon semantisch klar sind)
-   public Uri AndroidCustomSchemeRedirectUri() =>
-      new(Android.CustomSchemeRedirectUriString, UriKind.Absolute);
-
-   public Uri AndroidLoopbackRedirectUri() =>
-      new(Android.LoopbackRedirectUriString, UriKind.Absolute);
-
-   public Uri AndroidPostLogoutRedirectUri() =>
-      new(Android.PostLogoutRedirectUriString, UriKind.Absolute);
+   public Uri CampusLibraryAndroidClientPostLogoutRedirectUri() =>
+      new(CampusLibraryAndroidClient.PostLogoutRedirectUriString, UriKind.Absolute);
 
    
    // ------------------------------------------------------------------
@@ -144,7 +132,7 @@ public enum ClientType {
 
 public static class IdentityAccessServerSecretKeys {
    public const string WebMvcClientSecret = "IdentityAccessServer:WebMvc:ClientSecret";
-   public const string WebBlazorSsrSecret = "IdentityAccessServer:WebBlazorSsr:ClientSecret";
+   public const string BankingClientSsrSecret = "IdentityAccessServer:BankingClientSsr:ClientSecret";
+   public const string CampusLibraryClientSsrSecret = "IdentityAccessServer:CampusLibraryClientSsr:ClientSecret";
    public const string ServiceClientSecret = "IdentityAccessServer:ServiceClient:ClientSecret";
-   public const string CampusLibraryBlazorSsrSecret = "IdentityAccessServer:CampusLibraryBlazorSsr:ClientSecret";
 }

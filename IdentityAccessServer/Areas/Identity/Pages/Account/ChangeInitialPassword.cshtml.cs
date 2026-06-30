@@ -132,7 +132,8 @@ public sealed class ChangeInitialPasswordModel : PageModel {
          return false;
 
       var allowedBaseUrls = new[] {
-         _authServerOptions.WebBlazorSsr.BaseUrl,
+         _authServerOptions.BankingClientSsr.BaseUrl,
+         _authServerOptions.CampusLibraryClientSsr.BaseUrl,
          _authServerOptions.WebMvc.BaseUrl,
          _authServerOptions.BlazorWasm.BaseUrl
       };

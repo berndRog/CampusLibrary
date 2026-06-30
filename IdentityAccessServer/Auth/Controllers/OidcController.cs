@@ -34,13 +34,15 @@ public sealed class OidcController(
          ?? throw new InvalidOperationException("OpenID Connect request missing.");
 
       logger.LogInformation(
-         "Authorize request: client_id='{ClientId}', redirect_uri='{RedirectUri}', scope='{Scope}', response_type='{ResponseType}'",
+         "Authorize request: client_id='{ClientId}', redirect_uri='{RedirectUri}', " +
+         "scope='{Scope}', response_type='{ResponseType}'",
          request.ClientId, request.RedirectUri, request.Scope, request.ResponseType
       );
 
       var returnUrl = Request.PathBase + Request.Path + Request.QueryString;
 
-      var authResult = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
+      var authResult = 
+         await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
 
       if (!authResult.Succeeded) {
          logger.LogInformation("Authorize: no Identity cookie -> challenge, returnUrl='{ReturnUrl}'", returnUrl);
@@ -208,8 +210,7 @@ public sealed class OidcController(
    private string[] ResolveResourcesFromScopes(string[] requestedScopes) {
       static bool IsNonApiScope(string s)
          => s.Equals("openid", StringComparison.Ordinal) ||
-            s.Equals("profile", StringComparison.Ordinal) ||
-            s.Equals("offline_access", StringComparison.Ordinal);
+            s.Equals("profile", StringComparison.Ordinal);
 
       var apiScopesRequested = requestedScopes
          .Where(s => !IsNonApiScope(s))

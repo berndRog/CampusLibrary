@@ -65,12 +65,12 @@ Das beschleunigt:
 - Scope  (z. B. "carrental_api")  = Berechtigung / Capability (was darf der Client?)
 - Resource (z. B. "carrental-api") = Ziel-API / Audience (für wen ist das Token gedacht?)
 
-Im Resource Server wird typischerweise die Audience geprüft.
+Im Resource Server (z. B. CarRentalApi) wird typischerweise die Audience geprüft.
 
 3) Warum ApiKey im DTO?
 -----------------------
 Damit man beim Testen gezielt Tokens für verschiedene APIs ausstellen kann:
-- BankingApi, ImagesApi
+- CarRentalApi, BankingApi, ImagesApi
 
 So bleibt das Setup skalierbar, ohne Codeänderungen in diesem Controller.
 Die Wahrheit steht in appsettings.json:

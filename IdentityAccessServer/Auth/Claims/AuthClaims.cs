@@ -8,7 +8,7 @@ namespace IdentityAccessServer.Auth.Claims;
 /// - Profile-related claims
 /// - Domain-specific authorization and lifecycle claims
 ///
-/// Clients (MVC, Blazor WASM, BlazorSSR, Android, APIs) must rely on these constants.
+/// Clients (MVC, Blazor WASM, SSR, Android, APIs) must rely on these constants.
 /// </summary>
 public static class AuthClaims {
    //--- Standard OIDC / JWT claims -------------------------------------------
