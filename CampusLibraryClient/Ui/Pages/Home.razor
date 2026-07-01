@@ -3,52 +3,25 @@
 
 @inject ICurrentUserProvider CurrentUserProvider
 
-<PageTitle>CampusLibraryClient</PageTitle>
+<PageTitle>CampusLibrary</PageTitle>
 
-<h1>CampusLibraryClient</h1>
-
-<p>
-   This Blazor SSR client calls the CampusLibraryApi through typed API clients.
-</p>
+<h1>Willkommen</h1>
 
 @if(_currentUser is null) {
-   <p>Loading current user...</p>
+   <p>Aktuelle Perspektive wird geladen...</p>
 }
 else {
    <section class="card">
-      <h2>Current UI perspective</h2>
+      <h2>Aktuelle Perspektive</h2>
 
       <p>
          <strong>@_currentUser.DisplayName</strong>
-         (@_currentUser.AccountType)
+         (@DisplayAccountType(_currentUser.AccountType))
       </p>
 
-      @if(_currentUser.IsReader) {
-         <p>
-            Reader perspective: search books, borrow available book items and
-            view your own loans.
-         </p>
-         <p>
-            <a href="/catalog/books">Open catalog</a>
-            |
-            <a href="/my/loans">My loans</a>
-         </p>
-      }
-      else if(_currentUser.IsEmployee) {
-         <p>
-            Employee perspective: manage readers and view all active loans.
-         </p>
-         <p>
-            <a href="/readers">Readers</a>
-            |
-            <a href="/loans">All loans</a>
-         </p>
-      }
-      else {
-         <p>
-            No active identity. Enable DevIdentity for Part 5 or AuthN for Part 6.
-         </p>
-      }
+      <p>
+         Bitte wählen Sie einen Bereich über die Menüleiste.
+      </p>
    </section>
 }
 
@@ -59,4 +32,12 @@ else {
    protected override async Task OnInitializedAsync() {
       _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
    }
+
+   private static string DisplayAccountType(
+      string? accountType
+   ) => accountType?.ToLowerInvariant() switch {
+      "reader" => "Leser/in",
+      "employee" => "Mitarbeiter/in",
+      _ => accountType ?? "unbekannt"
+   };
 }

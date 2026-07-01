@@ -5,38 +5,38 @@
 @inject ILoanClient LoanClient
 @inject ICurrentUserProvider CurrentUserProvider
 
-<PageTitle>My loans</PageTitle>
+<PageTitle>Ausleihen</PageTitle>
 
-<h1>My loans</h1>
+<h1>Ausleihen</h1>
 
 <p>
-   Reader view. In Part 5 the current reader can be simulated with DevIdentity.
-   In Part 6 the same page can use the logged-in reader from claims.
+   Leseransicht. Diese Seite zeigt die aktiven Ausleihen des aktuellen Readers.
 </p>
 
-<button @onclick="LoadAsync">Reload</button>
+<button @onclick="LoadAsync">Neu laden</button>
 
 <ErrorAlert Error="Error" />
 
 @if(IsLoading || _currentUser is null) {
-   <p>Loading loans...</p>
+   <p>Ausleihen werden geladen...</p>
 }
 else if(!_currentUser.IsReader) {
-   <p>This page is intended for readers.</p>
+   <p>Diese Seite ist für Leserinnen und Leser vorgesehen.</p>
 }
 else if(_loans.Count == 0) {
-   <p>No active loans found for this reader.</p>
+   <p>Für diesen Reader wurden keine aktiven Ausleihen gefunden.</p>
 }
 else {
    <table>
       <thead>
          <tr>
-            <th>Title</th>
-            <th>Inventory</th>
-            <th>Loan date</th>
-            <th>Due date</th>
+            <th>Titel</th>
+            <th>Inventarnummer</th>
+            <th>Ausleihdatum</th>
+            <th>Rückgabedatum</th>
             <th>Status</th>
-            <th>Overdue</th>
+            <th>Überfällig</th>
+            <th>Aktion</th>
          </tr>
       </thead>
       <tbody>
@@ -47,7 +47,10 @@ else {
                <td>@loan.LoanDate.ToString("yyyy-MM-dd")</td>
                <td>@loan.DueDate.ToString("yyyy-MM-dd")</td>
                <td>@loan.Status</td>
-               <td>@(loan.IsOverdue ? "Yes" : "No")</td>
+               <td>@(loan.IsOverdue ? "Ja" : "Nein")</td>
+               <td>
+                  <a href="@($"/loans/{loan.Id}")">Details</a>
+               </td>
             </tr>
          }
       </tbody>
@@ -67,6 +70,7 @@ else {
 
    private async Task LoadAsync() {
       StartLoading();
+      Error = null;
 
       if(_currentUser?.ReaderId is null) {
          _loans = [];

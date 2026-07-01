@@ -1,38 +1,91 @@
 @inject ICurrentUserProvider CurrentUserProvider
+@inject IConfiguration Configuration
+@inject NavigationManager Navigation
 
-<div class="top-menu">
-   @if(_currentUser is null) {
-      <span>Loading user...</span>
-   }
-   else if(_currentUser.IsAuthenticated) {
-      <span>
-         @_currentUser.DisplayName
-         (@_currentUser.AccountType)
-      </span>
+<nav>
+   <div class="app-main navbar navbar-expand-sm navbar-light bg-light border-top border-bottom py-2">
+      <button class="navbar-toggler ms-auto"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#topmenu"
+              aria-controls="topmenu"
+              aria-expanded="false"
+              aria-label="Navigation umschalten">
+         <span class="navbar-toggler-icon"></span>
+      </button>
 
-      @if(!_authNEnabled) {
-         <span class="muted">DevIdentity, no real login</span>
-      }
-      else {
-         <a href="/identity/logout">Logout</a>
-      }
-   }
-   else {
-      <span>Anonymous</span>
+      <div class="collapse navbar-collapse" id="topmenu">
+         @if(_currentUser is null) {
+            <span class="navbar-text">Navigation wird geladen...</span>
+         }
+         else {
+            <ul class="navbar-nav me-auto mb-2 mb-sm-0">
+               <li class="nav-item">
+                  <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
+                     Home
+                  </NavLink>
+               </li>
 
-      @if(_authNEnabled) {
-         <a href="/identity/login?returnUrl=%2Fentry">Login</a>
-      }
-      else {
-         <span class="muted">Part 5: no active authentication</span>
-      }
-   }
-</div>
+               @if(_currentUser.IsAuthenticated) {
+                  <li class="nav-item">
+                     <NavLink class="nav-link" href="/catalog/books" Match="NavLinkMatch.Prefix">
+                        Katalog
+                     </NavLink>
+                  </li>
+               }
+
+               @if(_currentUser.IsReader) {
+                  <li class="nav-item">
+                     <NavLink class="nav-link" href="/my/loans" Match="NavLinkMatch.Prefix">
+                        Ausleihen
+                     </NavLink>
+                  </li>
+               }
+
+               @if(_currentUser.IsEmployee) {
+                  <li class="nav-item">
+                     <NavLink class="nav-link" href="/readers" Match="NavLinkMatch.Prefix">
+                        Leser
+                     </NavLink>
+                  </li>
+
+                  <li class="nav-item">
+                     <NavLink class="nav-link" href="/loans" Match="NavLinkMatch.Prefix">
+                        Ausleihen
+                     </NavLink>
+                  </li>
+               }
+            </ul>
+
+            <div class="d-flex align-items-sm-center gap-2 flex-column flex-sm-row ms-sm-auto mt-2 mt-sm-0">
+               @if(_currentUser.IsAuthenticated) {
+                  <span class="navbar-text small text-muted">
+                     @_currentUser.DisplayName (@DisplayAccountType(_currentUser.AccountType))
+                  </span>
+
+                  <a class="btn btn-outline-danger btn-sm" href="@LogoutUrl">
+                     Logout
+                  </a>
+               }
+               else {
+                  @if(_authNEnabled) {
+                     <a class="btn btn-primary btn-sm" href="@LoginUrl">
+                        Login
+                     </a>
+                  }
+                  else {
+                     <span class="btn btn-outline-secondary btn-sm disabled" aria-disabled="true">
+                        Login
+                     </span>
+                  }
+               }
+            </div>
+         }
+      </div>
+   </div>
+</nav>
 
 @code {
-
-   [Inject]
-   private IConfiguration Configuration { get; set; } = default!;
 
    private CurrentUserInfo? _currentUser;
 
@@ -42,10 +95,24 @@
       _authNEnabled = Configuration.GetValue<bool>(FeatureFlags.AuthNEnabled);
       _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
    }
+
+   private string LoginUrl =>
+      "/identity/login?returnUrl=" + Uri.EscapeDataString("/");
+
+   private string LogoutUrl => _authNEnabled
+      ? "/identity/logout"
+      : "/logout";
+
+   private static string DisplayAccountType(
+      string? accountType
+   ) => accountType?.ToLowerInvariant() switch {
+      "reader" => "Leser/in",
+      "employee" => "Mitarbeiter/in",
+      _ => accountType ?? "unbekannt"
+   };
 }
 
 @* Part 6 preparation:
-   When AuthNEnabled=true, the same TopMenu can use ClaimsCurrentUserProvider.
-   The UI still asks ICurrentUserProvider, so the DevIdentity source can be
-   removed without rewriting the pages.
+   With AuthNEnabled=true, the same menu can use ClaimsCurrentUserProvider.
+   In Part 5, DevIdentity only selects the UI perspective. It is not security.
 *@

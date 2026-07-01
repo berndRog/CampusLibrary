@@ -1,5 +1,8 @@
+using Microsoft.Extensions.Configuration;
+
 namespace CampusLibraryClient.Security;
 
+// Provides a demo user for Part 5 without real authentication.
 public sealed class DevCurrentUserProvider(
    IConfiguration configuration
 ) : ICurrentUserProvider {
@@ -7,59 +10,94 @@ public sealed class DevCurrentUserProvider(
    public Task<CurrentUserInfo> GetCurrentUserAsync(
       CancellationToken ct = default
    ) {
-      IConfigurationSection section = configuration.GetSection("DevIdentity");
+      string activeProfile =
+         configuration["DevIdentity:ActiveProfile"]
+         ?? throw new InvalidOperationException(
+            "Missing configuration value: DevIdentity:ActiveProfile"
+         );
 
-      bool isAuthenticated = section.GetValue(
-         key: "IsAuthenticated",
-         defaultValue: true
-      );
+      IConfigurationSection profileSection =
+         configuration.GetSection($"DevIdentity:Profiles:{activeProfile}");
 
-      if(!isAuthenticated)
-         return Task.FromResult(CurrentUserInfo.Anonymous);
+      if(!profileSection.Exists())
+         throw new InvalidOperationException(
+            $"DevIdentity profile '{activeProfile}' was not found."
+         );
 
-      string accountType = section.GetValue<string>("AccountType")
-         ?? CampusLibraryRoles.Reader;
+      bool isAuthenticated =
+         profileSection.GetValue<bool>("IsAuthenticated");
+
+      string accountType =
+         profileSection["AccountType"]
+         ?? throw new InvalidOperationException(
+            $"Missing AccountType for DevIdentity profile '{activeProfile}'."
+         );
+
+      string displayName =
+         profileSection["DisplayName"] ?? activeProfile;
+
+      string email =
+         profileSection["Email"] ?? string.Empty;
+
+      string? readerIdText =
+         profileSection["ReaderId"];
 
       Guid? readerId = null;
-      string? readerIdText = section.GetValue<string>("ReaderId");
 
-      if(Guid.TryParse(
-            input: readerIdText,
-            result: out Guid parsedReaderId
-         ))
+      if(!string.IsNullOrWhiteSpace(readerIdText)) {
+         if(!Guid.TryParse(
+               input: readerIdText,
+               result: out Guid parsedReaderId
+            )) {
+            throw new InvalidOperationException(
+               $"Invalid ReaderId for DevIdentity profile '{activeProfile}': {readerIdText}"
+            );
+         }
+
          readerId = parsedReaderId;
+      }
 
-      string displayName = section.GetValue<string>("DisplayName")
-         ?? "Dev user";
+      if(accountType.Equals(
+            value: CampusLibraryRoles.Reader,
+            comparisonType: StringComparison.OrdinalIgnoreCase
+         )
+         && readerId is null) {
+         throw new InvalidOperationException(
+            $"DevIdentity profile '{activeProfile}' is a reader but has no ReaderId."
+         );
+      }
 
-      string? email = section.GetValue<string>("Email");
-
-      CurrentUserInfo user = new(
-         IsAuthenticated: true,
+      CurrentUserInfo currentUser = new(
+         IsAuthenticated: isAuthenticated,
          AccountType: accountType,
          ReaderId: readerId,
          DisplayName: displayName,
          Email: email
       );
 
-      return Task.FromResult(user);
+      return Task.FromResult(currentUser);
    }
 }
 
 /*
-Didaktik
---------
+   Lernziele und Didaktik
+   ----------------------
 
-DevCurrentUserProvider ist eine bewusste Übergangslösung für Teil 5.
+   Dieser Provider simuliert in Teil 5 eine angemeldete Identität, ohne bereits
+   echte Authentifizierung über den IdentityAccessServer zu verwenden.
 
-Der Client soll bereits unterschiedliche UI-Perspektiven zeigen können:
-Reader sehen ihre eigenen Ausleihen und können Bücher ausleihen.
-Mitarbeiter sehen Verwaltungsseiten wie Readers und alle Loans.
+   Die aktive Demo-Identität wird über DevIdentity:ActiveProfile ausgewählt.
+   Dadurch bleibt die appsettings.json gültiges JSON. Es müssen keine Blöcke
+   auskommentiert oder umbenannt werden.
 
-Diese Klasse ersetzt keine Authentifizierung und bietet keine Sicherheit.
-Sie liest nur eine Demo-Identität aus appsettings.json.
+   Für Reader-Profile ist eine ReaderId erforderlich, weil die CampusLibraryApi
+   fachliche Reader kennt und Ausleihen einem Reader zugeordnet werden.
 
-In Teil 6 wird diese Quelle durch ClaimsCurrentUserProvider ersetzt.
-Die Razor-Seiten müssen dann nicht neu gedacht werden, weil sie nur das
-Interface ICurrentUserProvider verwenden.
+   Für Employee-Profile ist keine ReaderId erforderlich. Mitarbeiter gehören
+   in diesem didaktischen Modell nicht zur CampusLibrary-Domäne, sondern später
+   zum IdentityAccessServer.
+
+   In Teil 6 kann dieser Provider durch einen ClaimsCurrentUserProvider ersetzt
+   werden. Die UI-Seiten bleiben dabei weitgehend unverändert, weil sie nur gegen
+   ICurrentUserProvider programmiert sind.
 */

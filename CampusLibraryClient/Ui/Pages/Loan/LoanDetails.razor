@@ -1,0 +1,239 @@
+@page "/loans/{LoanId:guid}"
+@rendermode InteractiveServer
+@inherits BasePage
+
+@inject ILoanClient LoanClient
+@inject ICurrentUserProvider CurrentUserProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Ausleihe Details</PageTitle>
+
+<h1>Ausleihe Details</h1>
+
+<p>
+   Diese Seite zeigt die Detaildaten einer Ausleihe.
+</p>
+
+<ErrorAlert Error="Error" />
+
+@if(IsLoading || _currentUser is null) {
+   <p>Ausleihe wird geladen...</p>
+}
+else if(_loan is null) {
+   <p>Keine Ausleihe gefunden.</p>
+}
+else if(!CanViewLoan()) {
+   <p>Diese Ausleihe kann mit der aktuellen Demo-Identität nicht angezeigt werden.</p>
+}
+else {
+   <section class="card">
+      <h2>Buchdetails</h2>
+
+      <dl>
+         <dt>Titel</dt>
+         <dd>@Display(_loan.Title)</dd>
+
+         <dt>Untertitel</dt>
+         <dd>@Display(_loan.Subtitle)</dd>
+
+         <dt>Autoren</dt>
+         <dd>@Display(_loan.AuthorsText)</dd>
+
+         <dt>ISBN</dt>
+         <dd>@Display(_loan.Isbn)</dd>
+
+         <dt>Buch Id</dt>
+         <dd>@_loan.BookId</dd>
+
+         <dt>Aktiv</dt>
+         <dd>@YesNo(_loan.BookIsActive)</dd>
+      </dl>
+   </section>
+
+   <section class="card">
+      <h2>Exemplardetails</h2>
+
+      <dl>
+         <dt>Inventarnummer</dt>
+         <dd>@Display(_loan.InventoryNumber)</dd>
+
+         <dt>Exemplar Id</dt>
+         <dd>@_loan.BookItemId</dd>
+
+         <dt>Für Ausleihe verfügbar</dt>
+         <dd>@YesNo(_loan.IsAvailableForLoan)</dd>
+      </dl>
+   </section>
+
+   <section class="card">
+      <h2>Leserdetails</h2>
+
+      <dl>
+         <dt>Name</dt>
+         <dd>@Display(ReaderName)</dd>
+
+         <dt>Reader Id</dt>
+         <dd>@_loan.ReaderId</dd>
+      </dl>
+   </section>
+
+   <section class="card">
+      <h2>Ausleihdetails</h2>
+
+      <dl>
+         <dt>Ausleihe Id</dt>
+         <dd>@_loan.Id</dd>
+
+         <dt>Ausleihdatum</dt>
+         <dd>@FormatDate(_loan.LoanDate)</dd>
+
+         <dt>Fällig am</dt>
+         <dd>@FormatDate(_loan.DueDate)</dd>
+
+         <dt>Status</dt>
+         <dd>@_loan.Status</dd>
+
+         <dt>Verlängerungen</dt>
+         <dd>@_loan.RenewalCount</dd>
+
+         <dt>Überfällig</dt>
+         <dd>@YesNo(_loan.IsOverdue)</dd>
+
+         <dt>Zurückgegeben am</dt>
+         <dd>@(_loan.ReturnedAt is null ? "Nein" : FormatDate(_loan.ReturnedAt.Value))</dd>
+
+         <dt>Verlängerbar</dt>
+         <dd>@YesNo(_loan.CanRenew)</dd>
+      </dl>
+   </section>
+
+   <div class="toolbar">
+      <button @onclick="BackToOverview">
+         Zurück zur Übersicht
+      </button>
+
+      @if(_loan.ReturnedAt is null) {
+         <button @onclick="RenewAsync" disabled="@(!_loan.CanRenew || IsLoading)">
+            Verlängern
+         </button>
+
+         <button @onclick="ReturnAtDeskAsync" disabled="@IsLoading">
+            Zurückgeben
+         </button>
+      }
+   </div>
+}
+
+@code {
+
+   [Parameter]
+   public Guid LoanId { get; set; }
+
+   private LoanDetailDto? _loan;
+
+   private CurrentUserInfo? _currentUser;
+
+   private string ReaderName {
+      get {
+         if(_loan is null)
+            return string.Empty;
+
+         return $"{_loan.Firstname} {_loan.Lastname}".Trim();
+      }
+   }
+
+   protected override async Task OnInitializedAsync() {
+      _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
+      await LoadAsync();
+   }
+
+   private async Task LoadAsync() {
+      StartLoading();
+      Error = null;
+
+      Result<LoanDetailDto> result = await LoanClient.GetByIdAsync(
+         id: LoanId
+      );
+
+      if(result.IsSuccess && result.Value is not null)
+         _loan = result.Value;
+      else
+         Error = result.Error;
+
+      StopLoading();
+   }
+
+   private bool CanViewLoan() {
+      if(_currentUser is null || _loan is null)
+         return false;
+
+      if(_currentUser.IsEmployee)
+         return true;
+
+      if(_currentUser.IsReader && _currentUser.ReaderId == _loan.ReaderId)
+         return true;
+
+      return false;
+   }
+
+   private async Task RenewAsync() {
+      if(_loan is null)
+         return;
+
+      StartLoading();
+      Error = null;
+
+      Result<LoanDto> result = await LoanClient.RenewAsync(
+         id: _loan.Id
+      );
+
+      if(result.IsFailure) {
+         Error = result.Error;
+         StopLoading();
+         return;
+      }
+
+      await LoadAsync();
+   }
+
+   private async Task ReturnAtDeskAsync() {
+      if(_loan is null)
+         return;
+
+      StartLoading();
+      Error = null;
+
+      Result<LoanDto> result = await LoanClient.ReturnAtDeskAsync(
+         id: _loan.Id
+      );
+
+      if(result.IsFailure) {
+         Error = result.Error;
+         StopLoading();
+         return;
+      }
+
+      await LoadAsync();
+   }
+
+   private void BackToOverview() {
+      if(_currentUser?.IsReader == true)
+         Navigation.NavigateTo("/my/loans");
+      else
+         Navigation.NavigateTo("/loans");
+   }
+
+   private static string Display(
+      string? value
+   ) => string.IsNullOrWhiteSpace(value)
+      ? "Nicht verfügbar"
+      : value;
+
+   private static string FormatDate(
+      DateTime value
+   ) => value.ToString("yyyy-MM-dd");
+
+   private static string YesNo(
+      bool value
+   ) => value ? "Ja" : "Nein";
+}

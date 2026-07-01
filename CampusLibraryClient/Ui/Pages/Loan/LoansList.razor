@@ -6,40 +6,40 @@
 @inject ILoanClient LoanClient
 @inject ICurrentUserProvider CurrentUserProvider
 
-<PageTitle>All loans</PageTitle>
+<PageTitle>Ausleihen</PageTitle>
 
-<h1>All loans</h1>
+<h1>Ausleihen</h1>
 
 <p>
-   Employee view. This page shows the library desk perspective and lists all
-   currently borrowed loans.
+   Mitarbeiteransicht. Diese Seite zeigt die Perspektive der Bibliothekstheke
+   und listet alle aktuell ausgeliehenen Medien auf.
 </p>
 
-<button @onclick="LoadAsync">Reload</button>
+<button @onclick="LoadAsync">Neu laden</button>
 
 <ErrorAlert Error="Error" />
 
 @if(IsLoading || _currentUser is null) {
-   <p>Loading loans...</p>
+   <p>Ausleihen werden geladen...</p>
 }
 else if(!_currentUser.IsEmployee) {
-   <p>This page is intended for employees.</p>
+   <p>Diese Seite ist für Mitarbeitende vorgesehen.</p>
 }
 else if(_loans.Count == 0) {
-   <p>No borrowed loans found.</p>
+   <p>Keine aktiven Ausleihen gefunden.</p>
 }
 else {
    <table>
       <thead>
          <tr>
             <th>Reader</th>
-            <th>Title</th>
-            <th>Inventory</th>
-            <th>Loan date</th>
-            <th>Due date</th>
+            <th>Titel</th>
+            <th>Inventarnummer</th>
+            <th>Ausleihdatum</th>
+            <th>Rückgabedatum</th>
             <th>Status</th>
-            <th>Overdue</th>
-            <th>Actions</th>
+            <th>Überfällig</th>
+            <th>Aktion</th>
          </tr>
       </thead>
       <tbody>
@@ -51,10 +51,9 @@ else {
                <td>@loan.LoanDate.ToString("yyyy-MM-dd")</td>
                <td>@loan.DueDate.ToString("yyyy-MM-dd")</td>
                <td>@loan.Status</td>
-               <td>@(loan.IsOverdue ? "Yes" : "No")</td>
+               <td>@(loan.IsOverdue ? "Ja" : "Nein")</td>
                <td>
-                  <button @onclick="() => RenewAsync(loan.Id)">Renew</button>
-                  <button @onclick="() => ReturnAtDeskAsync(loan.Id)">Return</button>
+                  <a href="@($"/loans/{loan.Id}")">Details</a>
                </td>
             </tr>
          }
@@ -75,6 +74,7 @@ else {
 
    private async Task LoadAsync() {
       StartLoading();
+      Error = null;
 
       Result<IEnumerable<LoanListItemDto>> result = await LoanClient.GetBorrowedAsync();
 
@@ -84,27 +84,5 @@ else {
          Error = result.Error;
 
       StopLoading();
-   }
-
-   private async Task RenewAsync(Guid id) {
-      Result<LoanDto> result = await LoanClient.RenewAsync(id);
-
-      if(result.IsFailure) {
-         Error = result.Error;
-         return;
-      }
-
-      await LoadAsync();
-   }
-
-   private async Task ReturnAtDeskAsync(Guid id) {
-      Result<LoanDto> result = await LoanClient.ReturnAtDeskAsync(id);
-
-      if(result.IsFailure) {
-         Error = result.Error;
-         return;
-      }
-
-      await LoadAsync();
    }
 }

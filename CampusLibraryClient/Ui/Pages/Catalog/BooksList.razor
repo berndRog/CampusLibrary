@@ -3,73 +3,77 @@
 @inherits BasePage
 
 @inject IBookClient BookClient
+@inject ILoanClient LoanClient
 @inject ICurrentUserProvider CurrentUserProvider
 @inject NavigationManager Navigation
 
-<PageTitle>Books</PageTitle>
+<PageTitle>Bücher</PageTitle>
 
-<h1>Books</h1>
+<h1>Bücher</h1>
 
 <p>
-   The catalog is visible for readers and employees. Readers can borrow a book
-   when at least one book item is available.
+   Der Katalog ist für Leserinnen, Leser und Mitarbeitende sichtbar.
+   Leserinnen und Leser können ein Buch ausleihen, wenn mindestens ein Exemplar
+   tatsächlich verfügbar ist.
 </p>
 
 <div class="toolbar">
    <select @bind="_searchField">
-      <option value="Title">Title</option>
-      <option value="AuthorLastName">Author last name</option>
+      <option value="Title">Titel</option>
+      <option value="AuthorLastName">Nachname Autor/in</option>
       <option value="Isbn">ISBN</option>
    </select>
-   <input placeholder="Search text" @bind="_searchText" />
-   <button @onclick="SearchAsync">Search</button>
-   <button @onclick="LoadAsync">Reset</button>
+   <input placeholder="Suchtext" @bind="_searchText" />
+   <button @onclick="SearchAsync">Suchen</button>
+   <button @onclick="LoadAsync">Zurücksetzen</button>
 </div>
 
 <ErrorAlert Error="Error" />
 
 @if(IsLoading || _currentUser is null) {
-   <p>Loading books...</p>
+   <p>Bücher werden geladen...</p>
 }
 else if(_books.Count == 0) {
-   <p>No books found.</p>
+   <p>Keine Bücher gefunden.</p>
 }
 else {
    <table>
       <thead>
          <tr>
-            <th>Title</th>
-            <th>Subtitle</th>
-            <th>Authors</th>
+            <th>Titel</th>
+            <th>Untertitel</th>
+            <th>Autorinnen/Autoren</th>
             <th>ISBN</th>
-            <th>Items</th>
+            <th>Ausgeliehen / Gesamt</th>
             <th>Status</th>
-            <th>Action</th>
+            <th>Aktion</th>
          </tr>
       </thead>
       <tbody>
          @foreach(BookListItemDto book in _books) {
+            BookAvailability availability = GetAvailability(book);
+
             <tr>
                <td>@book.Title</td>
                <td>@book.Subtitle</td>
                <td>@book.AuthorsText</td>
                <td>@book.Isbn</td>
-               <td>@book.AvailableItems / @book.TotalItems</td>
-               <td>@(book.IsActive ? "Active" : "Inactive")</td>
+               <td>@availability.BorrowedItems / @availability.TotalItems</td>
+               <td>@(book.IsActive ? "Aktiv" : "Inaktiv")</td>
                <td>
-                  @if(_currentUser.IsReader && book.AvailableItems > 0) {
+                  @if(_currentUser.IsReader && book.IsActive && availability.AvailableItems > 0) {
                      <button @onclick="() => NavigateToBorrow(book.Id)">
-                        Borrow
+                        Ausleihen
                      </button>
                   }
                   else if(_currentUser.IsReader) {
-                     <span>Not available</span>
+                     <span>Nicht verfügbar</span>
                   }
                   else if(_currentUser.IsEmployee) {
-                     <span>Employee view</span>
+                     <span>Mitarbeiteransicht</span>
                   }
                   else {
-                     <span>No action</span>
+                     <span>Keine Aktion</span>
                   }
                </td>
             </tr>
@@ -80,7 +84,11 @@ else {
 
 @code {
 
+   private const int AvailableBookItemStatus = 1;
+
    private IReadOnlyList<BookListItemDto> _books = [];
+
+   private readonly Dictionary<Guid, BookAvailability> _availabilityByBookId = new();
 
    private BookSearchField _searchField = BookSearchField.Title;
 
@@ -95,13 +103,17 @@ else {
 
    private async Task LoadAsync() {
       StartLoading();
+      Error = null;
 
       Result<IEnumerable<BookListItemDto>> result = await BookClient.GetAllAsync();
 
-      if(result.IsSuccess && result.Value is not null)
+      if(result.IsSuccess && result.Value is not null) {
          _books = result.Value.ToList();
-      else
+         await RefreshAvailabilityAsync();
+      }
+      else {
          Error = result.Error;
+      }
 
       StopLoading();
    }
@@ -113,21 +125,105 @@ else {
       }
 
       StartLoading();
+      Error = null;
 
       Result<IEnumerable<BookListItemDto>> result = await BookClient.SearchAsync(
          searchField: _searchField,
          searchText: _searchText
       );
 
-      if(result.IsSuccess && result.Value is not null)
+      if(result.IsSuccess && result.Value is not null) {
          _books = result.Value.ToList();
-      else
+         await RefreshAvailabilityAsync();
+      }
+      else {
          Error = result.Error;
+      }
 
       StopLoading();
+   }
+
+   private async Task RefreshAvailabilityAsync() {
+      _availabilityByBookId.Clear();
+
+      Result<IEnumerable<LoanListItemDto>> loanResult = await LoanClient.GetBorrowedAsync();
+
+      HashSet<Guid> borrowedBookItemIds = loanResult.IsSuccess && loanResult.Value is not null
+         ? loanResult.Value.Select(loan => loan.BookItemId).ToHashSet()
+         : [];
+
+      foreach(BookListItemDto book in _books) {
+         Result<BookDetailDto> detailResult = await BookClient.GetByIdAsync(
+            id: book.Id
+         );
+
+         if(detailResult.IsFailure || detailResult.Value is null) {
+            _availabilityByBookId[book.Id] = CreateFallbackAvailability(book);
+            continue;
+         }
+
+         IReadOnlyList<BookItemDto> bookItems = detailResult.Value.BookItems ?? [];
+
+         int totalItems = bookItems.Count;
+
+         if(totalItems == 0)
+            totalItems = book.TotalItems;
+
+         int availableItems = bookItems.Count(item =>
+            item.Status == AvailableBookItemStatus &&
+            !borrowedBookItemIds.Contains(item.Id)
+         );
+
+         int borrowedItems = Math.Max(
+            val1: 0,
+            val2: totalItems - availableItems
+         );
+
+         _availabilityByBookId[book.Id] = new BookAvailability(
+            TotalItems: totalItems,
+            BorrowedItems: borrowedItems,
+            AvailableItems: availableItems
+         );
+      }
+   }
+
+   private BookAvailability GetAvailability(
+      BookListItemDto book
+   ) => _availabilityByBookId.TryGetValue(
+      key: book.Id,
+      value: out BookAvailability? availability
+   )
+      ? availability
+      : CreateFallbackAvailability(book);
+
+   private static BookAvailability CreateFallbackAvailability(
+      BookListItemDto book
+   ) {
+      int totalItems = book.TotalItems;
+      int borrowedItems = Math.Clamp(
+         value: book.AvailableItems,
+         min: 0,
+         max: totalItems
+      );
+      int availableItems = Math.Max(
+         val1: 0,
+         val2: totalItems - borrowedItems
+      );
+
+      return new BookAvailability(
+         TotalItems: totalItems,
+         BorrowedItems: borrowedItems,
+         AvailableItems: availableItems
+      );
    }
 
    private void NavigateToBorrow(Guid bookId) {
       Navigation.NavigateTo($"/catalog/books/{bookId}/borrow");
    }
+
+   private sealed record BookAvailability(
+      int TotalItems,
+      int BorrowedItems,
+      int AvailableItems
+   );
 }

@@ -6,34 +6,34 @@
 @inject IReaderClient ReaderClient
 @inject ICurrentUserProvider CurrentUserProvider
 
-<PageTitle>Readers</PageTitle>
+<PageTitle>Leser</PageTitle>
 
-<h1>Readers</h1>
+<h1>Leser</h1>
 
 <p>
-   Employee view. Readers are managed by library staff.
+   Mitarbeiteransicht. Leserinnen und Leser werden von Bibliotheksmitarbeitenden verwaltet.
 </p>
 
-<button @onclick="LoadAsync">Reload</button>
+<button @onclick="LoadAsync">Neu laden</button>
 
 <ErrorAlert Error="Error" />
 
 @if(IsLoading || _currentUser is null) {
-   <p>Loading readers...</p>
+   <p>Leser werden geladen...</p>
 }
 else if(!_currentUser.IsEmployee) {
-   <p>This page is intended for employees.</p>
+   <p>Diese Seite ist für Mitarbeitende vorgesehen.</p>
 }
 else if(_readers.Count == 0) {
-   <p>No readers found.</p>
+   <p>Keine Leser gefunden.</p>
 }
 else {
    <table>
       <thead>
          <tr>
-            <th>Firstname</th>
-            <th>Lastname</th>
-            <th>Email</th>
+            <th>Vorname</th>
+            <th>Nachname</th>
+            <th>E-Mail</th>
             <th>Subject</th>
             <th>Status</th>
          </tr>
@@ -45,7 +45,7 @@ else {
                <td>@reader.Lastname</td>
                <td>@reader.Email</td>
                <td>@reader.Subject</td>
-               <td>@(reader.IsActive ? "Active" : "Inactive")</td>
+               <td>@(reader.IsActive ? "Aktiv" : "Inaktiv")</td>
             </tr>
          }
       </tbody>
@@ -65,6 +65,7 @@ else {
 
    private async Task LoadAsync() {
       StartLoading();
+      Error = null;
 
       Result<IEnumerable<ReaderDto>> result = await ReaderClient.GetAllAsync();
 

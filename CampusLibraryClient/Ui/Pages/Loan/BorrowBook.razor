@@ -7,54 +7,57 @@
 @inject ICurrentUserProvider CurrentUserProvider
 @inject NavigationManager Navigation
 
-<PageTitle>Borrow book</PageTitle>
+<PageTitle>Buch ausleihen</PageTitle>
 
-<h1>Borrow book</h1>
+<h1>Buch ausleihen</h1>
 
 <ErrorAlert Error="Error" />
 
 @if(IsLoading || _currentUser is null) {
-   <p>Loading borrow details...</p>
+   <p>Ausleihdaten werden geladen...</p>
 }
 else if(!_currentUser.IsReader) {
    <p>
-      Borrowing books is available from the reader perspective.
-      In Part 5 this is controlled by DevIdentity.
+      Das Ausleihen von Büchern ist für die Leserperspektive vorgesehen.
+      In Teil 5 wird diese Perspektive über DevIdentity simuliert.
    </p>
-   <button @onclick="Cancel">Back to catalog</button>
+   <button @onclick="Cancel">Zurück zum Katalog</button>
 }
 else if(_book is null) {
-   <p>Book not found.</p>
-   <button @onclick="Cancel">Back to catalog</button>
+   <p>Buch nicht gefunden.</p>
+   <button @onclick="Cancel">Zurück zum Katalog</button>
 }
 else {
    <section class="card">
-      <h2>Book</h2>
+      <h2>Buch</h2>
       <dl>
-         <dt>Title</dt>
+         <dt>Titel</dt>
          <dd>@_book.Title</dd>
 
-         <dt>Subtitle</dt>
+         <dt>Untertitel</dt>
          <dd>@_book.Subtitle</dd>
 
-         <dt>Authors</dt>
+         <dt>Autorinnen/Autoren</dt>
          <dd>@_book.AuthorsText</dd>
 
          <dt>ISBN</dt>
          <dd>@_book.Isbn</dd>
 
-         <dt>Availability</dt>
-         <dd>@_book.AvailableItems / @_book.TotalItems</dd>
+         <dt>Ausgeliehen / Gesamt</dt>
+         <dd>@_borrowedItems / @_totalItems</dd>
+
+         <dt>Verfügbar</dt>
+         <dd>@_availableItems.Count</dd>
       </dl>
    </section>
 
    <section class="card">
-      <h2>Reader</h2>
+      <h2>Leser/in</h2>
       <dl>
          <dt>Name</dt>
          <dd>@_currentUser.DisplayName</dd>
 
-         <dt>Email</dt>
+         <dt>E-Mail</dt>
          <dd>@_currentUser.Email</dd>
 
          <dt>Reader Id</dt>
@@ -63,18 +66,18 @@ else {
    </section>
 
    <section class="card">
-      <h2>Planned loan</h2>
+      <h2>Geplante Ausleihe</h2>
       <dl>
-         <dt>Loan date</dt>
+         <dt>Ausleihdatum</dt>
          <dd>@DateTime.Today.ToString("yyyy-MM-dd")</dd>
 
-         <dt>Due date</dt>
+         <dt>Rückgabedatum</dt>
          <dd>@DateTime.Today.AddDays(28).ToString("yyyy-MM-dd")</dd>
 
-         <dt>Book item</dt>
+         <dt>Exemplar</dt>
          <dd>
             @if(_availableItems.Count == 0) {
-               <span>No available book item found.</span>
+               <span>Kein ausleihbares Exemplar gefunden.</span>
             }
             else {
                <select @bind="_selectedBookItemId">
@@ -90,11 +93,11 @@ else {
    </section>
 
    <div class="toolbar">
-      <button @onclick="Cancel">Cancel</button>
+      <button @onclick="Cancel">Abbrechen</button>
       <button
          @onclick="ConfirmBorrowAsync"
          disabled="@(_availableItems.Count == 0 || IsLoading)">
-         Complete loan
+         Ausleihe abschließen
       </button>
    </div>
 }
@@ -110,12 +113,17 @@ else {
 
    private IReadOnlyList<BookItemDto> _availableItems = [];
 
+   private int _totalItems;
+
+   private int _borrowedItems;
+
    private Guid _selectedBookItemId;
 
    private CurrentUserInfo? _currentUser;
 
    protected override async Task OnInitializedAsync() {
       StartLoading();
+      Error = null;
 
       _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
 
@@ -125,19 +133,46 @@ else {
 
       if(result.IsSuccess && result.Value is not null) {
          _book = result.Value;
-
-         _availableItems = (_book.BookItems ?? [])
-            .Where(item => item.Status == AvailableBookItemStatus)
-            .ToList();
-
-         if(_availableItems.Count > 0)
-            _selectedBookItemId = _availableItems[0].Id;
+         await RefreshAvailableBookItemsAsync();
       }
       else {
          Error = result.Error;
       }
 
       StopLoading();
+   }
+
+   private async Task RefreshAvailableBookItemsAsync() {
+      if(_book is null)
+         return;
+
+      Result<IEnumerable<LoanListItemDto>> loanResult = await LoanClient.GetBorrowedAsync();
+
+      HashSet<Guid> borrowedBookItemIds = loanResult.IsSuccess && loanResult.Value is not null
+         ? loanResult.Value.Select(loan => loan.BookItemId).ToHashSet()
+         : [];
+
+      IReadOnlyList<BookItemDto> bookItems = _book.BookItems ?? [];
+
+      _totalItems = bookItems.Count;
+
+      if(_totalItems == 0)
+         _totalItems = _book.TotalItems;
+
+      _availableItems = bookItems
+         .Where(item =>
+            item.Status == AvailableBookItemStatus &&
+            !borrowedBookItemIds.Contains(item.Id)
+         )
+         .ToList();
+
+      _borrowedItems = Math.Max(
+         val1: 0,
+         val2: _totalItems - _availableItems.Count
+      );
+
+      if(_availableItems.Count > 0)
+         _selectedBookItemId = _availableItems[0].Id;
    }
 
    private async Task ConfirmBorrowAsync() {
@@ -162,6 +197,7 @@ else {
       }
 
       StartLoading();
+      Error = null;
 
       LoanCreateDto dto = new(
          ReaderId: _currentUser.ReaderId.Value,
