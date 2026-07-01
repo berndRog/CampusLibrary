@@ -5,24 +5,26 @@
 
 <PageTitle>CampusLibrary</PageTitle>
 
-<h1>Willkommen</h1>
+<h1 class="h3 mb-3">Willkommen</h1>
 
 @if(_currentUser is null) {
-   <p>Aktuelle Perspektive wird geladen...</p>
+   <p class="text-muted">Aktuelle Perspektive wird geladen...</p>
 }
 else {
-   <section class="card">
-      <h2>Aktuelle Perspektive</h2>
+   <div class="card shadow-sm">
+      <div class="card-body">
+         <h2 class="h5 card-title mb-3">Aktuelle Perspektive</h2>
 
-      <p>
-         <strong>@_currentUser.DisplayName</strong>
-         (@DisplayAccountType(_currentUser.AccountType))
-      </p>
+         <p class="card-text mb-2">
+            <strong>@_currentUser.DisplayName</strong>
+            (@DisplayAccountType(_currentUser.AccountType))
+         </p>
 
-      <p>
-         Bitte wählen Sie einen Bereich über die Menüleiste.
-      </p>
-   </section>
+         <p class="card-text mb-0">
+            Bitte wählen Sie einen Bereich über die Menüleiste.
+         </p>
+      </div>
+   </div>
 }
 
 @code {

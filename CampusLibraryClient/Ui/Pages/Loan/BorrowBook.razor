@@ -9,94 +9,103 @@
 
 <PageTitle>Buch ausleihen</PageTitle>
 
-<h1>Buch ausleihen</h1>
+<h1 class="h3 mb-3">Buch ausleihen</h1>
 
 <ErrorAlert Error="Error" />
 
 @if(IsLoading || _currentUser is null) {
-   <p>Ausleihdaten werden geladen...</p>
+   <p class="text-muted">Ausleihdaten werden geladen...</p>
 }
 else if(!_currentUser.IsReader) {
    <p>
       Das Ausleihen von Büchern ist für die Leserperspektive vorgesehen.
       In Teil 5 wird diese Perspektive über DevIdentity simuliert.
    </p>
-   <button @onclick="Cancel">Zurück zum Katalog</button>
+   <button class="btn btn-outline-secondary" @onclick="Cancel">Zurück zum Katalog</button>
 }
 else if(_book is null) {
    <p>Buch nicht gefunden.</p>
-   <button @onclick="Cancel">Zurück zum Katalog</button>
+   <button class="btn btn-outline-secondary" @onclick="Cancel">Zurück zum Katalog</button>
 }
 else {
-   <section class="card">
-      <h2>Buch</h2>
-      <dl>
-         <dt>Titel</dt>
-         <dd>@_book.Title</dd>
+   <div class="card shadow-sm mb-3">
+      <div class="card-body">
+         <h2 class="h5 card-title mb-3">Buch</h2>
 
-         <dt>Untertitel</dt>
-         <dd>@_book.Subtitle</dd>
+         <dl class="row mb-0">
+            <dt class="col-sm-3">Titel</dt>
+            <dd class="col-sm-9">@_book.Title</dd>
 
-         <dt>Autorinnen/Autoren</dt>
-         <dd>@_book.AuthorsText</dd>
+            <dt class="col-sm-3">Untertitel</dt>
+            <dd class="col-sm-9">@_book.Subtitle</dd>
 
-         <dt>ISBN</dt>
-         <dd>@_book.Isbn</dd>
+            <dt class="col-sm-3">Autorinnen/Autoren</dt>
+            <dd class="col-sm-9">@_book.AuthorsText</dd>
 
-         <dt>Ausgeliehen / Gesamt</dt>
-         <dd>@_borrowedItems / @_totalItems</dd>
+            <dt class="col-sm-3">ISBN</dt>
+            <dd class="col-sm-9">@_book.Isbn</dd>
 
-         <dt>Verfügbar</dt>
-         <dd>@_availableItems.Count</dd>
-      </dl>
-   </section>
+            <dt class="col-sm-3">Ausgeliehen / Gesamt</dt>
+            <dd class="col-sm-9">@_borrowedItems / @_totalItems</dd>
 
-   <section class="card">
-      <h2>Leser/in</h2>
-      <dl>
-         <dt>Name</dt>
-         <dd>@_currentUser.DisplayName</dd>
+            <dt class="col-sm-3">Verfügbar</dt>
+            <dd class="col-sm-9">@_availableItems.Count</dd>
+         </dl>
+      </div>
+   </div>
 
-         <dt>E-Mail</dt>
-         <dd>@_currentUser.Email</dd>
+   <div class="card shadow-sm mb-3">
+      <div class="card-body">
+         <h2 class="h5 card-title mb-3">Leser/in</h2>
 
-         <dt>Reader Id</dt>
-         <dd>@_currentUser.ReaderId</dd>
-      </dl>
-   </section>
+         <dl class="row mb-0">
+            <dt class="col-sm-3">Name</dt>
+            <dd class="col-sm-9">@_currentUser.DisplayName</dd>
 
-   <section class="card">
-      <h2>Geplante Ausleihe</h2>
-      <dl>
-         <dt>Ausleihdatum</dt>
-         <dd>@DateTime.Today.ToString("yyyy-MM-dd")</dd>
+            <dt class="col-sm-3">E-Mail</dt>
+            <dd class="col-sm-9">@_currentUser.Email</dd>
 
-         <dt>Rückgabedatum</dt>
-         <dd>@DateTime.Today.AddDays(28).ToString("yyyy-MM-dd")</dd>
+            <dt class="col-sm-3">Reader Id</dt>
+            <dd class="col-sm-9"><code>@_currentUser.ReaderId</code></dd>
+         </dl>
+      </div>
+   </div>
 
-         <dt>Exemplar</dt>
-         <dd>
-            @if(_availableItems.Count == 0) {
-               <span>Kein ausleihbares Exemplar gefunden.</span>
-            }
-            else {
-               <select @bind="_selectedBookItemId">
-                  @foreach(BookItemDto item in _availableItems) {
-                     <option value="@item.Id">
-                        @item.InventoryNumber (@item.Id)
-                     </option>
-                  }
-               </select>
-            }
-         </dd>
-      </dl>
-   </section>
+   <div class="card shadow-sm mb-3">
+      <div class="card-body">
+         <h2 class="h5 card-title mb-3">Geplante Ausleihe</h2>
 
-   <div class="toolbar">
-      <button @onclick="Cancel">Abbrechen</button>
-      <button
-         @onclick="ConfirmBorrowAsync"
-         disabled="@(_availableItems.Count == 0 || IsLoading)">
+         <dl class="row mb-0">
+            <dt class="col-sm-3">Ausleihdatum</dt>
+            <dd class="col-sm-9">@DateTime.Today.ToString("yyyy-MM-dd")</dd>
+
+            <dt class="col-sm-3">Rückgabedatum</dt>
+            <dd class="col-sm-9">@DateTime.Today.AddDays(28).ToString("yyyy-MM-dd")</dd>
+
+            <dt class="col-sm-3">Exemplar</dt>
+            <dd class="col-sm-9">
+               @if(_availableItems.Count == 0) {
+                  <span class="text-muted">Kein ausleihbares Exemplar gefunden.</span>
+               }
+               else {
+                  <select class="form-select" @bind="_selectedBookItemId">
+                     @foreach(BookItemDto item in _availableItems) {
+                        <option value="@item.Id">
+                           @item.InventoryNumber (@item.Id)
+                        </option>
+                     }
+                  </select>
+               }
+            </dd>
+         </dl>
+      </div>
+   </div>
+
+   <div class="d-flex flex-wrap gap-2">
+      <button class="btn btn-outline-secondary" @onclick="Cancel">Abbrechen</button>
+      <button class="btn btn-primary"
+              @onclick="ConfirmBorrowAsync"
+              disabled="@(_availableItems.Count == 0 || IsLoading)">
          Ausleihe abschließen
       </button>
    </div>

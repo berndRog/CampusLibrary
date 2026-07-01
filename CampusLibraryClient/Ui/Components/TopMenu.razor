@@ -2,86 +2,84 @@
 @inject IConfiguration Configuration
 @inject NavigationManager Navigation
 
-<nav>
-   <div class="app-main navbar navbar-expand-sm navbar-light bg-light border-top border-bottom py-2">
-      <button class="navbar-toggler ms-auto"
-              type="button"
-              data-bs-toggle="collapse"
-              data-bs-target="#topmenu"
-              aria-controls="topmenu"
-              aria-expanded="false"
-              aria-label="Navigation umschalten">
-         <span class="navbar-toggler-icon"></span>
-      </button>
+<nav class="navbar navbar-expand-sm navbar-light bg-light border-top border-bottom px-2">
+   <button class="navbar-toggler ms-auto"
+           type="button"
+           data-bs-toggle="collapse"
+           data-bs-target="#topmenu"
+           aria-controls="topmenu"
+           aria-expanded="false"
+           aria-label="Navigation umschalten">
+      <span class="navbar-toggler-icon"></span>
+   </button>
 
-      <div class="collapse navbar-collapse" id="topmenu">
-         @if(_currentUser is null) {
-            <span class="navbar-text">Navigation wird geladen...</span>
-         }
-         else {
-            <ul class="navbar-nav me-auto mb-2 mb-sm-0">
+   <div class="collapse navbar-collapse" id="topmenu">
+      @if(_currentUser is null) {
+         <span class="navbar-text">Navigation wird geladen...</span>
+      }
+      else {
+         <ul class="navbar-nav me-auto mb-2 mb-sm-0">
+            <li class="nav-item">
+               <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
+                  Home
+               </NavLink>
+            </li>
+
+            @if(_currentUser.IsAuthenticated) {
                <li class="nav-item">
-                  <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
-                     Home
+                  <NavLink class="nav-link" href="/catalog/books" Match="NavLinkMatch.Prefix">
+                     Katalog
+                  </NavLink>
+               </li>
+            }
+
+            @if(_currentUser.IsReader) {
+               <li class="nav-item">
+                  <NavLink class="nav-link" href="/my/loans" Match="NavLinkMatch.Prefix">
+                     Ausleihen
+                  </NavLink>
+               </li>
+            }
+
+            @if(_currentUser.IsEmployee) {
+               <li class="nav-item">
+                  <NavLink class="nav-link" href="/readers" Match="NavLinkMatch.Prefix">
+                     Leser
                   </NavLink>
                </li>
 
-               @if(_currentUser.IsAuthenticated) {
-                  <li class="nav-item">
-                     <NavLink class="nav-link" href="/catalog/books" Match="NavLinkMatch.Prefix">
-                        Katalog
-                     </NavLink>
-                  </li>
-               }
+               <li class="nav-item">
+                  <NavLink class="nav-link" href="/loans" Match="NavLinkMatch.Prefix">
+                     Ausleihen
+                  </NavLink>
+               </li>
+            }
+         </ul>
 
-               @if(_currentUser.IsReader) {
-                  <li class="nav-item">
-                     <NavLink class="nav-link" href="/my/loans" Match="NavLinkMatch.Prefix">
-                        Ausleihen
-                     </NavLink>
-                  </li>
-               }
+         <div class="d-flex align-items-sm-center gap-2 flex-column flex-sm-row ms-sm-auto mt-2 mt-sm-0">
+            @if(_currentUser.IsAuthenticated) {
+               <span class="navbar-text small text-muted">
+                  @_currentUser.DisplayName (@DisplayAccountType(_currentUser.AccountType))
+               </span>
 
-               @if(_currentUser.IsEmployee) {
-                  <li class="nav-item">
-                     <NavLink class="nav-link" href="/readers" Match="NavLinkMatch.Prefix">
-                        Leser
-                     </NavLink>
-                  </li>
-
-                  <li class="nav-item">
-                     <NavLink class="nav-link" href="/loans" Match="NavLinkMatch.Prefix">
-                        Ausleihen
-                     </NavLink>
-                  </li>
-               }
-            </ul>
-
-            <div class="d-flex align-items-sm-center gap-2 flex-column flex-sm-row ms-sm-auto mt-2 mt-sm-0">
-               @if(_currentUser.IsAuthenticated) {
-                  <span class="navbar-text small text-muted">
-                     @_currentUser.DisplayName (@DisplayAccountType(_currentUser.AccountType))
-                  </span>
-
-                  <a class="btn btn-outline-danger btn-sm" href="@LogoutUrl">
-                     Logout
+               <a class="btn btn-outline-danger btn-sm" href="@LogoutUrl">
+                  Logout
+               </a>
+            }
+            else {
+               @if(_authNEnabled) {
+                  <a class="btn btn-primary btn-sm" href="@LoginUrl">
+                     Login
                   </a>
                }
                else {
-                  @if(_authNEnabled) {
-                     <a class="btn btn-primary btn-sm" href="@LoginUrl">
-                        Login
-                     </a>
-                  }
-                  else {
-                     <span class="btn btn-outline-secondary btn-sm disabled" aria-disabled="true">
-                        Login
-                     </span>
-                  }
+                  <span class="btn btn-outline-secondary btn-sm disabled" aria-disabled="true">
+                     Login
+                  </span>
                }
-            </div>
-         }
-      </div>
+            }
+         </div>
+      }
    </div>
 </nav>
 

@@ -8,16 +8,16 @@
 
 <PageTitle>Ausleihe Details</PageTitle>
 
-<h1>Ausleihe Details</h1>
+<h1 class="h3 mb-3">Ausleihe Details</h1>
 
-<p>
+<p class="text-muted">
    Diese Seite zeigt die Detaildaten einer Ausleihe.
 </p>
 
 <ErrorAlert Error="Error" />
 
 @if(IsLoading || _currentUser is null) {
-   <p>Ausleihe wird geladen...</p>
+   <p class="text-muted">Ausleihe wird geladen...</p>
 }
 else if(_loan is null) {
    <p>Keine Ausleihe gefunden.</p>
@@ -26,98 +26,106 @@ else if(!CanViewLoan()) {
    <p>Diese Ausleihe kann mit der aktuellen Demo-Identität nicht angezeigt werden.</p>
 }
 else {
-   <section class="card">
-      <h2>Buchdetails</h2>
+   <div class="card shadow-sm mb-3">
+      <div class="card-body">
+         <h2 class="h5 card-title mb-3">Buchdetails</h2>
 
-      <dl>
-         <dt>Titel</dt>
-         <dd>@Display(_loan.Title)</dd>
+         <dl class="row mb-0">
+            <dt class="col-sm-3">Titel</dt>
+            <dd class="col-sm-9">@Display(_loan.Title)</dd>
 
-         <dt>Untertitel</dt>
-         <dd>@Display(_loan.Subtitle)</dd>
+            <dt class="col-sm-3">Untertitel</dt>
+            <dd class="col-sm-9">@Display(_loan.Subtitle)</dd>
 
-         <dt>Autoren</dt>
-         <dd>@Display(_loan.AuthorsText)</dd>
+            <dt class="col-sm-3">Autoren</dt>
+            <dd class="col-sm-9">@Display(_loan.AuthorsText)</dd>
 
-         <dt>ISBN</dt>
-         <dd>@Display(_loan.Isbn)</dd>
+            <dt class="col-sm-3">ISBN</dt>
+            <dd class="col-sm-9">@Display(_loan.Isbn)</dd>
 
-         <dt>Buch Id</dt>
-         <dd>@_loan.BookId</dd>
+            <dt class="col-sm-3">Buch Id</dt>
+            <dd class="col-sm-9"><code>@_loan.BookId</code></dd>
 
-         <dt>Aktiv</dt>
-         <dd>@YesNo(_loan.BookIsActive)</dd>
-      </dl>
-   </section>
+            <dt class="col-sm-3">Aktiv</dt>
+            <dd class="col-sm-9">@YesNo(_loan.BookIsActive)</dd>
+         </dl>
+      </div>
+   </div>
 
-   <section class="card">
-      <h2>Exemplardetails</h2>
+   <div class="card shadow-sm mb-3">
+      <div class="card-body">
+         <h2 class="h5 card-title mb-3">Exemplardetails</h2>
 
-      <dl>
-         <dt>Inventarnummer</dt>
-         <dd>@Display(_loan.InventoryNumber)</dd>
+         <dl class="row mb-0">
+            <dt class="col-sm-3">Inventarnummer</dt>
+            <dd class="col-sm-9">@Display(_loan.InventoryNumber)</dd>
 
-         <dt>Exemplar Id</dt>
-         <dd>@_loan.BookItemId</dd>
+            <dt class="col-sm-3">Exemplar Id</dt>
+            <dd class="col-sm-9"><code>@_loan.BookItemId</code></dd>
 
-         <dt>Für Ausleihe verfügbar</dt>
-         <dd>@YesNo(_loan.IsAvailableForLoan)</dd>
-      </dl>
-   </section>
+            <dt class="col-sm-3">Für Ausleihe verfügbar</dt>
+            <dd class="col-sm-9">@YesNo(_loan.IsAvailableForLoan)</dd>
+         </dl>
+      </div>
+   </div>
 
-   <section class="card">
-      <h2>Leserdetails</h2>
+   <div class="card shadow-sm mb-3">
+      <div class="card-body">
+         <h2 class="h5 card-title mb-3">Leserdetails</h2>
 
-      <dl>
-         <dt>Name</dt>
-         <dd>@Display(ReaderName)</dd>
+         <dl class="row mb-0">
+            <dt class="col-sm-3">Name</dt>
+            <dd class="col-sm-9">@Display(ReaderName)</dd>
 
-         <dt>Reader Id</dt>
-         <dd>@_loan.ReaderId</dd>
-      </dl>
-   </section>
+            <dt class="col-sm-3">Reader Id</dt>
+            <dd class="col-sm-9"><code>@_loan.ReaderId</code></dd>
+         </dl>
+      </div>
+   </div>
 
-   <section class="card">
-      <h2>Ausleihdetails</h2>
+   <div class="card shadow-sm mb-3">
+      <div class="card-body">
+         <h2 class="h5 card-title mb-3">Ausleihdetails</h2>
 
-      <dl>
-         <dt>Ausleihe Id</dt>
-         <dd>@_loan.Id</dd>
+         <dl class="row mb-0">
+            <dt class="col-sm-3">Ausleihe Id</dt>
+            <dd class="col-sm-9"><code>@_loan.Id</code></dd>
 
-         <dt>Ausleihdatum</dt>
-         <dd>@FormatDate(_loan.LoanDate)</dd>
+            <dt class="col-sm-3">Ausleihdatum</dt>
+            <dd class="col-sm-9">@FormatDate(_loan.LoanDate)</dd>
 
-         <dt>Fällig am</dt>
-         <dd>@FormatDate(_loan.DueDate)</dd>
+            <dt class="col-sm-3">Fällig am</dt>
+            <dd class="col-sm-9">@FormatDate(_loan.DueDate)</dd>
 
-         <dt>Status</dt>
-         <dd>@_loan.Status</dd>
+            <dt class="col-sm-3">Status</dt>
+            <dd class="col-sm-9">@_loan.Status</dd>
 
-         <dt>Verlängerungen</dt>
-         <dd>@_loan.RenewalCount</dd>
+            <dt class="col-sm-3">Verlängerungen</dt>
+            <dd class="col-sm-9">@_loan.RenewalCount</dd>
 
-         <dt>Überfällig</dt>
-         <dd>@YesNo(_loan.IsOverdue)</dd>
+            <dt class="col-sm-3">Überfällig</dt>
+            <dd class="col-sm-9">@YesNo(_loan.IsOverdue)</dd>
 
-         <dt>Zurückgegeben am</dt>
-         <dd>@(_loan.ReturnedAt is null ? "Nein" : FormatDate(_loan.ReturnedAt.Value))</dd>
+            <dt class="col-sm-3">Zurückgegeben am</dt>
+            <dd class="col-sm-9">@(_loan.ReturnedAt is null ? "Nein" : FormatDate(_loan.ReturnedAt.Value))</dd>
 
-         <dt>Verlängerbar</dt>
-         <dd>@YesNo(_loan.CanRenew)</dd>
-      </dl>
-   </section>
+            <dt class="col-sm-3">Verlängerbar</dt>
+            <dd class="col-sm-9">@YesNo(_loan.CanRenew)</dd>
+         </dl>
+      </div>
+   </div>
 
-   <div class="toolbar">
-      <button @onclick="BackToOverview">
+   <div class="d-flex flex-wrap gap-2">
+      <button class="btn btn-outline-secondary" @onclick="BackToOverview">
          Zurück zur Übersicht
       </button>
 
       @if(_loan.ReturnedAt is null) {
-         <button @onclick="RenewAsync" disabled="@(!_loan.CanRenew || IsLoading)">
+         <button class="btn btn-outline-primary" @onclick="RenewAsync" disabled="@(!_loan.CanRenew || IsLoading)">
             Verlängern
          </button>
 
-         <button @onclick="ReturnAtDeskAsync" disabled="@IsLoading">
+         <button class="btn btn-primary" @onclick="ReturnAtDeskAsync" disabled="@IsLoading">
             Zurückgeben
          </button>
       }

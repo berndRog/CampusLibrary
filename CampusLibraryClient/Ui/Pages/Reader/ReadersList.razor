@@ -8,18 +8,18 @@
 
 <PageTitle>Leser</PageTitle>
 
-<h1>Leser</h1>
+<h1 class="h3 mb-3">Leser</h1>
 
-<p>
+<p class="text-muted">
    Mitarbeiteransicht. Leserinnen und Leser werden von Bibliotheksmitarbeitenden verwaltet.
 </p>
 
-<button @onclick="LoadAsync">Neu laden</button>
+<button class="btn btn-outline-secondary mb-3" @onclick="LoadAsync">Neu laden</button>
 
 <ErrorAlert Error="Error" />
 
 @if(IsLoading || _currentUser is null) {
-   <p>Leser werden geladen...</p>
+   <p class="text-muted">Leser werden geladen...</p>
 }
 else if(!_currentUser.IsEmployee) {
    <p>Diese Seite ist für Mitarbeitende vorgesehen.</p>
@@ -28,28 +28,37 @@ else if(_readers.Count == 0) {
    <p>Keine Leser gefunden.</p>
 }
 else {
-   <table>
-      <thead>
-         <tr>
-            <th>Vorname</th>
-            <th>Nachname</th>
-            <th>E-Mail</th>
-            <th>Subject</th>
-            <th>Status</th>
-         </tr>
-      </thead>
-      <tbody>
-         @foreach(ReaderDto reader in _readers) {
+   <div class="table-responsive">
+      <table class="table table-striped table-hover align-middle">
+         <thead class="table-light">
             <tr>
-               <td>@reader.Firstname</td>
-               <td>@reader.Lastname</td>
-               <td>@reader.Email</td>
-               <td>@reader.Subject</td>
-               <td>@(reader.IsActive ? "Aktiv" : "Inaktiv")</td>
+               <th scope="col">Vorname</th>
+               <th scope="col">Nachname</th>
+               <th scope="col">E-Mail</th>
+               <th scope="col">Subject</th>
+               <th scope="col">Status</th>
             </tr>
-         }
-      </tbody>
-   </table>
+         </thead>
+         <tbody>
+            @foreach(ReaderDto reader in _readers) {
+               <tr>
+                  <td>@reader.Firstname</td>
+                  <td>@reader.Lastname</td>
+                  <td>@reader.Email</td>
+                  <td><code>@reader.Subject</code></td>
+                  <td>
+                     @if(reader.IsActive) {
+                        <span class="badge text-bg-success">Aktiv</span>
+                     }
+                     else {
+                        <span class="badge text-bg-secondary">Inaktiv</span>
+                     }
+                  </td>
+               </tr>
+            }
+         </tbody>
+      </table>
+   </div>
 }
 
 @code {

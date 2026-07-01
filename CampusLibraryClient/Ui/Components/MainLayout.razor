@@ -1,19 +1,19 @@
 @inherits LayoutComponentBase
 
-<header class="app-header">
-   <div class="app-main py-3">
-      <div class="app-title">CampusLibrary</div>
-   </div>
+<div class="container-fluid px-3 px-md-4">
+   <header class="pt-3">
+      <div class="display-5 fw-semibold mb-3">
+         CampusLibrary
+      </div>
 
-   <TopMenu />
-</header>
+      <TopMenu />
+   </header>
 
-<main class="app-main py-4">
-   @Body
-</main>
+   <main class="py-4">
+      @Body
+   </main>
 
-<footer class="text-muted small py-2">
-   <div class="app-main border-top pt-2">
+   <footer class="border-top text-muted small py-3 mt-4">
       © @DateTime.Now.Year - CampusLibrary
-   </div>
-</footer>
+   </footer>
+</div>
