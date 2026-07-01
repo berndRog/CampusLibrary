@@ -325,7 +325,7 @@ public sealed class ReaderReadModelIntT : TestBaseIntegration {
          .ToList();
 
       actualReaderDtos.Should().NotBeNull();
-      actualReaderDtos.Count.Should().Be(6);
+      actualReaderDtos.Count.Should().Be(7);
       actualReaderDtos.Should().BeEquivalentTo(expReaderDtos);
    }
 
@@ -365,7 +365,7 @@ public sealed class ReaderReadModelIntT : TestBaseIntegration {
          .OrderBy(r => r.Id)
          .ToList();
 
-      actualReaderDtos.Count.Should().Be(5);
+      actualReaderDtos.Count.Should().Be(6);
       actualReaderDtos.Should().BeEquivalentTo(expReaderDtos);
       actualReaderDtos.Should().NotContain(r => r.Id == inactiveReader.Id);
    }
@@ -406,7 +406,7 @@ public sealed class ReaderReadModelIntT : TestBaseIntegration {
          .OrderBy(r => r.Id)
          .ToList();
 
-      actualReaderDtos.Count.Should().Be(6);
+      actualReaderDtos.Count.Should().Be(7);
       actualReaderDtos.Should().BeEquivalentTo(expReaderDtos);
       actualReaderDtos.Should().Contain(r => r.Id == inactiveReader.Id);
    }

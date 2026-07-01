@@ -1,29 +1,33 @@
 @baseUrl = https://localhost:8010/camplib/v1
 
-@reader1Id = 10000000-0000-0000-0000-000000000000
-@reader2Id = 20000000-0000-0000-0000-000000000000
-@reader3Id = 30000000-0000-0000-0000-000000000000
+@reader1Id = 00000001-0000-0000-0000-000000000000
+@reader2Id = 00000002-0000-0000-0000-000000000000
+@reader3Id = 00000003-0000-0000-0000-000000000000
+@reader99Id = 00000099-0000-0000-0000-000000000000
+@unknownReaderId = 00000999-0000-0000-0000-000000000000
 
 @reader1Subject = reader-001
 @reader2Subject = reader-002
 @reader3Subject = reader-003
+@reader99Subject = reader-099
 
 @reader1Email = e.mustermann@t-online.de
 @reader2Email = m.mustermann@gmail.com
 @reader3Email = a.arndt@t-online.de
+@reader99Email = r.reader@library.local
 
 
 
 ### Verify active readers ==================================================
 
 ### Get all active readers
-### Expected: 200 OK with reader 1, reader 2 and reader 3
+### Expected: 200 OK with reader 1, reader 2, reader 3 and reader 99
 GET {{baseUrl}}/readers
 Accept: application/json
 
 
 ### Get all readers including inactive readers
-### Expected: 200 OK with reader 1, reader 2 and reader 3
+### Expected: 200 OK with reader 1, reader 2, reader 3 and reader 99
 GET {{baseUrl}}/readers/with-inactive
 Accept: application/json
 
@@ -44,6 +48,12 @@ Accept: application/json
 GET {{baseUrl}}/readers/{{reader3Id}}
 Accept: application/json
 
+
+### Get active reader 99 by id: Rita Reader
+### Expected: 200 OK
+GET {{baseUrl}}/readers/{{reader99Id}}
+Accept: application/json
+
 ### Get reader 1 by id including inactive readers
 ### Expected: 200 OK
 GET {{baseUrl}}/readers/{{reader1Id}}/with-inactive
@@ -59,6 +69,12 @@ Accept: application/json
 ### Get reader 2 by email
 ### Expected: 200 OK
 GET {{baseUrl}}/readers/email?email={{reader2Email}}
+Accept: application/json
+
+
+### Get Rita Reader by email
+### Expected: 200 OK
+GET {{baseUrl}}/readers/email?email={{reader99Email}}
 Accept: application/json
 
 

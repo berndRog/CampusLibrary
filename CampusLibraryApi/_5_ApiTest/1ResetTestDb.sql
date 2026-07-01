@@ -1,5 +1,5 @@
 -- to start the script  
--- sqlite3 CampusLibraryApi/CampusLibrarycd Db.db <  CampusLibraryApi/_5_ApiTests/1ResetTestDb.sql
+-- sqlite3 CampusLibraryApi/CampusLibraryDb.db <  CampusLibraryApi/_5_ApiTest/1ResetTestDb.sql
 
 -- Reset Database for API Tests
 -- This script will delete all data from the tables and reset the auto-incrementing primary keys.    

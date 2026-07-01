@@ -36,17 +36,23 @@ public sealed class Seed(
 
    public AddressVo AddressRegVo
       => AddressVo.Create("Am Markt 14", "04109", "Leipzig", "DE").GetValueOrThrow();
+
+   public AddressVo AddressRitaVo
+      => AddressVo.Create("Bibliotheksweg 99", "29556", "Suderburg", "DE").GetValueOrThrow();
    #endregion
 
    #region -------------- Test Readers (Entities) ------------------------------------------
-   private const string Reader1Id = "00000001-0000-0000-0000-000000000000";
-   private const string Reader2Id = "00000002-0000-0000-0000-000000000000";
-   private const string Reader3Id = "00000003-0000-0000-0000-000000000000";
-   private const string Reader4Id = "00000004-0000-0000-0000-000000000000";
-   private const string Reader5Id = "00000005-0000-0000-0000-000000000000";
-   private const string Reader6Id = "00000006-0000-0000-0000-000000000000";
+   public const string Reader1Id = "00000001-0000-0000-0000-000000000000";
+   public const string Reader2Id = "00000002-0000-0000-0000-000000000000";
+   public const string Reader3Id = "00000003-0000-0000-0000-000000000000";
+   public const string Reader4Id = "00000004-0000-0000-0000-000000000000";
+   public const string Reader5Id = "00000005-0000-0000-0000-000000000000";
+   public const string Reader6Id = "00000006-0000-0000-0000-000000000000";
 
-   private const string ReaderRegisterId = "00000007-0000-0000-0000-000000000000";
+   public const string ReaderRegisterId = "00000007-0000-0000-0000-000000000000";
+
+   // Demo reader used by the Part 5 CampusLibraryClient DevIdentity.
+   public const string RitaReaderId = "00000099-0000-0000-0000-000000000000";
 
    public Reader Reader1() => CreateReader(
       id: Reader1Id,
@@ -68,7 +74,7 @@ public sealed class Seed(
 
    public Reader Reader3() => CreateReader(
       id: Reader3Id,
-      firstname: "Arno",
+      firstname: "Arne",
       lastname: "Arndt",
       email: "a.arndt@t-online.de",
       addressVo: Address3Vo,
@@ -102,6 +108,15 @@ public sealed class Seed(
       subject: "f00060A1-1381-efab-1440-71fc17630172"
    );
 
+   public Reader RitaReader() => CreateReader(
+      id: RitaReaderId,
+      firstname: "Rita",
+      lastname: "Reader",
+      email: "r.reader@library.local",
+      addressVo: AddressRitaVo,
+      subject: "99000000-0000-0000-0000-000000000000"
+   );
+
    public Reader ReaderRegister() => CreateReader(
       id: ReaderRegisterId,
       firstname: "Edgar",
@@ -112,15 +127,15 @@ public sealed class Seed(
    );
 
    public IReadOnlyList<Reader> Readers => [
-      Reader1(), Reader2(), Reader3(), Reader4(), Reader5(), Reader6()
+      Reader1(), Reader2(), Reader3(), Reader4(), Reader5(), Reader6(), RitaReader()
    ];
    #endregion
 
    #region -------------- Test Books (Aggregates) ------------------------------------------
-   public const string Book1Id = "b0000001-0000-0000-0000-000000000000";
-   public const string Book2Id = "b0000002-0000-0000-0000-000000000000";
-   public const string Book3Id = "b0000003-0000-0000-0000-000000000000";
-   public const string Book4Id = "b0000004-0000-0000-0000-000000000000";
+   public const string Book1Id = "00000001-0000-0000-0000-000000000000";
+   public const string Book2Id = "00000002-0000-0000-0000-000000000000";
+   public const string Book3Id = "00000003-0000-0000-0000-000000000000";
+   public const string Book4Id = "00000004-0000-0000-0000-000000000000";
 
    public Book Book1() => CreateBook(
       id: Book1Id,
@@ -167,18 +182,18 @@ public sealed class Seed(
    #endregion
 
    #region -------------- Test BookItems ---------------------------------------------------
-   public const string BookItem1Id = "be000001-0000-0000-0000-000000000000";
-   public const string BookItem2Id = "be000002-0000-0000-0000-000000000000";
-   public const string BookItem3Id = "be000003-0000-0000-0000-000000000000";
-   public const string BookItem4Id = "be000004-0000-0000-0000-000000000000";
-   public const string BookItem5Id = "be000005-0000-0000-0000-000000000000";
-   public const string BookItem6Id = "be000006-0000-0000-0000-000000000000";
+   public const string BookItem1Id = "00000001-0000-0000-0000-000000000000";
+   public const string BookItem2Id = "00000002-0000-0000-0000-000000000000";
+   public const string BookItem3Id = "00000003-0000-0000-0000-000000000000";
+   public const string BookItem4Id = "00000004-0000-0000-0000-000000000000";
+   public const string BookItem5Id = "00000005-0000-0000-0000-000000000000";
+   public const string BookItem6Id = "00000006-0000-0000-0000-000000000000";
    #endregion
 
    #region -------------- Test Loans (Aggregates) ------------------------------------------
-   public const string Loan1Id = "a1000001-0000-0000-0000-000000000000";
-   public const string Loan2Id = "a1000002-0000-0000-0000-000000000000";
-   public const string Loan3Id = "a1000003-0000-0000-0000-000000000000";
+   public const string Loan1Id = "00000001-0000-0000-0000-000000000000";
+   public const string Loan2Id = "00000002-0000-0000-0000-000000000000";
+   public const string Loan3Id = "00000003-0000-0000-0000-000000000000";
 
    public Loan Loan1() => CreateLoan(
       id: Loan1Id,
@@ -459,4 +474,14 @@ public sealed class Seed(
    Didaktisch wichtig ist die Trennung zwischen Seed-Daten und Fachlogik:
    Der Seed erzeugt Beispieldaten. Die Regeln bleiben aber im Domänenmodell,
    also in Reader, Book, BookItem, IsbnVo und Loan.
+
+   Die stabilen Demo-IDs werden pro Tabelle einfach durchnummeriert. Dadurch
+   können HTTP-Tests, Integrationstests und Client-Demos dieselben gut lesbaren
+   IDs verwenden. Die Werte dürfen sich zwischen unterschiedlichen Tabellen
+   wiederholen, weil jede Tabelle ihren eigenen fachlichen Entity-Typ enthält.
+
+   Rita Reader verwendet bewusst die ID
+   00000099-0000-0000-0000-000000000000. Diese ID ist für die Part-5-DevIdentity
+   des CampusLibraryClient reserviert und macht sichtbar, dass hier ein
+   simulierter angemeldeter Reader verwendet wird.
 */

@@ -1,17 +1,20 @@
 @baseUrl = https://localhost:8010/camplib/v1
 
 
-@reader1Id = 10000000-0000-0000-0000-000000000000
-@reader2Id = 20000000-0000-0000-0000-000000000000
-@reader3Id = 30000000-0000-0000-0000-000000000000
+@reader1Id = 00000001-0000-0000-0000-000000000000
+@reader2Id = 00000002-0000-0000-0000-000000000000
+@reader3Id = 00000003-0000-0000-0000-000000000000
+@reader99Id = 00000099-0000-0000-0000-000000000000
 
 @reader1Subject = reader-001
 @reader2Subject = reader-002
 @reader3Subject = reader-003
+@reader99Subject = reader-099
 
 @reader1Email = e.mustermann@t-online.de
 @reader2Email = m.mustermann@gmail.com
 @reader3Email = a.arndt@t-online.de
+@reader99Email = r.reader@library.local
 
 
 ### 1. Create seed readers =====================================================
@@ -58,7 +61,7 @@ Accept: application/json
 }
 
 
-### Create reader 3 with generated id: Arne Arndt
+### Create reader 3: Arne Arndt
 ### Expected: 201 Created
 POST {{baseUrl}}/readers
 Content-Type: application/json
@@ -76,4 +79,24 @@ Accept: application/json
   },
   "subject": "{{reader3Subject}}",
   "id": "{{reader3Id}}"
+}
+
+### Create reader 99: Rita Reader (DevIdentity demo reader)
+### Expected: 201 Created
+POST {{baseUrl}}/readers
+Content-Type: application/json
+Accept: application/json
+
+{
+  "firstname": "Rita",
+  "lastname": "Reader",
+  "email": "{{reader99Email}}",
+  "addressDto": {
+    "street": "Bibliotheksweg 99",
+    "postalCode": "29556",
+    "city": "Suderburg",
+    "country": "DE"
+  },
+  "subject": "{{reader99Subject}}",
+  "id": "{{reader99Id}}"
 }
