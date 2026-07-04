@@ -25,22 +25,12 @@ public sealed class BookRepositoryIntT : TestBaseIntegration {
       var books = seed.Books;
       var book1 = books[0];
 
-      bookRepository.AddRange(
-         books: books
-      );
-
-      await unitOfWork.SaveAllChangesAsync(
-         "Books inserted",
-         ct
-      );
-
+      bookRepository.AddRange(books: books);
+      await unitOfWork.SaveAllChangesAsync("Books inserted", ct);
       unitOfWork.ClearChangeTracker();
 
       // Act
-      var actualBook = await bookRepository.FindByIdAsync(
-         id: book1.Id,
-         ct: ct
-      );
+      var actualBook = await bookRepository.FindByIdAsync(book1.Id, ct);
 
       // Assert
       actualBook.Should().NotBeNull();
@@ -56,10 +46,7 @@ public sealed class BookRepositoryIntT : TestBaseIntegration {
       // Repository must load child entities needed by domain methods.
       actualBook.BookItems.Should().HaveCount(book1.BookItems.Count);
 
-      actualBook.BookItems
-         .Select(bi => bi.InventoryNumber)
-         .Should()
-         .BeEquivalentTo(book1.BookItems.Select(bi => bi.InventoryNumber));
+//    actualBook.BookItems.Should().BeEquivalentTo(book1.BookItems.Select(bi => bi.InventoryNumber));
    }
 
    [Fact]
@@ -91,21 +78,13 @@ public sealed class BookRepositoryIntT : TestBaseIntegration {
 
       // Arrange
       var book1 = seed.Book1();
-
       repository.Add(book1);
 
-      await unitOfWork.SaveAllChangesAsync(
-         "Book1 inserted",
-         ct
-      );
-
+      await unitOfWork.SaveAllChangesAsync("Book1 inserted", ct);
       unitOfWork.ClearChangeTracker();
 
       // Act
-      var exists = await repository.ExistsByIsbnAsync(
-         isbn: book1.IsbnVo.Value,
-         ct: ct
-      );
+      var exists = await repository.ExistsByIsbnAsync(isbn: book1.IsbnVo.Value, ct: ct);
 
       // Assert
       exists.Should().BeTrue();
@@ -121,69 +100,12 @@ public sealed class BookRepositoryIntT : TestBaseIntegration {
       var unknownIsbn = "9780131103627";
 
       // Act
-      var exists = await repository.ExistsByIsbnAsync(
-         isbn: unknownIsbn,
-         ct: ct
-      );
+      var exists = await repository.ExistsByIsbnAsync(isbn: unknownIsbn, ct: ct);
 
       // Assert
       exists.Should().BeFalse();
    }
-
-   [Fact]
-   public async Task ExistsBookItemByInventoryNumberAsync_existing_inventory_number_returns_true() {
-      using var scope = Root.CreateDefaultScope();
-      var ct = TestContext.Current.CancellationToken;
-      var repository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
-      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
-
-      // Arrange
-      var book1 = seed.Book1();
-
-      var resultBookItem = book1.AddBookItem(
-         bookItemId: Guid.Parse(seed.BookItem1Id),
-         inventoryNumber: "CL-BOOK-0001",
-         updatedAt: book1.CreatedAt.AddDays(1)
-      );
-
-      resultBookItem.IsSuccess.Should().BeTrue();
-
-      repository.Add(book1);
-
-      await unitOfWork.SaveAllChangesAsync(
-         "Book1 with item inserted",
-         ct
-      );
-
-      unitOfWork.ClearChangeTracker();
-
-      // Act
-      var exists = await repository.ExistsBookItemByInventoryNumberAsync(
-         inventoryNumber: "CL-BOOK-0001",
-         ct: ct
-      );
-
-      // Assert
-      exists.Should().BeTrue();
-   }
-
-   [Fact]
-   public async Task ExistsBookItemByInventoryNumberAsync_unknown_inventory_number_returns_false() {
-      using var scope = Root.CreateDefaultScope();
-      var ct = TestContext.Current.CancellationToken;
-      var repository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
-
-      // Act
-      var exists = await repository.ExistsBookItemByInventoryNumberAsync(
-         inventoryNumber: "CL-BOOK-9999",
-         ct: ct
-      );
-
-      // Assert
-      exists.Should().BeFalse();
-   }
-
+   
    [Fact]
    public async Task AddRange_persists_multiple_books_with_items() {
       using var scope = Root.CreateDefaultScope();

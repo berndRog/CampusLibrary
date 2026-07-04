@@ -1,36 +1,95 @@
 # CampusLibrary — Teil 5: Client ohne aktive Auth
 
-Lehrprojekt für eine modular aufgebaute, DDD-orientierte ASP.NET-Core-Web-API und einen Blazor-Server-Side-Rendering-Client.
+Lehrprojekt für eine modular aufgebaute, DDD-orientierte ASP.NET-Core-Web-API und einen Blazor-SSR-Client.
 
 Englische Version: [1Readme.md](1Readme.md)
 
 ## Aktueller Stand
 
-Diese Version ergänzt die modulare CampusLibrary-API um einen echten Web-Client.
+Teil 5 ergänzt die modulare CampusLibrary-API aus Teil 4 um einen echten Web-Client.
 
-Teil 5 baut auf Teil 4 auf:
+Teil 5 enthält damit:
 
-* Readers
-* Catalog
-* Loans
-* CampusLibraryClient
+```text
+Readers
+Catalog
+Loans
+CampusLibraryClient
+```
 
-Die fachlichen API-Module behalten ihre Verantwortung. Der neue Client verwendet die vorhandene HTTP-API über modulbezogene API-Clients.
+Die fachlichen API-Module bleiben Eigentümer der Regeln. Der Client referenziert keine Core-Projekte der API, sondern verwendet HTTP-Clients und DTOs.
 
-Bekanntes Build-Ergebnis für den aktuellen Startstand von Teil 5:
+Bekannter Prüfstand nach der BookItem-Identity-Umstellung:
 
 ```text
 dotnet build
 Build succeeded
+
+dotnet test
+196 total, 0 failed, 0 skipped
 ```
 
-Teil 5 führt keine aktive Authentifizierung und keine aktive Autorisierung ein. Der Client verwendet die CampusLibraryApi anonym. AuthN/AuthZ-Vorbereitungen dürfen im Code bleiben, sind aber über Feature-Flags deaktiviert.
+Wichtig: Die automatisierten Tests prüfen im aktuellen Stand im Wesentlichen die API. Reine Client-Layout- und Navigationsänderungen werden durch `dotnet build` und manuelle Browsertests geprüft.
 
-## Aktueller Branch
+## Branch
 
 ```text
 part-5/client-noauth
 ```
+
+## Ziel von Teil 5
+
+Teil 5 zeigt, wie eine bestehende modulare API von einem Blazor-SSR-Client verwendet wird.
+
+Nicht Ziel von Teil 5 ist eine echte Anmeldung oder eine echte API-Autorisierung.
+
+Aktiv in Teil 5:
+
+```text
+Blazor SSR Client
+HTTP-Zugriff auf CampusLibraryApi
+Bootstrap-basiertes Layout
+Readers-Liste
+Katalogsuche
+Buch ausleihen aus Reader-Perspektive
+Bücher hinzufügen aus Mitarbeiter-Perspektive
+Exemplare zu aktiven Büchern hinzufügen
+Bücher deaktivieren
+Ausleihen anzeigen
+Ausleihe-Details anzeigen
+Ausleihen verlängern und zurückgeben
+zentrale Fehleranzeige
+DevIdentity als simulierte UI-Perspektive
+```
+
+Nicht aktiv in Teil 5:
+
+```text
+echte Registrierung
+echter Login
+echte Logout-Session gegen IdentityAccessServer
+Access-Token-Weitergabe an die API
+geschützte API-Aufrufe
+policybasierte API-Autorisierung
+Reader-Provisionierung aus einem Token
+Reader-Erzeugung in der UI
+```
+
+## Warum keine Reader-Erzeugung in Teil 5?
+
+Ein Reader soll später nicht einfach durch ein Mitarbeiterformular im Client entstehen. Der fachlich korrekte Ablauf beginnt mit einem technischen Benutzer im IdentityAccessServer.
+
+Geplanter Ablauf für spätere Teile:
+
+```text
+1. Reader registriert sich im IdentityAccessServer.
+2. Email ist initial Username.
+3. IdentityAccessServer erzeugt einen technischen Benutzer mit Subject.
+4. CampusLibraryApi provisioniert daraus einen fachlichen Reader.
+5. Reader ergänzt fachliche Profildaten wie Vorname und Nachname.
+```
+
+Deshalb bleibt `Reader erstellen` in Teil 5 bewusst weg. Reader stammen in Teil 5 aus Seed- und Testdaten.
 
 ## Projektstruktur
 
@@ -46,23 +105,6 @@ CampusLibraryApiTest
 CampusLibraryClient
 ```
 
-## Architekturidee
-
-Teil 4 zeigte die modulare API als projektbasierten modularen Monolithen.
-
-Teil 5 ergänzt einen separaten Blazor-SSR-Client. Der Client gehört nicht zum Domain-Core. Er ist eine externe Benutzerschnittstelle und greift über HTTP auf die API zu.
-
-Zentrale Abhängigkeitsidee:
-
-```text
-CampusLibraryClient referenziert keine API-Core-Module.
-CampusLibraryClient verwendet HTTP-Clients und DTOs.
-CampusLibraryApi bleibt Eigentümer der fachlichen Regeln.
-Der Client zeigt Daten an und startet API-Workflows.
-```
-
-So bleibt die Grenze zwischen Web-UI und Backend-Modulen sichtbar.
-
 ## CampusLibraryClient
 
 Der Client ist eine Blazor-Server-Side-Rendering-Anwendung.
@@ -70,14 +112,15 @@ Der Client ist eine Blazor-Server-Side-Rendering-Anwendung.
 Wichtige Konzepte:
 
 ```text
-Blazor SSR
 Razor Components
+Interactive Server Render Mode für interaktive Seiten
 modulbezogene API-Clients
 DTOs für den API-Transport
 Result<T> für clientseitige Erfolgs-/Fehlerbehandlung
 ProblemDetails-basierte Fehleranzeige
-einfache Navigation
-vorbereitete, aber inaktive AuthN/AuthZ
+Bootstrap-Utilities statt eigener Layout-CSS-Regeln
+DevIdentity für Reader-/Mitarbeiter-Perspektive
+vorbereitete, aber inaktive AuthN/AuthZ-Infrastruktur
 ```
 
 Wichtige Client-Ordner:
@@ -101,16 +144,79 @@ CampusLibraryClient
    └─ Pages
 ```
 
-Aktuell sichtbare Seiten sind:
+## Sichtbare Seiten
 
 ```text
-/
-/readers
-/catalog/books
-/loans
+/                                      Startseite
+/readers                                Reader-Liste
+/catalog/books                          Katalog
+/catalog/books/create                   Buch hinzufügen
+/catalog/books/{bookId}/items/add       Exemplar hinzufügen
+/catalog/books/{bookId}/deactivate      Buch deaktivieren
+/catalog/books/{bookId}/borrow          Buch ausleihen
+/loans                                  Ausleihen aus Mitarbeiter-Perspektive
+/loans/{loanId}                         Ausleihe-Details
+/my/loans                               Ausleihen des aktuellen Readers
+/logout                                 Demo-Logout-Seite
+/access-denied                          vorbereitete Fehlerseite
+/error                                  technische Fehlerseite
 ```
 
-Der Client enthält bereits Infrastruktur für spätere Command-Seiten, zum Beispiel Create-/Update-Models und API-Client-Methoden. Der erste Fokus von Teil 5 ist der vertikale Durchstich von Navigation über Listen-Seiten bis zur API-Fehleranzeige.
+## DevIdentity in Teil 5
+
+Teil 5 verwendet keine echte Authentifizierung. Damit die UI trotzdem zwischen Reader- und Mitarbeiter-Perspektive unterscheiden kann, verwendet der Client eine DevIdentity.
+
+Beispiel:
+
+```json
+{
+  "Features": {
+    "AuthNEnabled": false,
+    "DevIdentityEnabled": true,
+    "ApiAccessTokenEnabled": false,
+    "AuthZEnabled": false
+  },
+  "DevIdentity": {
+    "ActiveProfile": "EmployeeAdmin",
+    "Profiles": {
+      "ReaderRita": {
+        "IsAuthenticated": true,
+        "AccountType": "reader",
+        "ReaderId": "00000099-0000-0000-0000-000000000000",
+        "DisplayName": "Rita Reader",
+        "Email": "r.reader@library.local"
+      },
+      "EmployeeAdmin": {
+        "IsAuthenticated": true,
+        "AccountType": "employee",
+        "ReaderId": null,
+        "DisplayName": "Admin",
+        "Email": "admin@mail.local"
+      }
+    }
+  }
+}
+```
+
+Die DevIdentity ist keine Sicherheit. Sie ist nur ein didaktisches Hilfsmittel für die UI.
+
+## Navigation und Layout
+
+Der Client verwendet ein horizontales Bootstrap-Menü. Der aktive Menüpunkt wird über Bootstrap-Nav-Links hervorgehoben.
+
+Die Menüpunkte hängen von der simulierten Perspektive ab:
+
+```text
+Reader:
+Home | Katalog | Ausleihen | Logout
+
+Mitarbeiter:
+Home | Katalog | Leser | Ausleihen | Logout
+```
+
+Die Startseite enthält eine normale Überschrift und aktuelle Meldungen. Das Layout verwendet Bootstrap-Klassen wie `container-fluid`, `px-4`, `navbar`, `nav-pills`, `table`, `card`, `row`, `col-*`, `badge` und `btn`.
+
+Eigene CSS-Regeln bleiben auf Blazor-spezifische Validierungs- und Fehlerdarstellung begrenzt.
 
 ## API-Clients pro Modul
 
@@ -146,9 +252,94 @@ Die BaseUrl steht in `appsettings.json`:
 }
 ```
 
+## Readers
+
+Die Readers-Seite zeigt Reader an, die von der API geliefert werden.
+
+Aktuell angezeigt:
+
+```text
+Name
+Email
+Status
+```
+
+`Subject` wird in der UI nicht angezeigt. Es ist eine technische Identität und gehört später zum AuthN/AuthZ-Thema.
+
+Reader werden in Teil 5 nicht in der UI angelegt. Das ist eine bewusste didaktische Entscheidung, weil der spätere korrekte Ablauf über IdentityAccessServer, Subject und Provisionierung läuft.
+
+## Catalog
+
+Der Katalog ist für Reader und Mitarbeiter sichtbar.
+
+Die Katalogtabelle verwendet diese fachliche Struktur:
+
+```text
+Aktion | Titel | Autorinnen/Autoren | ISBN | Exemplare | Status
+```
+
+Die Spalte `Titel` enthält Titel und Untertitel direkt zusammen. Der Untertitel präzisiert den Titel und wird daher nicht als entfernte eigene Spalte geführt.
+
+Die Spalte `Exemplare` zeigt:
+
+```text
+ausgeliehen / gesamt
+```
+
+Mitarbeiterfunktionen im Katalog:
+
+```text
+Buch hinzufügen
+Exemplar zu aktivem Buch hinzufügen
+aktives Buch deaktivieren
+aktive und inaktive Bücher anzeigen
+```
+
+Readerfunktionen im Katalog:
+
+```text
+Bücher suchen
+Buch ausleihen, wenn mindestens ein Exemplar tatsächlich verfügbar ist
+```
+
+## BookItem und Inventarnummer
+
+Die API hat keine separate `InventoryNumber`-Property mehr.
+
+Technisch gilt:
+
+```text
+BookItem.Id identifiziert ein Exemplar eindeutig.
+```
+
+In der UI wird diese Id weiterhin als fachlicher Begriff `Inventarnummer` angezeigt.
+
+Damit gilt:
+
+```text
+technisch:  BookItemId
+fachlich/UI: Inventarnummer
+```
+
+## Loans
+
+Die Loans-Seiten zeigen Ausleihen und Details.
+
+Wichtige Seiten:
+
+```text
+/loans          Mitarbeiterperspektive: ausgeliehene Loans
+/my/loans       Readerperspektive: eigene Loans
+/loans/{id}     Detailansicht einer Ausleihe
+```
+
+Renew und Return werden in der Detailansicht ausgeführt, nicht direkt in der Übersicht. Die Detailansicht zeigt Buchdaten, Readerdaten und Ausleihdaten.
+
+`BookIsActive` und `IsAvailableForLoan` können im DTO vorhanden sein, werden aber in der normalen Ausleihe-Detailseite nicht als zentrale fachliche Information angezeigt. Eine bestehende Ausleihe soll nicht durch technische Verfügbarkeitsflags irritieren.
+
 ## Fehlerbehandlung
 
-API-Fehler werden zentral in der Client-Infrastruktur behandelt.
+API-Fehler werden zentral behandelt.
 
 Wichtige Typen und Komponenten:
 
@@ -161,144 +352,21 @@ ErrorAlert.razor
 
 Die API liefert Fehler als `ProblemDetails`. Der Client bildet diese auf `ApiError` ab und zeigt sie über `ErrorAlert` an.
 
-Netzwerkfehler, ungültige JSON-Antworten und spätere Autorisierungsfehler werden ebenfalls in clientseitige Fehler übersetzt.
-
-## Auth-Status in Teil 5
-
-Teil 5 ist bewusst ein No-Auth-Client-Teil.
-
-Aktiv in Teil 5:
+## Geplante Fortsetzung
 
 ```text
-anonyme API-Aufrufe
-einfache Navigation
-Listen-Seiten
-Fehleranzeige
-vorbereitete Konfiguration
+Teil 6: Client-AuthN mit Login/Logout gegen IdentityAccessServer
+Teil 7: AuthN/AuthZ in CampusLibraryApi, Reader-Provisionierung über Token
+Teil 8: geschützter API-Zugriff aus dem Client mit Access Token
 ```
 
-Inaktiv in Teil 5:
+Der geplante Reader-Ablauf:
 
 ```text
-Login
-Logout
-AuthorizeView
-[Authorize]
-Access-Token-Weitergabe
-rollenbasierte UI-Entscheidungen
-policybasierte Autorisierung
-geschützte API-Aufrufe
-```
+POST /camplib/v1/readers/me/provision
+- API liest Subject und Email aus dem Access Token.
+- Kein Subject im Body.
 
-Feature-Flags im Client machen das explizit:
-
-```json
-{
-  "Features": {
-    "AuthNEnabled": false,
-    "ApiAccessTokenEnabled": false,
-    "AuthZEnabled": false
-  }
-}
-```
-
-Vorbereitete AuthN/AuthZ-Klassen dürfen im Projekt bleiben, weil sie für die nächsten Teile nützlich sind.
-
-Geplante Fortsetzung:
-
-```text
-Teil 6: Client-AuthN mit Login/Logout
-Teil 7: AuthN/AuthZ in CampusLibraryApi
-Teil 8: geschützter API-Zugriff aus dem Client
-```
-
-## Vom Client verwendete Module
-
-## Readers
-
-Die Readers-Seite zeigt Reader an, die von der API geliefert werden.
-
-Wichtige Client-Konzepte:
-
-```text
-ReaderDto
-IReaderClient
-ReaderClient
-ReadersList.razor
-```
-
-Typischer Client-Aufruf:
-
-```text
-GET /camplib/v1/readers?includeInactive=false
-```
-
-## Catalog
-
-Die Catalog-Seite zeigt Bücher an und unterstützt Suche.
-
-Wichtige Client-Konzepte:
-
-```text
-BookListItemDto
-BookSearchField
-IBookClient
-BookClient
-BooksList.razor
-```
-
-Typische Client-Aufrufe:
-
-```text
-GET /camplib/v1/books?includeInactive=false
-GET /camplib/v1/books/search?searchField=Title&searchText=Clean%20Code&includeInactive=false
-```
-
-## Loans
-
-Die Loans-Seite zeigt ausgeliehene Loans an und ermöglicht Verlängerung und Rückgabe.
-
-Wichtige Client-Konzepte:
-
-```text
-LoanListItemDto
-LoanDto
-ILoanClient
-LoanClient
-LoansList.razor
-```
-
-Typische Client-Aufrufe:
-
-```text
-GET   /camplib/v1/loans
-PATCH /camplib/v1/loans/{id}/renew
-PATCH /camplib/v1/loans/{id}/return-at-desk
-```
-
-## Lokal starten
-
-Zuerst die CampusLibraryApi starten.
-
-Dann den Client starten:
-
-```bash
-dotnet run --project CampusLibraryClient
-```
-
-Der Client ruft die API-BaseUrl aus `CampusLibraryClient/appsettings.json` auf.
-
-## Didaktisches Ziel
-
-Teil 5 zeigt, dass eine modulare API nicht nur über HTTP-Dateien oder automatisierte Tests geprüft wird, sondern von einem echten Web-Client verwendet werden kann.
-
-Die Studierenden sehen:
-
-```text
-wie ein Blazor-SSR-Client eine Backend-API aufruft
-wie clientseitige API-Wrapper pro Modul strukturiert werden
-wie DTOs die Transportgrenze definieren
-wie API-Fehler in der UI angezeigt werden
-wie Navigation Seiten mit API-Workflows verbindet
-wie AuthN/AuthZ vorbereitet werden kann, ohne es zu früh zu aktivieren
+POST /camplib/v1/readers/me/profile
+- Client sendet nur fachliche Profildaten wie Vorname und Nachname.
 ```

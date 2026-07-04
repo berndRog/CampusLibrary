@@ -16,22 +16,13 @@ internal sealed class ConfigBookItem : IEntityTypeConfiguration<BookItem> {
          .ValueGeneratedNever()
          .HasColumnName("Id").HasColumnOrder(0);
       
-      builder.Property(bi => bi.InventoryNumber)
-         .HasMaxLength(40)
-         .HasColumnName("InventoryNumber").HasColumnOrder(1)
-         .IsRequired();
-
       builder.Property(bi => bi.Status)
          .HasConversion<int>()
-         .HasColumnName("Status").HasColumnOrder(2)
+         .HasColumnName("Status").HasColumnOrder(1)
          .IsRequired();
 
       builder.Property(bi => bi.BookId)
-         .HasColumnName("BookId").HasColumnOrder(3)
+         .HasColumnName("BookId").HasColumnOrder(2)
          .IsRequired();
-
-      // Inventory numbers must be unique
-      builder.HasIndex(bi => bi.InventoryNumber)
-         .IsUnique();
    }
 }

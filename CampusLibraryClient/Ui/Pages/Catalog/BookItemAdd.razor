@@ -1,0 +1,210 @@
+@page "/catalog/books/{BookId:guid}/items/add"
+@rendermode InteractiveServer
+@inherits BasePage
+
+@inject IBookClient BookClient
+@inject ICurrentUserProvider CurrentUserProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Exemplar hinzufügen</PageTitle>
+
+<h1 class="h3 mb-3">Exemplar hinzufügen</h1>
+
+<ErrorAlert Error="Error" />
+
+@if(IsLoading || _currentUser is null) {
+   <p class="text-muted">Buchdaten werden geladen...</p>
+}
+else if(!_currentUser.IsEmployee) {
+   <div class="alert alert-warning" role="alert">
+      Diese Seite ist für Mitarbeitende vorgesehen.
+   </div>
+
+   <button class="btn btn-outline-secondary" @onclick="BackToCatalog">
+      Zurück zum Katalog
+   </button>
+}
+else if(_book is null) {
+   <p>Buch nicht gefunden.</p>
+
+   <button class="btn btn-outline-secondary" @onclick="BackToCatalog">
+      Zurück zum Katalog
+   </button>
+}
+else {
+   @if(_addedItem is not null) {
+      <div class="alert alert-success" role="alert">
+         Das Exemplar wurde hinzugefügt. Die Inventarnummer ist
+         <code>@_addedItem.Id</code>.
+      </div>
+   }
+
+   <div class="card shadow-sm mb-3">
+      <div class="card-body">
+         <h2 class="h5 card-title mb-3">Buch</h2>
+
+         <dl class="row mb-0">
+            <dt class="col-sm-3">Titel</dt>
+            <dd class="col-sm-9">@Display(_book.Title)</dd>
+
+            <dt class="col-sm-3">Untertitel</dt>
+            <dd class="col-sm-9">@Display(_book.Subtitle)</dd>
+
+            <dt class="col-sm-3">Autorinnen/Autoren</dt>
+            <dd class="col-sm-9">@Display(_book.AuthorsText)</dd>
+
+            <dt class="col-sm-3">ISBN</dt>
+            <dd class="col-sm-9">@Display(_book.Isbn)</dd>
+
+            <dt class="col-sm-3">Status</dt>
+            <dd class="col-sm-9">
+               @if(_book.IsActive) {
+                  <span class="badge text-bg-success">Aktiv</span>
+               }
+               else {
+                  <span class="badge text-bg-secondary">Inaktiv</span>
+               }
+            </dd>
+
+            <dt class="col-sm-3">Exemplare</dt>
+            <dd class="col-sm-9">@CurrentItemCount</dd>
+         </dl>
+      </div>
+   </div>
+
+   @if(!_book.IsActive) {
+      <div class="alert alert-warning" role="alert">
+         Zu inaktiven Büchern können keine neuen Exemplare hinzugefügt werden.
+      </div>
+   }
+   else {
+      <p class="text-muted">
+         Beim Hinzufügen erzeugt die API eine eindeutige BookItem-Id.
+         Diese Id wird in der Oberfläche als Inventarnummer angezeigt.
+      </p>
+   }
+
+   @if(CurrentItems.Count > 0) {
+      <h2 class="h5 mt-4">Vorhandene Exemplare</h2>
+
+      <div class="table-responsive mb-3">
+         <table class="table table-striped table-hover align-middle">
+            <thead class="table-light">
+               <tr>
+                  <th scope="col">Inventarnummer</th>
+                  <th scope="col">Status</th>
+               </tr>
+            </thead>
+            <tbody>
+               @foreach(BookItemDto item in CurrentItems) {
+                  <tr>
+                     <td><code>@item.Id</code></td>
+                     <td>@BookItemStatusText(item.Status)</td>
+                  </tr>
+               }
+            </tbody>
+         </table>
+      </div>
+   }
+
+   <div class="d-flex flex-wrap gap-2">
+      <button class="btn btn-primary"
+              @onclick="AddItemAsync"
+              disabled="@(!_book.IsActive || IsLoading)">
+         Exemplar hinzufügen
+      </button>
+
+      <button class="btn btn-outline-secondary" @onclick="BackToCatalog">
+         Zurück zum Katalog
+      </button>
+   </div>
+}
+
+@code {
+
+   [Parameter]
+   public Guid BookId { get; set; }
+
+   private CurrentUserInfo? _currentUser;
+
+   private BookDetailDto? _book;
+
+   private BookItemDto? _addedItem;
+
+   private IReadOnlyList<BookItemDto> CurrentItems =>
+      _book?.BookItems ?? [];
+
+   private int CurrentItemCount =>
+      CurrentItems.Count > 0
+         ? CurrentItems.Count
+         : _book?.TotalItems ?? 0;
+
+   protected override async Task OnInitializedAsync() {
+      _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
+      await LoadBookAsync();
+   }
+
+   private async Task LoadBookAsync() {
+      StartLoading();
+      Error = null;
+
+      Result<BookDetailDto> result = await BookClient.GetByIdAsync(
+         id: BookId,
+         includeInactive: true
+      );
+
+      if(result.IsSuccess && result.Value is not null)
+         _book = result.Value;
+      else
+         Error = result.Error;
+
+      StopLoading();
+   }
+
+   private async Task AddItemAsync() {
+      if(_currentUser?.IsEmployee != true || _book?.IsActive != true)
+         return;
+
+      StartLoading();
+      Error = null;
+      _addedItem = null;
+
+      BookItemAddDto dto = new(
+         Id: null
+      );
+
+      Result<BookItemDto> result = await BookClient.AddBookItemAsync(
+         bookId: BookId,
+         dto: dto
+      );
+
+      if(result.IsSuccess && result.Value is not null) {
+         _addedItem = result.Value;
+         await LoadBookAsync();
+      }
+      else {
+         Error = result.Error;
+         StopLoading();
+      }
+   }
+
+   private void BackToCatalog() {
+      Navigation.NavigateTo("/catalog/books");
+   }
+
+   private static string Display(
+      string? value
+   ) => string.IsNullOrWhiteSpace(value)
+      ? "Nicht verfügbar"
+      : value;
+
+   private static string BookItemStatusText(
+      int status
+   ) => status switch {
+      1 => "Verfügbar",
+      2 => "Nicht verfügbar",
+      3 => "Verloren",
+      4 => "Beschädigt",
+      _ => status.ToString()
+   };
+}

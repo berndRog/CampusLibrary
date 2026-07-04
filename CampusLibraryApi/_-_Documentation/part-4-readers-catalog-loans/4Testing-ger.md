@@ -9,7 +9,7 @@ Teil 4 prüft die Module Readers, Catalog und Loans.
 Finales automatisiertes Testergebnis:
 
 ```text
-Test summary: total: 202, failed: 0, succeeded: 202, skipped: 0
+Test summary: total: 196, failed: 0, succeeded: 196, skipped: 0
 Build succeeded
 ```
 

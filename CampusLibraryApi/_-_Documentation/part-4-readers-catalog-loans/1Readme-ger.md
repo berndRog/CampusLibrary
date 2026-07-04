@@ -17,7 +17,7 @@ Teil 4 erweitert den Readers+Catalog-Modular-Monolith um ein Loans-Modul. Reader
 Finales automatisiertes Testergebnis für diesen Teil:
 
 ```text
-202 Tests
+196 Tests
 0 fehlgeschlagen
 0 übersprungen
 Build succeeded
@@ -93,7 +93,7 @@ Book-ReadModel
 BooksController
 ```
 
-Ein Book repräsentiert das bibliografische Werk. Ein BookItem repräsentiert ein physisches Exemplar.
+Ein Book repräsentiert das bibliografische Werk. Ein BookItem repräsentiert ein physisches Exemplar. Das Exemplar wird ausschließlich über seine eindeutige `BookItem.Id` identifiziert. Eine separate `InventoryNumber` gibt es nicht mehr; wenn Oberfläche oder Unterrichtsmaterial von Inventarnummer sprechen, ist die `BookItemId` gemeint.
 
 Es gibt kein Author-Aggregate und keine Author-API. Autoren werden in `Book.AuthorsText` gespeichert. Die Suche nach Autorennachnamen parst diesen komma-separierten Text.
 
@@ -140,6 +140,19 @@ BookItemLoanInfoDto
 ```
 
 Die Implementierungen liegen in Infrastructure.
+
+Aktuelle DTO-Entscheidungen:
+
+```text
+ReaderLoanInfoDto enthält zusätzlich Email.
+LoanDetailDto enthält zusätzlich Email.
+LoanDetailDto enthält keine InventoryNumber mehr.
+LoanListItemDto enthält keine InventoryNumber mehr.
+BookItemAddDto enthält nur noch die optionale Id.
+BookItemDto enthält keine InventoryNumber mehr.
+```
+
+Die fachliche Inventarnummer wird in der UI aus `BookItemId` abgeleitet. In der API bleibt die Eigenschaft `BookItemId`.
 
 Besitzregel:
 

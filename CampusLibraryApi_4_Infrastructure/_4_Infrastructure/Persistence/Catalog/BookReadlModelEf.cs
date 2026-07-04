@@ -158,14 +158,11 @@ internal sealed class BookReadModelEf(
          book.IsbnVo.Value,
          // BookItems:
          book.BookItems
-            .OrderBy(item => item.InventoryNumber)
             .Select(item => new BookItemDto(
                // Id: 
                item.Id,
                // BookId: 
                item.BookId,
-               // InventoryNumber:
-               item.InventoryNumber,
                // Status:
                (int) item.Status
             ))

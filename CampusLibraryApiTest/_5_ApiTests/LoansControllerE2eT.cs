@@ -89,7 +89,6 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
       actualLoanDto.Firstname.Should().NotBeNullOrWhiteSpace();
       actualLoanDto.Lastname.Should().NotBeNullOrWhiteSpace();
       actualLoanDto.Title.Should().NotBeNullOrWhiteSpace();
-      actualLoanDto.InventoryNumber.Should().NotBeNullOrWhiteSpace();
 
       actualLoanDto.ReturnedAt.Should().BeNull();
       actualLoanDto.IsOverdue.Should().BeFalse();
@@ -188,8 +187,7 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
       actualLoanDtos.Should().OnlyContain(l =>
          !string.IsNullOrWhiteSpace(l.Firstname) &&
          !string.IsNullOrWhiteSpace(l.Lastname) &&
-         !string.IsNullOrWhiteSpace(l.Title) &&
-         !string.IsNullOrWhiteSpace(l.InventoryNumber)
+         !string.IsNullOrWhiteSpace(l.Title) 
       );
    }
 

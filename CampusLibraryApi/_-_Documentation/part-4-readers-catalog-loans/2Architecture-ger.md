@@ -7,7 +7,7 @@ Die Anwendung ist ein projektbasierter modularer Monolith mit drei fachlichen Mo
 Finales automatisiertes Testergebnis:
 
 ```text
-202 Tests
+196 Tests
 0 fehlgeschlagen
 0 übersprungen
 Build succeeded
@@ -184,6 +184,8 @@ BookItem / Loan:
 - Status beschreibt den fachlichen Lebenszyklus
 ```
 
+Ein `BookItem` hat keine zusätzliche Inventarnummer mehr. Die eindeutige `BookItemId` identifiziert das Exemplar; in der UI kann diese Id als Inventarnummer bezeichnet werden.
+
 Eine Loan ist nicht aktiv/inaktiv. Sie ist ausgeliehen, zurückgegeben oder storniert.
 
 ## Loan-Use-Cases
@@ -234,6 +236,78 @@ CanRenew
 ```
 
 Die Regeln für diese Werte sollten mit den Domain-Policies übereinstimmen.
+
+## Aktuelle DTO-Formen
+
+Die folgenden DTOs spiegeln die aktuelle Entscheidung wider: keine separate `InventoryNumber`, sondern `BookItemId` als eindeutige Exemplaridentität.
+
+```csharp
+public sealed record ReaderLoanInfoDto(
+   Guid Id,
+   string Firstname,
+   string Lastname,
+   string Email,
+   bool IsActive
+);
+
+public sealed record LoanDetailDto(
+   Guid Id,
+
+   Guid ReaderId,
+   string Firstname,
+   string Lastname,
+   string Email,
+
+   Guid BookItemId,
+
+   Guid BookId,
+   string AuthorsText,
+   string Title,
+   string? Subtitle,
+   string Isbn,
+   bool BookIsActive,
+   bool IsAvailableForLoan,
+
+   DateTime LoanDate,
+   DateTime DueDate,
+   DateTime? ReturnedAt,
+
+   int Status,
+   int RenewalCount,
+
+   bool IsOverdue,
+   bool CanRenew
+);
+
+public sealed record BookItemAddDto(
+   string? Id
+);
+
+public sealed record BookItemDto(
+   Guid Id,
+   Guid BookId,
+   int Status
+);
+
+public sealed record LoanListItemDto(
+   Guid Id,
+
+   Guid ReaderId,
+   string Firstname,
+   string Lastname,
+
+   Guid BookItemId,
+
+   string Title,
+   string? Subtitle,
+
+   DateTime LoanDate,
+   DateTime DueDate,
+
+   int Status,
+   bool IsOverdue
+);
+```
 
 ## Infrastructure
 

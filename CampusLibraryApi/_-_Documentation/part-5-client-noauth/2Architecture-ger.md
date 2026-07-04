@@ -2,217 +2,110 @@
 
 Dieses Dokument beschreibt die Architektur von Teil 5 des Projekts `CampusLibrary`.
 
-Teil 5 ergänzt die modulare CampusLibrary-API um einen Blazor-Server-Side-Rendering-Client. Die API besteht weiterhin aus den Modulen Readers, Catalog und Loans aus Teil 4. Der Client verwendet die API über HTTP und referenziert keine API-Core-Projekte.
+Teil 5 ergänzt die modulare CampusLibrary-API um einen Blazor-SSR-Client. Die API besteht weiterhin aus den Modulen Readers, Catalog und Loans aus Teil 4. Der Client verwendet die API über HTTP und referenziert keine API-Core-Projekte.
 
-Bekanntes Build-Ergebnis:
-
-```text
-dotnet build
-Build succeeded
-```
+Englische Version: [2Architecture.md](2Architecture.md)
 
 ## Architekturziel
 
-Teil 5 macht folgende Konzepte für den Unterricht sichtbar:
-
-* eine modulare Backend-API wird von einem echten Web-Client verwendet
-* Trennung zwischen Backend-Modulen und Frontend-Client
-* API-Clients als typisierte clientseitige Adapter
-* DTOs als Transportmodelle an der HTTP-Grenze
-* clientseitige Result- und Fehlerbehandlung
-* Blazor-SSR-Seiten und Komponenten
-* einfache Navigation über Backend-Module hinweg
-* vorbereitete, aber inaktive AuthN/AuthZ-Infrastruktur
-
-## Lösungsstruktur
+Teil 5 macht folgende Konzepte sichtbar:
 
 ```text
-CampusLibrary
-├─ CampusLibraryApi
+Backend-API wird von einem echten Web-Client verwendet
+Frontend und Backend bleiben getrennt
+API-Clients kapseln HTTP-Zugriffe
+DTOs bilden die Transportgrenze
+Result<T> und ErrorAlert kapseln Fehlerbehandlung
+Bootstrap bildet das UI-Layout
+DevIdentity simuliert UI-Perspektiven ohne echte AuthN/AuthZ
+```
+
+## Solution-Sicht
+
+```text
+CampusLibraryApi
 ├─ CampusLibraryApi_1_Web
 ├─ CampusLibraryApi_2_BuildingBlocks
 ├─ CampusLibraryApi_3_Core_Readers
 ├─ CampusLibraryApi_3_Core_Catalog
 ├─ CampusLibraryApi_3_Core_Loan
 ├─ CampusLibraryApi_4_Infrastructure
-├─ CampusLibraryApiTest
-└─ CampusLibraryClient
+└─ CampusLibraryApiTest
+
+CampusLibraryClient
 ```
 
-## Backend-Architektur
-
-Das Backend bleibt ein projektbasierter modularer Monolith.
-
-Die API wird als eine ASP.NET-Core-Anwendung deployt. Intern ist der Code nach Verantwortung getrennt:
+Der Client ist bewusst ein eigenes Projekt.
 
 ```text
-Web/API-Projekt       -> HTTP-Controller
-BuildingBlocks        -> gemeinsame Abstraktionen und modulübergreifende Contracts
-Core_Readers          -> Readers-Modul
-Core_Catalog          -> Catalog-Modul
-Core_Loan             -> Loans-Modul
-Infrastructure        -> EF Core, Repositories, ReadModels, Contract-Implementierungen
-CampusLibraryApi      -> ausführbare Anwendung und Composition Root
+CampusLibraryClient -> HTTP -> CampusLibraryApi
+CampusLibraryClient -/-> Core_Readers
+CampusLibraryClient -/-> Core_Catalog
+CampusLibraryClient -/-> Core_Loan
 ```
 
-Core-Module hängen nicht vom Client ab. Der Client ist eine separate Anwendung und kommuniziert über HTTP.
-
 ## Client-Architektur
-
-Das Projekt `CampusLibraryClient` ist eine Blazor-SSR-Anwendung.
-
-Wichtige Struktur:
 
 ```text
 CampusLibraryClient
 ├─ Api
-│  ├─ Auth
-│  ├─ Clients
-│  ├─ Contracts
-│  ├─ Dtos
-│  └─ Errors
-├─ Core
-│  ├─ FeatureFlags.cs
-│  ├─ Result.cs
-│  └─ Utils
-├─ Extensions
-├─ Security
-├─ Shared
-│  └─ Logging
+│  ├─ Clients        konkrete HTTP-Clients
+│  ├─ Contracts      Client-Interfaces
+│  ├─ Dtos           Transportmodelle
+│  ├─ Errors         ApiError
+│  └─ Auth           vorbereitete Token-Infrastruktur
+├─ Core              Result<T>, FeatureFlags, Common
+├─ Extensions        DI-Registrierung
+├─ Security          CurrentUserProvider, Rollen, Policies
+├─ Shared            gemeinsame Hilfstypen
 └─ Ui
-   ├─ Components
-   ├─ Controllers
-   ├─ Models
-   └─ Pages
+   ├─ Components     Layout, Navigation, ErrorAlert
+   ├─ Controllers    vorbereitete Auth-Controller
+   ├─ Models         UI-Formularmodelle
+   └─ Pages          Razor Pages / Components
 ```
 
-Die Client-Architektur folgt derselben Grundidee wie die Backend-Module: Verantwortlichkeiten trennen und Grenzen sichtbar halten.
+## Dependency Rule
 
-## Clientseitige API-Adapter-Schicht
-
-Der Client besitzt einen typisierten API-Adapter pro Backend-Bereich:
+Der Client kennt die API nur über HTTP.
 
 ```text
-IReaderClient -> ReaderClient
-IBookClient   -> BookClient
-ILoanClient   -> LoanClient
+UI Page
+  -> IBookClient / IReaderClient / ILoanClient
+    -> BookClient / ReaderClient / LoanClient
+      -> HttpClient
+        -> CampusLibraryApi
 ```
 
-Diese Clients sind keine Domain Services. Sie sind HTTP-Adapter auf Clientseite.
+Die fachlichen Regeln bleiben in der API. Der Client prüft nur UI-nahe Dinge, zum Beispiel ob ein Button angezeigt werden soll oder ob eine Eingabe lokal vollständig ist.
 
-Sie sind verantwortlich für:
+## Render-Modell
+
+Interaktive Seiten verwenden:
+
+```razor
+@rendermode InteractiveServer
+```
+
+Dadurch können Buttons, Formulare und Ladezustände in Razor-Komponenten verwendet werden, ohne für Teil 5 ein separates JavaScript-Frontend einzuführen.
+
+## API-Client-Schicht
+
+Die drei fachlichen Clientadapter sind:
 
 ```text
-URLs aufbauen
-Request-DTOs serialisieren
-Response-DTOs deserialisieren
-ProblemDetails auf ApiError abbilden
-Result<T> zurückgeben
-ausgehende Aufrufe und Fehler loggen
+ReaderClient
+BookClient
+LoanClient
 ```
 
-Das Basisverhalten liegt in:
+Alle verwenden den benannten HttpClient:
 
 ```text
-BaseApiClient<TClient>
+Common.CampusLibraryApiClientName
 ```
 
-So wird HTTP-Erfolgs- und Fehlerbehandlung nicht in jedem konkreten Client dupliziert.
-
-## DTO-Grenze
-
-Der Client verwendet eigene DTOs unter:
-
-```text
-CampusLibraryClient/Api/Dtos
-```
-
-Diese DTOs spiegeln den HTTP-Vertrag der CampusLibraryApi. Sie sind Transportmodelle, keine Domain Entities.
-
-Beispiele:
-
-```text
-ReaderDto
-BookListItemDto
-BookDetailDto
-BookCreateDto
-BookItemDto
-LoanListItemDto
-LoanDetailDto
-LoanCreateDto
-```
-
-Damit wird die HTTP-Grenze explizit:
-
-```text
-Domain-Objekte leben in den Backend-Core-Modulen.
-DTOs werden über HTTP ausgetauscht.
-Der Client manipuliert keine Backend-Aggregates direkt.
-```
-
-## Seiten und Komponenten
-
-Die sichtbare UI in Teil 5 ist bewusst einfach.
-
-Seiten:
-
-```text
-Home.razor
-ReadersList.razor
-BooksList.razor
-LoansList.razor
-Error.razor
-AccessDenied.razor
-```
-
-Gemeinsame UI-Komponenten:
-
-```text
-MainLayout.razor
-NavMenu.razor
-TopMenu.razor
-ErrorAlert.razor
-```
-
-Gemeinsames Seitenverhalten liegt in:
-
-```text
-BasePage.cs
-```
-
-Die ersten vertikalen Durchstiche sind:
-
-```text
-Navigation -> ReadersList -> IReaderClient -> CampusLibraryApi
-Navigation -> BooksList   -> IBookClient   -> CampusLibraryApi
-Navigation -> LoansList   -> ILoanClient   -> CampusLibraryApi
-```
-
-## Architektur der Fehlerbehandlung
-
-Der Client verwendet ein einheitliches Result-Modell:
-
-```text
-Result<T>
-```
-
-Erfolgreiche API-Aufrufe liefern einen Wert. Fehlgeschlagene API-Aufrufe liefern einen `ApiError`.
-
-Die Fehler-Pipeline ist:
-
-```text
-CampusLibraryApi liefert ProblemDetails
-BaseApiClient liest ProblemDetails
-BaseApiClient bildet sie auf ApiError ab
-Page speichert Error
-ErrorAlert zeigt den Fehler an
-```
-
-So werden API-Fehler in der UI sichtbar, ohne Exceptions direkt in Razor-Komponenten zu werfen.
-
-## Konfiguration
-
-Die API-BaseUrl wird konfiguriert über:
+Die BaseUrl kommt aus:
 
 ```json
 {
@@ -222,86 +115,234 @@ Die API-BaseUrl wird konfiguriert über:
 }
 ```
 
-Die API-Clients werden registriert in:
+## DTOs als Transportgrenze
+
+Der Client definiert eigene DTOs passend zur HTTP-API. Diese DTOs sind keine Domain-Objekte.
+
+Wichtige aktuelle DTO-Entscheidungen:
 
 ```text
-CampusLibraryClientExtensions.AddCampusLibraryClients(...)
+BookItemDto enthält Id, BookId und Status.
+BookItemDto enthält keine InventoryNumber mehr.
+BookItemAddDto enthält nur noch eine optionale Id.
+LoanListItemDto enthält BookItemId, aber keine InventoryNumber.
+LoanDetailDto enthält Reader-Email und BookItemId, aber keine InventoryNumber.
 ```
+
+Die UI darf `BookItemId` als `Inventarnummer` beschriften. Der Code bleibt aber bei `BookItemId`.
+
+## CurrentUserProvider
+
+Teil 5 trennt die aktuelle Benutzerperspektive über ein Interface:
+
+```text
+ICurrentUserProvider
+```
+
+Implementierungen:
+
+```text
+DevCurrentUserProvider       aktive Teil-5-Simulation
+ClaimsCurrentUserProvider    vorbereitet für echte AuthN
+AnonymousCurrentUserProvider Fallback/No-User-Fall
+```
+
+`DevCurrentUserProvider` liest das aktive Profil aus `appsettings.json`.
+
+Beispiele:
+
+```text
+ReaderRita      AccountType=reader, ReaderId gesetzt
+EmployeeAdmin   AccountType=employee, ReaderId=null
+```
+
+Diese Information steuert nur die UI-Perspektive. Sie ersetzt keine echte Autorisierung.
+
+## UI-Perspektiven
+
+### Reader
+
+Reader können:
+
+```text
+Katalog anzeigen
+Bücher suchen
+Buch ausleihen, wenn ein Exemplar tatsächlich verfügbar ist
+eigene Ausleihen anzeigen
+Ausleihe-Details öffnen
+```
+
+### Mitarbeiter
+
+Mitarbeiter können:
+
+```text
+Reader-Liste anzeigen
+Katalog anzeigen, inklusive inaktiver Bücher
+Buch hinzufügen
+Exemplar zu aktivem Buch hinzufügen
+aktives Buch deaktivieren
+Ausleihen anzeigen
+Ausleihe-Details öffnen
+Ausleihe verlängern
+Ausleihe zurückgeben
+```
+
+## Warum Reader-Erzeugung nicht im Client liegt
+
+Das Erzeugen eines Readers ist in Teil 5 bewusst nicht als Mitarbeiterfunktion umgesetzt.
+
+Die fachliche Zielarchitektur für spätere Teile lautet:
+
+```text
+technischer Benutzer im IdentityAccessServer
+  -> Subject und Email
+  -> Reader-Provisionierung in CampusLibraryApi
+  -> Reader ergänzt Vorname und Nachname
+```
+
+Ein Teil-5-Formular `Reader hinzufügen` würde einen falschen Ablauf zeigen. Deshalb bleiben Reader in Teil 5 Seed-/Testdaten.
+
+## Katalog-Architektur
+
+Der Katalog verwendet:
+
+```text
+BooksList.razor        Liste, Suche, rollenabhängige Aktionen
+BookCreate.razor       Buch hinzufügen
+BookItemAdd.razor      Exemplar hinzufügen
+BookDeactivate.razor   Buch deaktivieren
+BorrowBook.razor       Buch ausleihen aus Reader-Perspektive
+```
+
+Die Katalogtabelle ist fachlich so aufgebaut:
+
+```text
+Aktion | Titel | Autorinnen/Autoren | ISBN | Exemplare | Status
+```
+
+Die Aktion steht vorne, weil sie bei schmaleren Fenstern nicht abgeschnitten werden soll. Titel und Untertitel stehen gemeinsam in einer Spalte, weil der Untertitel den Titel präzisiert.
+
+## Exemplar-Identität
+
+Die separate Inventarnummer wurde entfernt.
+
+```text
+BookItem.Id ist eindeutig.
+```
+
+Die UI bezeichnet diese Id weiterhin als Inventarnummer:
+
+```text
+BookItemId -> Inventarnummer in der Oberfläche
+```
+
+Das vermeidet eine doppelte Identität und hält das Modell einfacher.
+
+## Ausleih-Architektur
+
+`BorrowBook.razor` lädt:
+
+```text
+BookDetailDto mit BookItems
+aktuell ausgeliehene Loans
+```
+
+Daraus berechnet die UI, welche Exemplare wirklich verfügbar sind:
+
+```text
+BookItem.Status == Available
+und
+BookItem.Id ist nicht in den aktuell ausgeliehenen BookItemIds
+```
+
+Der Borrow-Request sendet:
+
+```text
+ReaderId aus CurrentUserProvider
+BookItemId der ausgewählten Inventarnummer
+```
+
+## Loan-Details
+
+Die Übersichtsseiten führen zur Detailseite:
+
+```text
+/loans/{loanId}
+```
+
+Renew und Return gehören in die Detailansicht. Dadurch bleibt die Übersicht einfacher und die fachliche Entscheidung wird vor der Aktion sichtbar.
 
 ## Auth-Vorbereitung ohne Aktivierung
 
-Teil 5 aktiviert bewusst keine Authentifizierung und keine Autorisierung.
-
-Der Client enthält aber bereits Vorbereitung für spätere Teile:
+Teil 5 enthält vorbereitete Klassen, aktiviert sie aber nicht:
 
 ```text
-Api/Auth/AccessTokenHandler.cs
-Extensions/AuthenticationExtensions.cs
-Extensions/AuthorizationExtensions.cs
-Security/CampusLibraryRoles.cs
-Security/CampusLibraryPolicies.cs
-Ui/Controllers/IdentityController.cs
-Ui/Controllers/EntryController.cs
+AccessTokenHandler
+AuthenticationExtensions
+AuthorizationExtensions
+IdentityController
+EntryController
+ClaimsCurrentUserProvider
 ```
 
-Feature-Flags steuern die Aktivierung:
+Feature-Flags:
 
 ```json
 {
   "Features": {
     "AuthNEnabled": false,
+    "DevIdentityEnabled": true,
     "ApiAccessTokenEnabled": false,
     "AuthZEnabled": false
   }
 }
 ```
 
-In Teil 5 gilt:
+Bedeutung:
 
 ```text
-AuthNEnabled=false           -> kein Login-/Logout-Flow
-ApiAccessTokenEnabled=false  -> API-Aufrufe bleiben anonym
-AuthZEnabled=false           -> keine rollen-/policybasierte UI-Einschränkung
+AuthNEnabled=false          -> kein echter Login-/Logout-Flow
+DevIdentityEnabled=true     -> simulierte UI-Perspektive
+ApiAccessTokenEnabled=false -> keine Access-Token-Weitergabe
+AuthZEnabled=false          -> keine echte Policy-Autorisierung
 ```
 
-Das ermöglicht einen glatten Übergang zu den nächsten Teilen:
+## Geplante Auth-Architektur
+
+Spätere Zielarchitektur:
 
 ```text
-Teil 6: Client-AuthN aktivieren
-Teil 7: AuthN/AuthZ in CampusLibraryApi ergänzen
-Teil 8: Token-Weitergabe und geschützten API-Zugriff aktivieren
+Teil 6: Client meldet Benutzer am IdentityAccessServer an.
+Teil 7: CampusLibraryApi validiert Bearer Tokens.
+Teil 8: Client sendet Access Token an geschützte API-Endpunkte.
 ```
 
-## Abhängigkeitsregeln
-
-Teil 5 ergänzt eine neue Abhängigkeitsrichtung:
+Reader-Provisionierung später:
 
 ```text
-Browser/User -> CampusLibraryClient -> HTTP -> CampusLibraryApi
+POST /camplib/v1/readers/me/provision
+Authorization: Bearer <access_token>
+
+API liest Subject und Email aus dem Token.
 ```
 
-Es entstehen aber keine Projektreferenzen vom Client auf Backend-Core-Module.
-
-Regeln:
+Profilpflege später:
 
 ```text
-CampusLibraryClient darf von ASP.NET-Core-Blazor-Paketen abhängen.
-CampusLibraryClient darf DTOs verwenden, die zum API-Vertrag passen.
-CampusLibraryClient darf Core_Readers, Core_Catalog oder Core_Loan nicht referenzieren.
-CampusLibraryApi darf nicht vom CampusLibraryClient abhängen.
-Fachliche Regeln bleiben in den API-Modulen.
+POST /camplib/v1/readers/me/profile
+Authorization: Bearer <access_token>
+
+Body enthält nur Vorname und Nachname.
 ```
 
-## Didaktische Zusammenfassung
+## Didaktischer Kern
 
-Teil 5 verschiebt die Perspektive von der Backend-Implementierung zur Backend-Verwendung.
-
-Die Studierenden sehen jetzt:
+Teil 5 soll zeigen:
 
 ```text
-Die API ist eine wiederverwendbare Grenze.
-Der Client ist ein weiterer Adapter.
-HTTP-Verträge sind wichtig.
-Fehlerverhalten ist Teil der User Experience.
-Auth kann vorbereitet werden, ohne die erste Client-Einheit zu dominieren.
+Ein modularer API-Backend-Stand kann von einem echten Web-Client genutzt werden.
+Der Client bleibt technisch getrennt vom Domain-Core.
+UI-Perspektiven können für die Lehre simuliert werden, ohne echte Sicherheit vorwegzunehmen.
+Reader-Provisionierung gehört erst in den AuthN/AuthZ-Teil.
 ```

@@ -19,7 +19,6 @@ public static class CatalogMappings {
       new(
          Id: bookItem.Id,
          BookId: bookItem.BookId,
-         InventoryNumber: bookItem.InventoryNumber,
          Status: (int) bookItem.Status
       );
 }

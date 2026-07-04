@@ -27,13 +27,6 @@ internal sealed class BookRepositoryEf(
          .AnyAsync(b => b.IsbnVo == isbnVo, ct);
    }
    
-   public async Task<bool> ExistsBookItemByInventoryNumberAsync(
-      string inventoryNumber,
-      CancellationToken ct = default
-   ) =>
-      await dbContext.BookItems
-         .AnyAsync(bi => bi.InventoryNumber == inventoryNumber, ct);
-
    public void Add(Book book)
       => dbContext.Add(book);
 

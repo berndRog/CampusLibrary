@@ -44,7 +44,7 @@ else {
             @foreach(LoanListItemDto loan in _loans) {
                <tr>
                   <td>@loan.Title</td>
-                  <td>@loan.InventoryNumber</td>
+                  <td>@loan.BookItemId</td>
                   <td>@loan.LoanDate.ToString("yyyy-MM-dd")</td>
                   <td>@loan.DueDate.ToString("yyyy-MM-dd")</td>
                   <td>@loan.Status</td>

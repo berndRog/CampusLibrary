@@ -77,7 +77,7 @@ DELETE /camplib/v1/readers/{id}
 
 # Books API
 
-Die Books API ist gegenüber Teil 3 unverändert.
+Die Books API verwendet weiterhin Books und BookItems. Ein BookItem wird nur noch über seine eindeutige `Id` identifiziert. Es gibt keine separate `InventoryNumber` mehr.
 
 Wichtige Endpunkte:
 
@@ -94,6 +94,22 @@ PATCH /camplib/v1/books/{bookId}/deactivate
 
 Es gibt keine Author API.
 
+Beim Hinzufügen eines BookItems kann der Client optional eine Id liefern. Die Inventarnummer wird nicht mehr als eigenes Feld übertragen.
+
+```csharp
+public sealed record BookItemAddDto(
+   string? Id
+);
+
+public sealed record BookItemDto(
+   Guid Id,
+   Guid BookId,
+   int Status
+);
+```
+
+In der UI darf die `BookItemId` weiterhin als Inventarnummer angezeigt werden.
+
 # Loans API
 
 Loans beschreiben den Ausleih-Lebenszyklus konkreter BookItems.
@@ -107,6 +123,66 @@ Cancelled = 3
 ```
 
 DTOs geben den Status als numerischen API-Wert aus. Die Domäne verwendet intern weiterhin das Enum `LoanStatus`.
+
+Aktuelle DTO-Regel: `InventoryNumber` ist aus den Loan-DTOs entfernt. Die eindeutige Exemplaridentität ist `BookItemId`. Zusätzlich enthalten Reader-bezogene Loan-DTOs jetzt `Email`.
+
+```csharp
+public sealed record ReaderLoanInfoDto(
+   Guid Id,
+   string Firstname,
+   string Lastname,
+   string Email,
+   bool IsActive
+);
+
+public sealed record LoanListItemDto(
+   Guid Id,
+
+   Guid ReaderId,
+   string Firstname,
+   string Lastname,
+
+   Guid BookItemId,
+
+   string Title,
+   string? Subtitle,
+
+   DateTime LoanDate,
+   DateTime DueDate,
+
+   int Status,
+   bool IsOverdue
+);
+
+public sealed record LoanDetailDto(
+   Guid Id,
+
+   Guid ReaderId,
+   string Firstname,
+   string Lastname,
+   string Email,
+
+   Guid BookItemId,
+
+   Guid BookId,
+   string AuthorsText,
+   string Title,
+   string? Subtitle,
+   string Isbn,
+   bool BookIsActive,
+   bool IsAvailableForLoan,
+
+   DateTime LoanDate,
+   DateTime DueDate,
+   DateTime? ReturnedAt,
+
+   int Status,
+   int RenewalCount,
+
+   bool IsOverdue,
+   bool CanRenew
+);
+```
 
 ## Ausgeliehene Loans abrufen
 

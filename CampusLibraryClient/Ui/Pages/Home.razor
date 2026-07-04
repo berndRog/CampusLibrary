@@ -5,26 +5,42 @@
 
 <PageTitle>CampusLibrary</PageTitle>
 
-<h1 class="h3 mb-3">Willkommen</h1>
+<h2 class="h3 mb-4">Willkommen</h2>
 
 @if(_currentUser is null) {
-   <p class="text-muted">Aktuelle Perspektive wird geladen...</p>
+   <p class="text-muted">Aktuelle Meldungen werden geladen...</p>
 }
 else {
-   <div class="card shadow-sm">
-      <div class="card-body">
-         <h2 class="h5 card-title mb-3">Aktuelle Perspektive</h2>
+   @* <section class="mb-4"> *@
+   @*    <h2 class="h5 mb-3">Aktuelle Perspektive</h2> *@
+   @* *@
+   @*    <p class="mb-1"> *@
+   @*       <strong>@_currentUser.DisplayName</strong> *@
+   @*       <span class="text-muted">(@DisplayAccountType(_currentUser.AccountType))</span> *@
+   @*    </p> *@
+   @* *@
+   @*    <p class="text-muted mb-0"> *@
+   @*       Bitte wählen Sie einen Bereich über die Menüleiste. *@
+   @*    </p> *@
+   @* </section> *@
 
-         <p class="card-text mb-2">
-            <strong>@_currentUser.DisplayName</strong>
-            (@DisplayAccountType(_currentUser.AccountType))
-         </p>
+   <section>
+      <h2 class="h5 mb-3">Aktuelle Meldungen</h2>
 
-         <p class="card-text mb-0">
-            Bitte wählen Sie einen Bereich über die Menüleiste.
-         </p>
-      </div>
-   </div>
+      <p class="mb-3">
+         <strong>03.07.2026 10:30 Uhr:</strong>
+         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer vitae
+         libero at ipsum facilisis cursus. Donec non lorem sed neque tincidunt
+         faucibus.
+      </p>
+
+      <p class="mb-0">
+         <strong>02.07.2026 16:15 Uhr:</strong>
+         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent
+         pretium, sapien non fermentum volutpat, arcu neque dignissim justo,
+         vitae consequat sem lorem sed augue.
+      </p>
+   </section>
 }
 
 @code {

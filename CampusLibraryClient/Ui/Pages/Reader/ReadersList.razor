@@ -35,7 +35,6 @@ else {
                <th scope="col">Vorname</th>
                <th scope="col">Nachname</th>
                <th scope="col">E-Mail</th>
-               <th scope="col">Subject</th>
                <th scope="col">Status</th>
             </tr>
          </thead>
@@ -45,7 +44,6 @@ else {
                   <td>@reader.Firstname</td>
                   <td>@reader.Lastname</td>
                   <td>@reader.Email</td>
-                  <td><code>@reader.Subject</code></td>
                   <td>
                      @if(reader.IsActive) {
                         <span class="badge text-bg-success">Aktiv</span>

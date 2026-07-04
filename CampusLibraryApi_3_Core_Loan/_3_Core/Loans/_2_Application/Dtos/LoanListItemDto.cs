@@ -9,7 +9,6 @@ public sealed record LoanListItemDto(
    string Lastname,
 
    Guid BookItemId,
-   string InventoryNumber,
 
    string Title,
    string? Subtitle,

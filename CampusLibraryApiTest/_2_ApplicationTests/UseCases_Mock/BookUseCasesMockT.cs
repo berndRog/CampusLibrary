@@ -305,7 +305,6 @@ public sealed class BookUseCasesMockT {
       var book1 = seed.Book1();
 
       var dto = new BookItemAddDto(
-         InventoryNumber: "CL-MOCK-BOOK-0001",
          Id: seed.BookItem1Id
       );
 
@@ -313,11 +312,7 @@ public sealed class BookUseCasesMockT {
       repository
          .Setup(r => r.FindByIdAsync(book1.Id, ct))
          .ReturnsAsync(book1);
-
-      repository
-         .Setup(r => r.ExistsBookItemByInventoryNumberAsync(dto.InventoryNumber, ct))
-         .ReturnsAsync(false);
-
+      
       var unitOfWork = new Mock<IUnitOfWork>();
       unitOfWork
          .Setup(u => u.SaveAllChangesAsync("BookUcAddBookItem", ct))
@@ -339,11 +334,7 @@ public sealed class BookUseCasesMockT {
 
       // Assert
       resultAddBookItem.IsSuccess.Should().BeTrue();
-
-      book1.BookItems
-         .Should()
-         .ContainSingle(bi => bi.InventoryNumber == dto.InventoryNumber);
-
+      
       book1.UpdatedAt.Should().Be(CreatedAt.AddDays(1));
 
       unitOfWork.Verify(
@@ -354,59 +345,7 @@ public sealed class BookUseCasesMockT {
          Times.Once
       );
    }
-
-   [Fact]
-   public async Task AddBookItemAsync_duplicate_inventory_number_fails() {
-      // Arrange
-      var ct = TestContext.Current.CancellationToken;
-      var seed = new TestSeed();
-      var book1 = seed.Book1();
-
-      var dto = new BookItemAddDto(
-         InventoryNumber: "CL-MOCK-BOOK-0001",
-         Id: seed.BookItem1Id
-      );
-
-      var repository = new Mock<IBookRepository>();
-      repository
-         .Setup(r => r.FindByIdAsync(book1.Id, ct))
-         .ReturnsAsync(book1);
-
-      repository
-         .Setup(r => r.ExistsBookItemByInventoryNumberAsync(dto.InventoryNumber, ct))
-         .ReturnsAsync(true);
-
-      var unitOfWork = new Mock<IUnitOfWork>();
-
-      var sut = new BookUcAddBookItem(
-         bookRepository: repository.Object,
-         unitOfWork: unitOfWork.Object,
-         clock: new FakeClock(CreatedAt),
-         logger: Mock.Of<ILogger<BookUcAddBookItem>>()
-      );
-
-      // Act
-      var resultAddBookItem = await sut.ExecuteAsync(
-         bookId: book1.Id,
-         bookItemAddDto: dto,
-         ct: ct
-      );
-
-      // Assert
-      resultAddBookItem.IsFailure.Should().BeTrue();
-      resultAddBookItem.Error.Should().Be(CatalogErrors.BookItemAlreadyExists);
-
-      book1.BookItems.Should().BeEmpty();
-
-      unitOfWork.Verify(
-         u => u.SaveAllChangesAsync(
-            It.IsAny<string?>(),
-            It.IsAny<CancellationToken>()
-         ),
-         Times.Never
-      );
-   }
-
+   
    [Fact]
    public async Task AddBookItemAsync_book_not_found_fails() {
       // Arrange
@@ -414,10 +353,7 @@ public sealed class BookUseCasesMockT {
       var seed = new TestSeed();
       var book1 = seed.Book1();
 
-      var dto = new BookItemAddDto(
-         InventoryNumber: "CL-MOCK-BOOK-0001",
-         Id: seed.BookItem1Id
-      );
+      var dto = new BookItemAddDto(seed.BookItem1Id);
 
       var repository = new Mock<IBookRepository>();
       repository
@@ -444,13 +380,6 @@ public sealed class BookUseCasesMockT {
       resultAddBookItem.IsFailure.Should().BeTrue();
       resultAddBookItem.Error.Should().Be(CatalogErrors.BookNotFound);
 
-      repository.Verify(
-         r => r.ExistsBookItemByInventoryNumberAsync(
-            It.IsAny<string>(),
-            It.IsAny<CancellationToken>()
-         ),
-         Times.Never
-      );
 
       unitOfWork.Verify(
          u => u.SaveAllChangesAsync(

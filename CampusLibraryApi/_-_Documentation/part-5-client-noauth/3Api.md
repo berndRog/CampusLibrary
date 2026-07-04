@@ -1,26 +1,20 @@
-# API and Client Contract — Part 5
+# API Usage from the Client Perspective — Part 5
 
-This document describes the API surface used by `CampusLibraryClient` in Part 5.
-
-Part 5 does not primarily add new backend API endpoints. It adds a Blazor SSR client that consumes the existing CampusLibraryApi endpoints from Part 4.
+This document describes which CampusLibraryApi endpoints are used by the Blazor SSR client in Part 5.
 
 German version: [3Api-ger.md](3Api-ger.md)
 
-## Base URLs
+## Basic idea
 
-CampusLibraryApi:
-
-```text
-https://localhost:8010/
-```
-
-CampusLibraryClient:
+The client calls the API through typed API clients:
 
 ```text
-configured by the client launch settings
+IReaderClient -> ReaderClient
+IBookClient   -> BookClient
+ILoanClient   -> LoanClient
 ```
 
-The client configures the backend API URL in `CampusLibraryClient/appsettings.json`:
+The API base address comes from `appsettings.json`:
 
 ```json
 {
@@ -30,96 +24,30 @@ The client configures the backend API URL in `CampusLibraryClient/appsettings.js
 }
 ```
 
-## API client registration
-
-The client registers all module clients through:
+All business routes are located under:
 
 ```text
-AddCampusLibraryClients(configuration, useAccessToken)
+/camplib/v1
 ```
 
-In Part 5:
+## Auth status in Part 5
 
-```text
-useAccessToken = false
-```
-
-Therefore requests are sent without a Bearer token.
-
-## Client API structure
-
-The client uses three module-specific API client abstractions:
-
-```text
-IReaderClient
-IBookClient
-ILoanClient
-```
-
-The concrete implementations are:
-
-```text
-ReaderClient
-BookClient
-LoanClient
-```
-
-All three clients use the named HttpClient:
-
-```text
-Common.CampusLibraryApiClientName
-```
-
-## Error contract
-
-The backend returns errors as `ProblemDetails`.
-
-The client maps backend errors to:
-
-```text
-ApiError
-```
-
-The common result type is:
-
-```text
-Result<T>
-```
-
-Typical client handling:
-
-```text
-Result<T>.IsSuccess -> display data
-Result<T>.IsFailure -> display ErrorAlert
-```
-
-## Auth status
-
-Part 5 uses anonymous API calls.
-
-Feature flags:
+Part 5 does not use real protected API calls.
 
 ```json
 {
   "Features": {
     "AuthNEnabled": false,
+    "DevIdentityEnabled": true,
     "ApiAccessTokenEnabled": false,
     "AuthZEnabled": false
   }
 }
 ```
 
-Prepared but inactive:
-
-```text
-AccessTokenHandler
-AuthenticationExtensions
-AuthorizationExtensions
-IdentityController
-EntryController
-```
-
 The `AccessTokenHandler` is not attached to the CampusLibraryApi HttpClient while `ApiAccessTokenEnabled=false`.
+
+`DevIdentity` only controls the UI perspective. It is not authentication and not authorization.
 
 ## Readers API used by the client
 
@@ -146,19 +74,27 @@ ReadersList.razor
 
 Response type:
 
-```text
-IEnumerable<ReaderDto>
+```csharp
+public sealed record ReaderDto(
+   Guid Id,
+   string? Firstname,
+   string? Lastname,
+   string? Email,
+   AddressDto? AddressDto,
+   bool IsActive,
+   string? Subject
+);
 ```
 
-Displayed fields:
+Displayed in the UI:
 
 ```text
-Firstname
-Lastname
+Name
 Email
-Subject
-IsActive
+Status
 ```
+
+`Subject` is not displayed. It is a technical identity and becomes relevant in the later AuthN/AuthZ context.
 
 ### Get reader by id
 
@@ -190,49 +126,35 @@ GET /camplib/v1/readers/email?email={email}&includeInactive=false
 
 ### Create reader
 
-Client method:
+The API client method may technically exist:
 
 ```text
 IReaderClient.CreateAsync(dto)
 ```
 
-HTTP call:
+But Part 5 intentionally does not expose a visible UI function `Create reader`.
 
-```http
-POST /camplib/v1/readers
-Content-Type: application/json
-```
-
-Request type:
+Reason:
 
 ```text
-ReaderCreateDto
+Readers should later be provisioned from a technical user in IdentityAccessServer.
 ```
+
+Part 5 uses readers from seed/test data.
 
 ### Update reader
 
-Client method:
+The API client method may technically exist:
 
 ```text
 IReaderClient.UpdateAsync(id, dto)
 ```
 
-HTTP call:
-
-```http
-PUT /camplib/v1/readers/{id}
-Content-Type: application/json
-```
-
-Request type:
-
-```text
-ReaderUpdateDto
-```
+This is also not the central UI workflow in Part 5.
 
 ### Deactivate reader
 
-Client method:
+If the UI uses this function, the client calls the existing API endpoint:
 
 ```text
 IReaderClient.DeactivateAsync(id)
@@ -244,11 +166,7 @@ Current client call:
 DELETE /camplib/v1/readers/{id}
 ```
 
-Check this against the current API route. If the final API uses an explicit deactivate route, the client should be adjusted accordingly, for example:
-
-```http
-PATCH /camplib/v1/readers/{id}/deactivate
-```
+Business-wise this is deactivation, not physical deletion.
 
 ## Catalog API used by the client
 
@@ -273,23 +191,34 @@ Used by:
 BooksList.razor
 ```
 
+Employees load inactive books too:
+
+```http
+GET /camplib/v1/books?includeInactive=true
+```
+
 Response type:
 
-```text
-IEnumerable<BookListItemDto>
+```csharp
+public sealed record BookListItemDto(
+   Guid Id,
+   string? AuthorsText,
+   string? Title,
+   string? Subtitle,
+   string? Isbn,
+   int TotalItems,
+   int AvailableItems,
+   bool IsActive
+);
 ```
 
-Displayed fields:
+The catalog table displays:
 
 ```text
-Title
-Subtitle
-AuthorsText
-Isbn
-AvailableItems
-TotalItems
-IsActive
+Action | Title | Authors | ISBN | Items | Status
 ```
+
+The `Title` column contains title and subtitle. The `Items` column shows borrowed / total.
 
 ### Get book by id
 
@@ -307,8 +236,18 @@ GET /camplib/v1/books/{id}?includeInactive=false
 
 Response type:
 
-```text
-BookDetailDto
+```csharp
+public sealed record BookDetailDto(
+   Guid Id,
+   string? AuthorsText,
+   string? Title,
+   string? Subtitle,
+   string? Isbn,
+   IReadOnlyList<BookItemDto>? BookItems,
+   int TotalItems,
+   int AvailableItems,
+   bool IsActive
+);
 ```
 
 ### Search books
@@ -350,11 +289,26 @@ Content-Type: application/json
 
 Request type:
 
-```text
-BookCreateDto
+```csharp
+public sealed record BookCreateDto(
+   string? AuthorsText,
+   string? Title,
+   string? Subtitle,
+   string? Isbn,
+   string? Id = null
+);
 ```
 
-### Add book item
+Used by:
+
+```text
+/catalog/books/create
+BookCreate.razor
+```
+
+This page is intended for employees.
+
+### Add BookItem
 
 Client method:
 
@@ -371,9 +325,53 @@ Content-Type: application/json
 
 Request type:
 
-```text
-BookItemAddDto
+```csharp
+public sealed record BookItemAddDto(
+   string? Id = null
+);
 ```
+
+Response type:
+
+```csharp
+public sealed record BookItemDto(
+   Guid Id,
+   Guid BookId,
+   int Status
+);
+```
+
+Used by:
+
+```text
+/catalog/books/{bookId}/items/add
+BookItemAdd.razor
+```
+
+The API no longer has a separate `InventoryNumber`. The UI displays `BookItem.Id` as inventory number.
+
+### Deactivate book
+
+Client method:
+
+```text
+IBookClient.DeactivateAsync(bookId)
+```
+
+HTTP call:
+
+```http
+PATCH /camplib/v1/books/{bookId}/deactivate
+```
+
+Used by:
+
+```text
+/catalog/books/{bookId}/deactivate
+BookDeactivate.razor
+```
+
+The client does not call a separate BookItem delete endpoint. Removing or blocking items is the responsibility of the API use case.
 
 ## Loans API used by the client
 
@@ -396,25 +394,29 @@ Used by:
 ```text
 /loans
 LoansList.razor
+/my/loans
+MyLoansList.razor
 ```
 
 Response type:
 
-```text
-IEnumerable<LoanListItemDto>
+```csharp
+public sealed record LoanListItemDto(
+   Guid Id,
+   Guid ReaderId,
+   string? Firstname,
+   string? Lastname,
+   Guid BookItemId,
+   string? Title,
+   string? Subtitle,
+   DateTime LoanDate,
+   DateTime DueDate,
+   int Status,
+   bool IsOverdue
+);
 ```
 
-Displayed fields:
-
-```text
-Reader firstname/lastname
-Book title
-Inventory number
-Loan date
-Due date
-Status
-IsOverdue
-```
+`BookItemId` is displayed as inventory number in the UI.
 
 ### Get loan by id
 
@@ -432,11 +434,41 @@ GET /camplib/v1/loans/{id}
 
 Response type:
 
-```text
-LoanDetailDto
+```csharp
+public sealed record LoanDetailDto(
+   Guid Id,
+   Guid ReaderId,
+   string? Firstname,
+   string? Lastname,
+   string? Email,
+   Guid BookItemId,
+   Guid BookId,
+   string? AuthorsText,
+   string? Title,
+   string? Subtitle,
+   string? Isbn,
+   bool BookIsActive,
+   bool IsAvailableForLoan,
+   DateTime LoanDate,
+   DateTime DueDate,
+   DateTime? ReturnedAt,
+   int Status,
+   int RenewalCount,
+   bool IsOverdue,
+   bool CanRenew
+);
 ```
 
-### Borrow a book item
+Used by:
+
+```text
+/loans/{loanId}
+LoanDetails.razor
+```
+
+The detail page shows book data, inventory number, reader data with email and loan data. Renew and return are started from there.
+
+### Borrow BookItem
 
 Client method:
 
@@ -453,27 +485,24 @@ Content-Type: application/json
 
 Request type:
 
+```csharp
+public sealed record LoanCreateDto(
+   Guid ReaderId,
+   Guid BookItemId,
+   string? Id = null
+);
+```
+
+Used by:
+
 ```text
-LoanCreateDto
+/catalog/books/{bookId}/borrow
+BorrowBook.razor
 ```
 
-### Renew a loan
+The UI selects an actually available BookItem and sends its `BookItemId`.
 
-Client method:
-
-```text
-ILoanClient.RenewAsync(id)
-```
-
-HTTP call:
-
-```http
-PATCH /camplib/v1/loans/{id}/renew
-```
-
-Used by the action button in `LoansList.razor`.
-
-### Return a loan at the service desk
+### Return loan
 
 Client method:
 
@@ -487,29 +516,58 @@ HTTP call:
 PATCH /camplib/v1/loans/{id}/return-at-desk
 ```
 
-Used by the action button in `LoansList.razor`.
+### Renew loan
 
-## Typical Part 5 manual UI flow
-
-```text
-1. Start CampusLibraryApi.
-2. Start CampusLibraryClient.
-3. Open the client home page.
-4. Navigate to Readers.
-5. Navigate to Catalog / Books.
-6. Search for a book by title, author last name or ISBN.
-7. Navigate to Loans.
-8. Renew or return a borrowed loan.
-9. Stop CampusLibraryApi and reload a page to observe ErrorAlert.
-```
-
-## What Part 5 intentionally does not do
+Client method:
 
 ```text
-No login endpoint is required for the visible UI.
-No access token is sent to CampusLibraryApi.
-No API endpoint is protected by the client.
-No role or policy decision is active in the UI.
+ILoanClient.RenewAsync(id)
 ```
 
-The prepared AuthN/AuthZ elements are documented because they reduce the transition effort for later parts.
+HTTP call:
+
+```http
+PATCH /camplib/v1/loans/{id}/renew
+```
+
+## Error handling
+
+All API clients use:
+
+```text
+BaseApiClient<TClient>
+```
+
+Successful responses are returned as `Result<T>.Success`. Failed responses are returned as `Result<T>.Failure(ApiError)`.
+
+The UI displays errors through:
+
+```text
+ErrorAlert.razor
+```
+
+## Later reader provisioning
+
+The following planned endpoints are not part of Part 5, but are documented for the continuation.
+
+```http
+POST /camplib/v1/readers/me/provision
+Authorization: Bearer <access_token>
+```
+
+The API reads `subject` and `email` from the token. The client does not send a subject in the body.
+
+```http
+POST /camplib/v1/readers/me/profile
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
+
+Example body:
+
+```json
+{
+  "firstname": "Erika",
+  "lastname": "Mustermann"
+}
+```

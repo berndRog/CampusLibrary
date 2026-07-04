@@ -6,7 +6,6 @@ public sealed record LoanListItemDto(
    string? Firstname,
    string? Lastname,
    Guid BookItemId,
-   string? InventoryNumber,
    string? Title,
    string? Subtitle,
    DateTime LoanDate,

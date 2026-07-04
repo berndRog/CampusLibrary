@@ -109,10 +109,10 @@ internal sealed class LoanReadModelEf(
             ReaderId: loan.ReaderId,
             Firstname: reader.Firstname,
             Lastname: reader.Lastname,
+            Email: reader.Email,
 
             BookItemId: loan.BookItemId,
             BookId: bookItem.BookId,
-            InventoryNumber: bookItem.InventoryNumber,
 
             Title: bookItem.Title,
             Subtitle: bookItem.Subtitle,
@@ -173,7 +173,6 @@ internal sealed class LoanReadModelEf(
             Lastname: reader.Lastname,
 
             BookItemId: loan.BookItemId,
-            InventoryNumber: bookItem.InventoryNumber,
 
             Title: bookItem.Title,
             Subtitle: bookItem.Subtitle,

@@ -453,10 +453,7 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
          unitOfWork.ClearChangeTracker();
       });
 
-      var dto = new BookItemAddDto(
-         InventoryNumber: "CL-BOOK-0001",
-         Id: "be000001-0000-0000-0000-000000000000"
-      );
+      var dto = new BookItemAddDto("be000001-0000-0000-0000-000000000000");
 
       // Act
       var response = await Client.PostAsJsonAsync(
@@ -478,7 +475,6 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
       actualBookItemDto.Should().NotBeNull();
       actualBookItemDto!.Id.Should().Be(Guid.Parse(dto.Id!));
       actualBookItemDto.BookId.Should().Be(bookId);
-      actualBookItemDto.InventoryNumber.Should().Be(dto.InventoryNumber);
       actualBookItemDto.Status.Should().Be((int)BookItemStatus.Available);
    }
 

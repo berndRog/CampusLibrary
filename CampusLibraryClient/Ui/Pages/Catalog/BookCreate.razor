@@ -1,0 +1,182 @@
+@page "/catalog/books/create"
+@rendermode InteractiveServer
+@inherits BasePage
+
+@inject IBookClient BookClient
+@inject ICurrentUserProvider CurrentUserProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Buch hinzufügen</PageTitle>
+
+<h1 class="h3 mb-3">Buch hinzufügen</h1>
+
+<ErrorAlert Error="Error" />
+
+@if(IsLoading || _currentUser is null) {
+   <p class="text-muted">Formular wird geladen...</p>
+}
+else if(!_currentUser.IsEmployee) {
+   <div class="alert alert-warning" role="alert">
+      Diese Seite ist für Mitarbeitende vorgesehen.
+   </div>
+
+   <button class="btn btn-outline-secondary" @onclick="BackToCatalog">
+      Zurück zum Katalog
+   </button>
+}
+else if(_createdBook is not null) {
+   <div class="alert alert-success" role="alert">
+      Das Buch wurde angelegt.
+   </div>
+
+   <div class="card shadow-sm mb-3">
+      <div class="card-body">
+         <h2 class="h5 card-title mb-3">Angelegtes Buch</h2>
+
+         <dl class="row mb-0">
+            <dt class="col-sm-3">Titel</dt>
+            <dd class="col-sm-9">@Display(_createdBook.Title)</dd>
+
+            <dt class="col-sm-3">Untertitel</dt>
+            <dd class="col-sm-9">@Display(_createdBook.Subtitle)</dd>
+
+            <dt class="col-sm-3">Autorinnen/Autoren</dt>
+            <dd class="col-sm-9">@Display(_createdBook.AuthorsText)</dd>
+
+            <dt class="col-sm-3">ISBN</dt>
+            <dd class="col-sm-9">@Display(_createdBook.Isbn)</dd>
+
+            <dt class="col-sm-3">Status</dt>
+            <dd class="col-sm-9">
+               @if(_createdBook.IsActive) {
+                  <span class="badge text-bg-success">Aktiv</span>
+               }
+               else {
+                  <span class="badge text-bg-secondary">Inaktiv</span>
+               }
+            </dd>
+         </dl>
+      </div>
+   </div>
+
+   <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-primary" href="@($"/catalog/books/{_createdBook.Id}/items/add")">
+         Erstes Exemplar hinzufügen
+      </a>
+
+      <button class="btn btn-outline-secondary" @onclick="BackToCatalog">
+         Zurück zum Katalog
+      </button>
+
+      <button class="btn btn-outline-primary" @onclick="CreateAnother">
+         Weiteres Buch anlegen
+      </button>
+   </div>
+}
+else {
+   <p class="text-muted">
+      Mitarbeitende können hier ein neues Buch im Katalog anlegen.
+      Exemplare werden anschließend separat hinzugefügt.
+   </p>
+
+   <EditForm Model="_model" OnValidSubmit="CreateAsync" FormName="book-create">
+      <DataAnnotationsValidator />
+      <ValidationSummary />
+
+      <div class="row gy-3 mb-3">
+         <div class="col-md-8 col-lg-6">
+            <label class="form-label" for="title">Titel</label>
+            <InputText id="title" class="form-control" @bind-Value="_model.Title" />
+            <ValidationMessage For="@(() => _model.Title)" />
+         </div>
+
+         <div class="col-md-8 col-lg-6">
+            <label class="form-label" for="subtitle">Untertitel</label>
+            <InputText id="subtitle" class="form-control" @bind-Value="_model.Subtitle" />
+            <ValidationMessage For="@(() => _model.Subtitle)" />
+         </div>
+
+         <div class="col-md-8 col-lg-6">
+            <label class="form-label" for="authorsText">Autorinnen/Autoren</label>
+            <InputText id="authorsText" class="form-control" @bind-Value="_model.AuthorsText" />
+            <div class="form-text">Mehrere Namen mit Komma trennen, z. B. Martin Fowler, Kent Beck.</div>
+            <ValidationMessage For="@(() => _model.AuthorsText)" />
+         </div>
+
+         <div class="col-md-4 col-lg-3">
+            <label class="form-label" for="isbn">ISBN</label>
+            <InputText id="isbn" class="form-control" @bind-Value="_model.Isbn" />
+            <ValidationMessage For="@(() => _model.Isbn)" />
+         </div>
+      </div>
+
+      <div class="d-flex flex-wrap gap-2">
+         <button type="submit" class="btn btn-primary" disabled="@IsLoading">
+            Buch speichern
+         </button>
+
+         <button type="button" class="btn btn-outline-secondary" @onclick="BackToCatalog">
+            Abbrechen
+         </button>
+      </div>
+   </EditForm>
+}
+
+@code {
+
+   private readonly BookCreateModel _model = new();
+
+   private CurrentUserInfo? _currentUser;
+
+   private BookDto? _createdBook;
+
+   protected override async Task OnInitializedAsync() {
+      _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
+   }
+
+   private async Task CreateAsync() {
+      if(_currentUser?.IsEmployee != true)
+         return;
+
+      StartLoading();
+      Error = null;
+
+      BookCreateDto dto = new(
+         AuthorsText: _model.AuthorsText,
+         Title: _model.Title,
+         Subtitle: _model.Subtitle,
+         Isbn: _model.Isbn,
+         Id: null
+      );
+
+      Result<BookDto> result = await BookClient.CreateAsync(
+         dto: dto
+      );
+
+      if(result.IsSuccess && result.Value is not null)
+         _createdBook = result.Value;
+      else
+         Error = result.Error;
+
+      StopLoading();
+   }
+
+   private void CreateAnother() {
+      _model.AuthorsText = null;
+      _model.Title = null;
+      _model.Subtitle = null;
+      _model.Isbn = null;
+      _createdBook = null;
+      Error = null;
+   }
+
+   private void BackToCatalog() {
+      Navigation.NavigateTo("/catalog/books");
+   }
+
+   private static string Display(
+      string? value
+   ) => string.IsNullOrWhiteSpace(value)
+      ? "Nicht verfügbar"
+      : value;
+}

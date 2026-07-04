@@ -106,26 +106,18 @@ public sealed class Book : AggregateRoot {
    // Adds a physical copy of this book (Exemplar) to the aggregate.
    public Result<BookItem> AddBookItem(
       Guid bookItemId,
-      string inventoryNumber,
       DateTime updatedAt
    ) {
-      inventoryNumber = inventoryNumber.Trim();
       
-      // A book item needs a valid technical identity.
+      // A book item needs a identity == inventary number.
       if (bookItemId == Guid.Empty)
          return Result<BookItem>.Failure(CatalogErrors.BookItemIdRequired);
 
-      // Inventory numbers must be unique inside this aggregate.
-      // A library-wide uniqueness rule should additionally be checked in the use case.
-      if (!string.IsNullOrWhiteSpace(inventoryNumber) &&
-          _bookItems.Any(bi => bi.InventoryNumber == inventoryNumber))
-         return Result<BookItem>.Failure(CatalogErrors.BookItemAlreadyExists);
 
       // Create the child entity through its factory method.
       var resultBookItem = BookItem.Create(
          id: bookItemId,
-         bookId: Id,
-         inventoryNumber: inventoryNumber
+         bookId: Id
       );
       if (resultBookItem.IsFailure)
          return Result<BookItem>.Failure(resultBookItem.Error);

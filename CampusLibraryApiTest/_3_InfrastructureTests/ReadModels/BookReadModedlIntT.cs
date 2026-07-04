@@ -29,20 +29,14 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       var books = seed.Books;
       var book1 = books[0];
 
-      bookRepository.AddRange(
-         books: books
-      );
-
-      await unitOfWork.SaveAllChangesAsync(
-         "Books inserted",
-         ct
-      );
-
+      bookRepository.AddRange(books: books);
+      await unitOfWork.SaveAllChangesAsync("Books inserted", ct);
       unitOfWork.ClearChangeTracker();
 
       // Act
       var result = await readModel.FindByIdAsync(
-         id: book1.Id,
+         id: book1.Id, 
+         includeInactive: false,
          ct: ct
       );
 
@@ -62,10 +56,10 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
       actualBookDto.BookItems.Should().HaveCount(book1.BookItems.Count);
 
       actualBookDto.BookItems
-         .Select(item => item.InventoryNumber)
+         .Select(item => item.Id)
          .Should()
          .BeEquivalentTo(
-            book1.BookItems.Select(item => item.InventoryNumber)
+            book1.BookItems.Select(item => item.Id)
          );
 
       actualBookDto.BookItems
@@ -130,16 +124,13 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
 
       resultDeactivated.IsSuccess.Should().BeTrue();
 
-      await unitOfWork.SaveAllChangesAsync(
-         "Book1 deactivated",
-         ct
-      );
-
+      await unitOfWork.SaveAllChangesAsync("Book1 deactivated", ct);
       unitOfWork.ClearChangeTracker();
 
       // Act
       var result = await readModel.FindByIdAsync(
          id: book1.Id,
+         includeInactive: false,
          ct: ct
       );
 

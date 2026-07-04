@@ -32,7 +32,6 @@ internal sealed class BookItemLoanContractEf(
          select new BookItemLoanInfoDto(
             bookItem.Id,
             book.Id,
-            bookItem.InventoryNumber,
             book.Title,
             book.Subtitle,
             book.AuthorsText,

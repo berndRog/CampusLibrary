@@ -268,13 +268,11 @@ public sealed class BookUt {
       var book1 = _seed.Book1();
 
       var bookItemId = Guid.Parse(_seed.BookItem1Id);
-      var inventoryNumber = "CL-BOOK-0001";
       var updatedAt = book1.CreatedAt.AddDays(1);
 
       // Act
       var result = book1.AddBookItem(
          bookItemId: bookItemId,
-         inventoryNumber: inventoryNumber,
          updatedAt: updatedAt
       );
 
@@ -285,7 +283,6 @@ public sealed class BookUt {
 
       actualBookItem.Id.Should().Be(bookItemId);
       actualBookItem.BookId.Should().Be(book1.Id);
-      actualBookItem.InventoryNumber.Should().Be(inventoryNumber);
       actualBookItem.Status.Should().Be(BookItemStatus.Available);
 
       book1.BookItems.Should().ContainSingle();
@@ -294,57 +291,7 @@ public sealed class BookUt {
       book1.CreatedAt.Should().Be(_seed.Book1().CreatedAt);
       book1.UpdatedAt.Should().Be(updatedAt);
    }
-
-   [Fact]
-   public void AddBookItem_WithDuplicateInventoryNumber_ShouldReturnFailure() {
-      // Arrange
-      var book1 = _seed.Book1();
-
-      var updatedAt = book1.CreatedAt.AddDays(1);
-
-      var firstResult = book1.AddBookItem(
-         bookItemId: Guid.Parse(_seed.BookItem1Id),
-         inventoryNumber: "CL-BOOK-0001",
-         updatedAt: updatedAt
-      );
-
-      firstResult.IsSuccess.Should().BeTrue();
-
-      // Act
-      var result = book1.AddBookItem(
-         bookItemId: Guid.Parse(_seed.BookItem2Id),
-         inventoryNumber: "CL-BOOK-0001",
-         updatedAt: updatedAt.AddDays(1)
-      );
-
-      // Assert
-      result.IsFailure.Should().BeTrue();
-      result.Error.Should().Be(CatalogErrors.BookItemAlreadyExists);
-
-      book1.BookItems.Should().ContainSingle();
-      book1.UpdatedAt.Should().Be(updatedAt);
-   }
-
-   [Fact]
-   public void AddBookItem_WithoutInventoryNumber_ShouldReturnFailure() {
-      // Arrange
-      var book1 = _seed.Book1();
-
-      // Act
-      var result = book1.AddBookItem(
-         bookItemId: Guid.Parse(_seed.BookItem1Id),
-         inventoryNumber: " ",
-         updatedAt: book1.CreatedAt.AddDays(1)
-      );
-
-      // Assert
-      result.IsFailure.Should().BeTrue();
-      result.Error.Should().Be(CatalogErrors.BookItemInventoryNumberIsRequired);
-
-      book1.BookItems.Should().BeEmpty();
-      book1.UpdatedAt.Should().Be(book1.CreatedAt);
-   }
-
+   
    [Fact]
    public void AddBookItem_WithEmptyId_ShouldReturnFailure() {
       // Arrange
@@ -353,7 +300,6 @@ public sealed class BookUt {
       // Act
       var result = book1.AddBookItem(
          bookItemId: Guid.Empty,
-         inventoryNumber: "CL-BOOK-0001",
          updatedAt: book1.CreatedAt.AddDays(1)
       );
 

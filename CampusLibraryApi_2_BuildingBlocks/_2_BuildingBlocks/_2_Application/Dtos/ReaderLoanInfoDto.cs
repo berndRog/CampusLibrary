@@ -5,6 +5,7 @@ public sealed record ReaderLoanInfoDto(
    Guid Id,
    string Firstname,
    string Lastname,
+   string Email,
    bool IsActive
 );
 

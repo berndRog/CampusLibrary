@@ -91,7 +91,7 @@ else {
                   <select class="form-select" @bind="_selectedBookItemId">
                      @foreach(BookItemDto item in _availableItems) {
                         <option value="@item.Id">
-                           @item.InventoryNumber (@item.Id)
+                           @item.Id (@item.Id)
                         </option>
                      }
                   </select>

@@ -73,7 +73,6 @@ public sealed class LoanReadModelIntT : TestBaseIntegration {
 
       actualLoanDto.BookItemId.Should().Be(loan1.BookItemId);
       actualLoanDto.BookId.Should().Be(book.Id);
-      actualLoanDto.InventoryNumber.Should().Be(bookItem.InventoryNumber);
 
       actualLoanDto.Title.Should().Be(book.Title);
       actualLoanDto.Subtitle.Should().Be(book.Subtitle);
@@ -237,7 +236,6 @@ public sealed class LoanReadModelIntT : TestBaseIntegration {
       actualLoanDto.Lastname.Should().Be(reader.Lastname);
 
       actualLoanDto.BookItemId.Should().Be(bookItem.Id);
-      actualLoanDto.InventoryNumber.Should().Be(bookItem.InventoryNumber);
 
       actualLoanDto.Title.Should().Be(book.Title);
       actualLoanDto.Subtitle.Should().Be(book.Subtitle);

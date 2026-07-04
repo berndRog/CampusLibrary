@@ -21,7 +21,6 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "inventoryNumber": "CL-BOOK-0001",
   "id": "{{bookItem1Id}}"
 }
 
@@ -32,7 +31,6 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "inventoryNumber": "CL-BOOK-0002",
   "id": "{{bookItem2Id}}"
 }
 
@@ -43,7 +41,6 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "inventoryNumber": "CL-BOOK-0003",
   "id": "{{bookItem3Id}}"
 }
 
@@ -54,7 +51,6 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "inventoryNumber": "CL-BOOK-0004",
   "id": "{{bookItem4Id}}"
 }
 
@@ -65,7 +61,6 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "inventoryNumber": "CL-BOOK-0005",
   "id": "{{bookItem5Id}}"
 }
 
@@ -76,6 +71,5 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "inventoryNumber": "CL-BOOK-0006",
   "id": "{{bookItem6Id}}"
 }

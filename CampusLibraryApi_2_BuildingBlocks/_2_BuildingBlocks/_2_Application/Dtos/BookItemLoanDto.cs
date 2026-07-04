@@ -4,7 +4,6 @@ namespace CampusLibraryApi._2_BuildingBlocks._2_Application.Contracts;
 public sealed record BookItemLoanInfoDto(
    Guid BookItemId,
    Guid BookId,
-   string InventoryNumber,
    string Title,
    string? Subtitle,
    string AuthorsText,

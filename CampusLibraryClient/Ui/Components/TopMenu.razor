@@ -2,7 +2,7 @@
 @inject IConfiguration Configuration
 @inject NavigationManager Navigation
 
-<nav class="navbar navbar-expand-sm navbar-light bg-light border-top border-bottom px-2">
+<nav class="navbar navbar-expand-sm navbar-light bg-light border-top border-bottom pe-2 ps-0">
    <button class="navbar-toggler ms-auto"
            type="button"
            data-bs-toggle="collapse"
@@ -13,43 +13,53 @@
       <span class="navbar-toggler-icon"></span>
    </button>
 
+   
    <div class="collapse navbar-collapse" id="topmenu">
       @if(_currentUser is null) {
          <span class="navbar-text">Navigation wird geladen...</span>
       }
       else {
-         <ul class="navbar-nav me-auto mb-2 mb-sm-0">
+         <ul class="navbar-nav me-auto nav-pills">
             <li class="nav-item">
-               <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">
+               <NavLink class="nav-link"
+                        href="/"
+                        Match="NavLinkMatch.All"
+                        ActiveClass="active text-white">
                   Home
                </NavLink>
             </li>
 
-            @if(_currentUser.IsAuthenticated) {
-               <li class="nav-item">
-                  <NavLink class="nav-link" href="/catalog/books" Match="NavLinkMatch.Prefix">
-                     Katalog
-                  </NavLink>
-               </li>
-            }
+            <li class="nav-item">
+               <NavLink class="nav-link"
+                        href="/catalog/books"
+                        ActiveClass="active text-white">
+                  Katalog
+               </NavLink>
+            </li>
 
-            @if(_currentUser.IsReader) {
+            @if (_currentUser.IsReader) {
                <li class="nav-item">
-                  <NavLink class="nav-link" href="/my/loans" Match="NavLinkMatch.Prefix">
+                  <NavLink class="nav-link"
+                           href="/my/loans"
+                           ActiveClass="active text-white">
                      Ausleihen
                   </NavLink>
                </li>
             }
 
-            @if(_currentUser.IsEmployee) {
+            @if (_currentUser.IsEmployee) {
                <li class="nav-item">
-                  <NavLink class="nav-link" href="/readers" Match="NavLinkMatch.Prefix">
+                  <NavLink class="nav-link"
+                           href="/readers"
+                           ActiveClass="active text-white">
                      Leser
                   </NavLink>
                </li>
 
                <li class="nav-item">
-                  <NavLink class="nav-link" href="/loans" Match="NavLinkMatch.Prefix">
+                  <NavLink class="nav-link"
+                           href="/loans"
+                           ActiveClass="active text-white">
                      Ausleihen
                   </NavLink>
                </li>

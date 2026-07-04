@@ -21,6 +21,7 @@ public static class ReaderMappings {
          Id: reader.Id,
          Firstname: reader.Firstname,
          Lastname: reader.Lastname,
+         Email: reader.EmailVo.Value,
          IsActive: reader.IsActive
       );
    

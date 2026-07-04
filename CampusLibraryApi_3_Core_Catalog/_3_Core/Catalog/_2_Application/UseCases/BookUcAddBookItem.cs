@@ -34,33 +34,13 @@ public sealed class BookUcAddBookItem(
          return Result<BookItemDto>.Failure(CatalogErrors.BookNotFound);
 
       // Resolve or generate the BookItem id.
-      var resultId = EntityId.Resolve(
-         dto.Id,
-         CatalogErrors.InvalidBookItemId
-      );
-
+      var resultId = EntityId.Resolve(dto.Id, CatalogErrors.InvalidBookItemId);
       if (resultId.IsFailure)
          return Result<BookItemDto>.Failure(resultId.Error);
-
-      var inventoryNumber = dto.InventoryNumber ?? string.Empty;
-      var normalizedInventoryNumber = inventoryNumber.Trim();
-
-      // Library-wide uniqueness requires persistence knowledge.
-      // The aggregate can only protect consistency inside one loaded Book.
-      if (!string.IsNullOrWhiteSpace(normalizedInventoryNumber)) {
-         var exists = await bookRepository.ExistsBookItemByInventoryNumberAsync(
-            normalizedInventoryNumber,
-            ct
-         );
-
-         if (exists)
-            return Result<BookItemDto>.Failure(CatalogErrors.BookItemAlreadyExists);
-      }
-
+      
       // The Book aggregate controls the BookItem creation.
       var resultBookItem = book.AddBookItem(
          bookItemId: resultId.Value,
-         inventoryNumber: inventoryNumber,
          updatedAt: clock.UtcNow
       );
 

@@ -7,9 +7,9 @@ public sealed record LoanDetailDto(
    Guid ReaderId,
    string Firstname,
    string Lastname,
+   string Email,
 
    Guid BookItemId,
-   string InventoryNumber,
 
    Guid BookId,
    string AuthorsText,

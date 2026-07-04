@@ -357,7 +357,6 @@ public sealed class Seed(
       // The Book aggregate controls its BookItems.
       var result = book.AddBookItem(
          bookItemId: resultBookItemId.Value,
-         inventoryNumber: inventoryNumber,
          updatedAt: clock.UtcNow.Add(TimeSpan.FromHours(6))
       );
 

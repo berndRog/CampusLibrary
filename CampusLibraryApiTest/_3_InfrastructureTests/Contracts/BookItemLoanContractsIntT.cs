@@ -43,7 +43,6 @@ public sealed class BookItemLoanContractIntT : TestBaseIntegration {
       actualBookItemDto.Should().NotBeNull();
       actualBookItemDto.BookItemId.Should().Be(bookItem1.Id);
       actualBookItemDto.BookId.Should().Be(book1.Id);
-      actualBookItemDto.InventoryNumber.Should().Be(bookItem1.InventoryNumber);
       actualBookItemDto.Title.Should().Be(book1.Title);
       actualBookItemDto.AuthorsText.Should().Be(book1.AuthorsText);
       actualBookItemDto.Isbn.Should().Be(book1.IsbnVo.Value);

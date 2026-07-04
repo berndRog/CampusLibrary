@@ -27,13 +27,13 @@ internal sealed class ReaderLoanContractEf(
       var reader = await readerDbContext.Readers
          .AsNoTracking()
          .FirstOrDefaultAsync(reader => reader.Id == id, ct);
+     
       if (reader is null)
          return Result<ReaderLoanInfoDto>.Failure(CommonErrors.ReaderNotFound);
-
       if (!reader.IsActive)
          return Result<ReaderLoanInfoDto>.Failure(CommonErrors.ReaderIsDeactivated);
 
-      ReaderLoanInfoDto dto = reader.ToReaderLoanInfoDto();
+      var dto = reader.ToReaderLoanInfoDto();
       return Result<ReaderLoanInfoDto>.Success(dto);
    }
 }
