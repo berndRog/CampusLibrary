@@ -30,4 +30,8 @@
     <ProjectReference Include="..\CampusLibraryApi_3_Core_Readers\CampusLibraryApi_3_Core_Readers.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="_4_Infrastructure\Security\" />
+  </ItemGroup>
+
 </Project>

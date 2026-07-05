@@ -16,7 +16,7 @@
     <PackageReference Include="Asp.Versioning.Mvc" Version="10.0.0"/>
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="10.0.0"/>
     <!-- Swagger -->
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7"/>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3"/>
   </ItemGroup>
 
   <ItemGroup>
@@ -24,6 +24,7 @@
     <ProjectReference Include="..\CampusLibraryApi_3_Core_Catalog\CampusLibraryApi_3_Core_Catalog.csproj" />
     <ProjectReference Include="..\CampusLibraryApi_3_Core_Loan\CampusLibraryApi_3_Core_Loan.csproj" />
     <ProjectReference Include="..\CampusLibraryApi_3_Core_Readers\CampusLibraryApi_3_Core_Readers.csproj" />
+    <ProjectReference Include="..\CampusLibraryApi_4_Infrastructure\CampusLibraryApi_4_Infrastructure.csproj" />
   </ItemGroup>
   
 </Project>
