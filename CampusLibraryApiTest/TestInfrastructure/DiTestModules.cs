@@ -18,10 +18,10 @@ using CampusLibraryApi._4_Infrastructure.Persistence.Loans;
 using CampusLibraryApi._4_Infrastructure.Persistence.Readers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+
 namespace CampusLibraryApiTest.TestInfrastructure;
 
 public static class DiTestModules {
-   
    public static IServiceCollection AddTestModules(
       this IServiceCollection services,
       DbConnection dbConnection,
@@ -41,50 +41,47 @@ public static class DiTestModules {
       services.AddScoped<IReaderDbContext, ReaderDbContextEf>();
       services.AddScoped<ICatalogDbContext, CatalogDbContextEf>();
       services.AddScoped<ILoanDbContext, LoadDbContextEf>();
-      
+
       // Adapters
       services.AddScoped<IReaderLoanContract, ReaderLoanContractEf>();
       services.AddScoped<IBookItemLoanContract, BookItemLoanContractEf>();
-      
+
       // Repositories
       services.AddScoped<IReaderRepository, ReaderRepositoryEf>();
       services.AddScoped<IBookRepository, BookRepositoryEf>();
       services.AddScoped<ILoanRepository, LoanRepositoryEf>();
-      
+
       // ReadModels
       services.AddScoped<IReaderReadModel, ReaderReadModelEf>();
       services.AddScoped<IBookReadModel, BookReadModelEf>();
       services.AddScoped<ILoanReadModel, LoanReadModelEf>();
-      
+
       // Reader UseCases
       services.AddScoped<IReaderUseCases, ReaderUseCases>();
       services.AddScoped<ReaderUcCreate>();
       services.AddScoped<ReaderUcUpdate>();
       services.AddScoped<ReaderUcDeactivate>();
-      
+      services.AddScoped<ReaderUcCreateProvision>();
+      services.AddScoped<ReaderUcUpdateProfile>();
+
+      // Catalog UseCases
       services.AddScoped<BookUcCreate>();
       services.AddScoped<BookUcAddBookItem>();
       services.AddScoped<BookUcDeactivate>();
       services.AddScoped<IBookUseCases, BookUseCases>();
-      
+
+      // Loan UseCases
       services.AddScoped<LoanUcBorrow>();
       services.AddScoped<LoanUcRenew>();
       services.AddScoped<LoanUcReturnAtDesk>();
       services.AddScoped<ILoanUseCases, LoanUseCases>();
-      
+
       // Unit of Work
       services.AddScoped<IUnitOfWork, UnitOfWorkEf>();
-      // Clock 
-      services.AddSingleton<IClock>(_ => new FakeClock(FakeClock.DefaultUtcNow));
 
-      // // IdentityGateway = CustomerRegister() from Seed
-      // // simulate loggedin customer
-      // services.AddScoped<IIdentityGateway>(_ => new FakeIdentityGateway{
-      //    Subject = "70000000-0007-0000-0000-000000000000",
-      //    Username = "e.engel@freenet.de",
-      //    CreatedAt = FakeClock.DefaultUtcNow,
-      //    AdminRights = 0
-      // });
+      // Deterministic test clock and identity
+      services.AddSingleton<IClock>(_ => new FakeClock(FakeClock.DefaultUtcNow));
+      services.AddScoped<IIdentityGateway>(_ => new FakeIdentityGateway());
 
       // Seed
       services.AddScoped<Seed>();

@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+
 namespace CampusLibraryApiTest.TestController;
 
 /// <summary>
@@ -22,6 +23,7 @@ public sealed class TestBaseFactory : WebApplicationFactory<Program> {
    private readonly bool _applyMigrations;
    private readonly bool _enableSensitiveDataLogging;
    private readonly bool _deleteDatabaseOnDispose;
+   private readonly Action<IServiceCollection>? _configureTestServices;
 
    private string _dbPath = string.Empty;
    private DbConnection? _dbConnection;
@@ -34,16 +36,18 @@ public sealed class TestBaseFactory : WebApplicationFactory<Program> {
 
    public TestBaseFactory(
       DbMode dbMode,
-      string databaseName = "ApiTest",
-      bool applyMigrations = true,
-      bool enableSensitiveDataLogging = true,
-      bool deleteDatabaseOnDispose = false
+      string databaseName,
+      bool applyMigrations,
+      bool enableSensitiveDataLogging,
+      bool deleteDatabaseOnDispose,
+      Action<IServiceCollection>? configureTestServices = null
    ) {
       _dbMode = dbMode;
       _databaseName = databaseName;
       _applyMigrations = applyMigrations;
       _enableSensitiveDataLogging = enableSensitiveDataLogging;
       _deleteDatabaseOnDispose = deleteDatabaseOnDispose;
+      _configureTestServices = configureTestServices;
    }
 
    public async Task InitializeAsync() {
@@ -110,12 +114,15 @@ public sealed class TestBaseFactory : WebApplicationFactory<Program> {
          // Seed helpers used by controller/end-to-end tests
          services.AddScoped<TestSeed>();
 
+         // For pure use-case tests a FakeIdentityGateway can still be useful.
+         // For E2E tests with TestAuthHandler, prefer IdentityGatewayHttpContext
+         // so the application sees the claims from the authenticated HTTP request.
          // services.RemoveAll(typeof(IIdentityGateway));
          // services.AddScoped<IIdentityGateway>(_ => new FakeIdentityGateway {
-         //       Subject = TestSubject, 
-         //       Username = TestUsername, 
-         //       CreatedAt =  TestCreatedAt, 
-         //       AdminRights =  TestAdminRights
+         //       Subject = TestSubject,
+         //       Username = TestUsername,
+         //       CreatedAt = TestCreatedAt,
+         //       AdminRights = TestAdminRights
          //    });
 
          // ---- Fake auth for tests ----
@@ -133,6 +140,10 @@ public sealed class TestBaseFactory : WebApplicationFactory<Program> {
 
          // Important: ensures authorization sees an authenticated user
          services.AddAuthorization();
+
+         // Let individual E2E tests override or replace selected services.
+         // Keep this at the end so test-specific registrations win.
+         _configureTestServices?.Invoke(services);
       });
    }
 

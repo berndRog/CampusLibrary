@@ -9,7 +9,7 @@ public static class Mappings {
       Firstname: reader.Firstname,
       Lastname: reader.Lastname,
       Email: reader.EmailVo.Value,
-      AddressDto: reader.AddressVo.ToAddressDto(),
+      AddressDto: reader.AddressVo?.ToAddressDto(),
       Subject: reader.Subject,
       Id: reader.Id.ToString()
    );

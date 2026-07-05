@@ -3,11 +3,19 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+
 namespace CampusLibraryApiTest.TestController;
 
 public sealed class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions> {
    public const string SchemeName = "TestScheme";
-   public const string Header = "X-Test-Roles"; // z.B. "Customer" oder "Employee" oder "Customer,Employee"
+
+   // e.g. "Reader" or "Employee" or "Reader,Employee"
+   public const string RolesHeader = "X-Test-Roles";
+   public const string Header = RolesHeader;
+
+   public const string SubjectHeader = "X-Test-Subject";
+   public const string UsernameHeader = "X-Test-Username";
+   public const string CreatedAtHeader = "X-Test-CreatedAt";
 
    public TestAuthHandler(
       IOptionsMonitor<AuthenticationSchemeOptions> options,
@@ -17,20 +25,35 @@ public sealed class TestAuthHandler : AuthenticationHandler<AuthenticationScheme
    }
 
    protected override Task<AuthenticateResult> HandleAuthenticateAsync() {
-      // wenn Header fehlt -> "nicht eingeloggt"
-      if (!Request.Headers.TryGetValue(Header, out var rolesRaw))
+      if (!Request.Headers.TryGetValue(RolesHeader, out var rolesRaw))
          return Task.FromResult(AuthenticateResult.NoResult());
 
       var roles = rolesRaw.ToString()
          .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
+      var subject = Request.Headers.TryGetValue(SubjectHeader, out var subjectRaw)
+         ? subjectRaw.ToString()
+         : "part6-reader-subject-e2e";
+
+      var username = Request.Headers.TryGetValue(UsernameHeader, out var usernameRaw)
+         ? usernameRaw.ToString()
+         : "reader.e2e@example.org";
+
+      var createdAt = Request.Headers.TryGetValue(CreatedAtHeader, out var createdAtRaw)
+         ? createdAtRaw.ToString()
+         : "2025-01-01T00:00:00Z";
+
       var claims = new List<Claim> {
-         new(ClaimTypes.NameIdentifier, "test-user"),
-         new(ClaimTypes.Name, "Test User"),
+         new("sub", subject),
+         new(ClaimTypes.NameIdentifier, subject),
+         new("preferred_username", username),
+         new(ClaimTypes.Name, username),
+         new("created_at", createdAt),
+         new("admin_rights", "0")
       };
 
-      // Rollen als Role-Claims
-      claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
+      claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+      claims.AddRange(roles.Select(role => new Claim("role", role)));
 
       var identity = new ClaimsIdentity(claims, Scheme.Name);
       var principal = new ClaimsPrincipal(identity);

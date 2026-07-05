@@ -139,7 +139,8 @@ public sealed class ReadersControllerE2eT : TestBaseEndToEnd {
             Email: updateDto.Email ?? reader1.EmailVo.Value,
             AddressDto: updateDto.AddressDto ?? reader1.AddressVo.ToAddressDto(),
             IsActive: reader1.IsActive,
-            Subject: reader1.Subject
+            Subject: reader1.Subject,
+            IsProfileCompleted: true
          );
 
          repository.Add(reader1);

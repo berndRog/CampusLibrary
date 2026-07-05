@@ -3,6 +3,7 @@ using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._2_BuildingBlocks._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
+using CampusLibraryApi._3_Core.Loans._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
 using CampusLibraryApiTest.TestInfrastructure;
 namespace CampusLibraryApiTest._1_DomainTests.Entities;
@@ -31,7 +32,7 @@ public sealed class ReaderUt {
          firstname: _reader1.Firstname,
          lastname: _reader1.Lastname,
          emailVo: _reader1.EmailVo,
-         addressVo: _reader1.AddressVo,
+         addressVo: _reader1.AddressVo!,
          subject: _reader1.Subject,
          createdAt: _reader1.CreatedAt
       );
@@ -57,7 +58,7 @@ public sealed class ReaderUt {
          firstname: _reader1.Firstname,
          lastname: _reader1.Lastname,
          emailVo: _reader1.EmailVo,
-         addressVo: _reader1.AddressVo,
+         addressVo: _reader1.AddressVo!,
          subject: _reader1.Subject,
          createdAt: _reader1.CreatedAt
       );
@@ -75,14 +76,14 @@ public sealed class ReaderUt {
          firstname: _reader1.Firstname,
          lastname: _reader1.Lastname,
          emailVo: _reader1.EmailVo,
-         addressVo: _reader1.AddressVo,
+         addressVo: _reader1.AddressVo!,
          subject: "       ",
          createdAt: _reader1.CreatedAt
       );
       
       // Assert
       result.IsFailure.Should().BeTrue();
-      result.Error.Should().Be(ReaderErrors.SubjectRequired);
+      result.Error.Should().Be(CommonErrors.SubjectRequired);
    }
 
    [Fact]
@@ -113,7 +114,7 @@ public sealed class ReaderUt {
          firstname: _reader1.Firstname,
          lastname: _reader1.Lastname,
          emailVo: _reader1.EmailVo,
-         addressVo: _reader1.AddressVo,
+         addressVo: _reader1.AddressVo!,
          subject: _reader1.Subject,
          createdAt: default
       );
@@ -222,13 +223,18 @@ public sealed class ReaderUt {
    private static EmailVo CreateEmail(string email) =>
       EmailVo.Create(email).GetValueOrThrow();
 
-   private static AddressVo CreateAddress() =>
-      AddressVo.Create(
-         street: "Hauptstr. 23",
-         postalCode: "29556",
-         city: "Suderburg",
-         country: "DE"
-      ).GetValueOrThrow();
+   private static AddressVo CreateAddress() {
+      Result<AddressVo> result = AddressVo.Create(
+         street: "Campus Street 1",
+         postalCode: "12345",
+         city: "Campus City",
+         country: "Germany"
+      );
+
+      result.IsSuccess.Should().BeTrue();
+
+      return result.Value!;
+   }
    
    [Fact]
    public void Deactivate_ok() {
