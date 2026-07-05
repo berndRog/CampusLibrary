@@ -1,0 +1,23 @@
+@baseUrl = https://localhost:8010/camplib/v1
+@accessToken = paste-reader-access-token-here
+
+### Provision current reader from IdentityAccessServer token claims
+POST {{baseUrl}}/readers/me/provision
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+### Get current reader profile
+GET {{baseUrl}}/readers/me
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+### Complete current reader profile
+PUT {{baseUrl}}/readers/me/profile
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "firstname": "Alice",
+  "lastname": "Reader"
+}

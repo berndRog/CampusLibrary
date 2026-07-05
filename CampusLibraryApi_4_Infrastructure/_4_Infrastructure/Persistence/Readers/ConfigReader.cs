@@ -45,24 +45,24 @@ internal sealed class ConfigReader(
          a.Property(p => p.Street)
             .HasMaxLength(80)
             .HasColumnName("Street").HasColumnOrder(4)
-            .IsRequired();
+            .IsRequired(false);
 
          a.Property(p => p.PostalCode)
             .HasMaxLength(20)
             .HasColumnName("PostalCode").HasColumnOrder(5)
-            .IsRequired();
+            .IsRequired(false);
 
          a.Property(p => p.City)
             .HasMaxLength(80)
             .HasColumnName("City").HasColumnOrder(6)
-            .IsRequired();
+            .IsRequired(false);
 
          a.Property(p => p.Country)
             .HasMaxLength(80)
             .HasColumnName("Country").HasColumnOrder(7)
             .IsRequired(false);
       });
-      builder.Navigation(c => c.AddressVo).IsRequired();
+      builder.Navigation(c => c.AddressVo).IsRequired(false);
 
       builder.Property(r => r.IsActive)
          .HasColumnName("IsActive").HasColumnOrder(8)

@@ -5,7 +5,8 @@ public sealed record ReaderDto(
    string Firstname,
    string Lastname,
    string Email,
-   AddressDto AddressDto,
+   AddressDto? AddressDto,
    bool IsActive,
-   string Subject
+   string Subject,
+   bool IsProfileCompleted
 );

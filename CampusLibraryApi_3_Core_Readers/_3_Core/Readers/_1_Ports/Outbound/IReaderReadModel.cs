@@ -8,6 +8,11 @@ namespace CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 // the domain model. Returns DTOs because this port belongs to the query side.
 public interface IReaderReadModel {
 
+   // Returns the currently authenticated reader
+   Task<Result<ReaderDto>> FindMeAsync(
+      CancellationToken ct = default
+   );
+   
    // Finds a reader by technical identifier.
    // By default, only active readers are returned.
    // If includeInactive is true, inactive readers are included as well.

@@ -18,11 +18,12 @@ public static class ReaderErrors {
          "The given Id is invalid."
       );
 
-   public static readonly DomainError SubjectRequired =
+   
+   public static readonly DomainError ReaderProfileUpdateDtoRequired =
       new(
          WebErrorStatus.BadRequest,
-         "Reader: SubjectRequired",
-         "Subject is required."
+         "Reader: ReaderProfileUpdateDtoRequired",
+         "A ReaderProfileUpdateDto object must be provided."
       );
 
    public static readonly DomainError FirstnameIsRequired =
@@ -66,12 +67,12 @@ public static class ReaderErrors {
          "Reader: EmailAlreadyInUse",
          "The provided email address is already in use."
       );
-
-   public static readonly DomainError TimestampIsRequired =
+   
+   public static readonly DomainError AddressIsRequired =
       new(
          WebErrorStatus.BadRequest,
-         "Reader: Timestamp is required",
-         "A valid timestamp must be provided for this operation."
+         "Reader: Address required", 
+         "A valid address with street, postal code and city must be provided."
       );
    
    public static readonly DomainError ReaderNotFound =
@@ -101,13 +102,14 @@ public static class ReaderErrors {
          "Reader: ReaderUpdateDtoRequired",
          "A ReaderUpdateDto object must be provided."
       );
-
-   public static readonly DomainError AddressRequired =
+   
+   public static readonly DomainError IsAlreadyDeactivated =
       new(
          WebErrorStatus.BadRequest,
-         "Reader: AddressRequired",
-         "A reader address must be provided."
+         "Reader: Is Already Deactivated",
+         "The reader is deactivated."
       );
+   
 
    // Address value object
    // ------------------------------------------------------------------------
@@ -160,17 +162,4 @@ public static class ReaderErrors {
          "The provided country is too short or too long (2–80 characters)."
       );
    
-   public static readonly DomainError IsDeactivated =
-      new(
-         WebErrorStatus.BadRequest,
-         "Reader: Is Deactivated",
-         "The reader is deactivated."
-      );
-   
-   public static readonly DomainError IsAlreadyDeactivated =
-      new(
-         WebErrorStatus.BadRequest,
-         "Reader: Is Already Deactivated",
-         "The reader is deactivated."
-      );
 }

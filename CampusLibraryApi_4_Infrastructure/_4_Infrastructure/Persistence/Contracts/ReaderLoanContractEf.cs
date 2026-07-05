@@ -32,6 +32,8 @@ internal sealed class ReaderLoanContractEf(
          return Result<ReaderLoanInfoDto>.Failure(CommonErrors.ReaderNotFound);
       if (!reader.IsActive)
          return Result<ReaderLoanInfoDto>.Failure(CommonErrors.ReaderIsDeactivated);
+      if (!reader.IsProfileCompleted)
+         return Result<ReaderLoanInfoDto>.Failure(CommonErrors.ReaderProfileIncomplete);
 
       var dto = reader.ToReaderLoanInfoDto();
       return Result<ReaderLoanInfoDto>.Success(dto);

@@ -1,74 +1,63 @@
 using CampusLibraryApi._2_BuildingBlocks;
-using CampusLibraryApi._3_Core.Readers._1_Ports;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Inbound;
 using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
 
 namespace CampusLibraryApi._3_Core.Readers._2_Application.UseCases;
 
-// Facade for all Reader write use cases.
+// Facade for all Reader write and self-service use cases.
 // Controllers depend on this facade instead of depending on every single use case.
 internal sealed class ReaderUseCases(
    ReaderUcCreate createUc,
    ReaderUcUpdate updateUc,
-   ReaderUcDeactivate deactivatedUc
+   ReaderUcDeactivate deactivatedUc,
+   ReaderUcCreateProvision createProvisionUc,
+   ReaderUcUpdateProfile updateProfileUc
 ) : IReaderUseCases {
 
    public Task<Result<ReaderDto>> CreateAsync(
       ReaderCreateDto dto,
       CancellationToken ct
-   ) => createUc.ExecuteAsync(
-      dto: dto,
-      ct: ct
-   );
+   ) => createUc.ExecuteAsync(dto, ct);
 
    public Task<Result<ReaderDto>> UpdateAsync(
       Guid id,
       ReaderUpdateDto dto,
       CancellationToken ct
-   ) => updateUc.ExecuteAsync(
-      id: id,
-      dto: dto,
-      ct: ct
-   );
+   ) => updateUc.ExecuteAsync(id, dto, ct);
 
    public Task<Result> DeactivateAsync(
       Guid id,
       CancellationToken ct
    ) => deactivatedUc.ExecuteAsync(id, ct);
 
+
+   public Task<Result<ReaderProvisionDto>> CreateProvisionAsync(
+      string? id,
+      CancellationToken ct
+   ) => createProvisionUc.ExecuteAsync(id, ct);
+
+   public Task<Result<ReaderDto>> UpdateProfileAsync(
+      ReaderProfileUpdateDto dto,
+      CancellationToken ct
+   ) => updateProfileUc.ExecuteAsync(dto, ct);
 }
 
 /*
 Didaktik
 --------
 
-ReaderUseCases ist die konkrete Fassade für die schreibenden Use Cases
-des Readers-Moduls.
+ReaderUseCases ist die konkrete Fassade für die Reader-Anwendungsfälle.
 
-Ohne diese Fassade müsste der Controller jeden einzelnen Use Case als
-eigene Abhängigkeit kennen. Mit der Fassade hängt der Controller nur von
-IReaderUseCases ab.
+Part 6 erweitert die Fassade um Self-Service-UseCases. Die Fassade enthält
+selbst keine Fachlogik. Sie delegiert nur an die konkreten UseCase-Klassen.
 
-Dadurch entsteht eine klare Trennung:
-
-IReaderReadModel
-- Query-Seite
-- GET-Endpunkte
-- liefert DTOs aus Leseabfragen
-
-IReaderUseCases
-- Command-Seite
-- POST, PUT, DELETE
-- koordiniert fachliche Änderungen
-
-Die Fassade enthält selbst keine Fachlogik. Sie delegiert nur an die
-konkreten Use Cases.
+Dadurch bleibt im Controller eine einfache Abhängigkeit erhalten, obwohl das
+Readers-Modul mehrere fachliche Abläufe besitzt.
 
 Lernziele
 ---------
 
 - Fassade als Vereinfachung für Controller-Abhängigkeiten verstehen
-- Command- und Query-Seite im Controller sichtbar trennen
-- konkrete Use Cases hinter einem Port kapseln
-- spätere Erweiterbarkeit des Moduls vorbereiten
+- klassische Verwaltung und Self-Service in einer Fassade bündeln
+- Fachlogik in einzelnen UseCases halten
 */

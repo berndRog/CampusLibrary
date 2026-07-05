@@ -1,18 +1,19 @@
 using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
+
 namespace CampusLibraryApi._3_Core.Readers._1_Ports.Inbound;
 
 // Facade port for Reader command use cases.
 // The web layer depends on this interface instead of concrete use case classes.
 public interface IReaderUseCases {
 
-   // Create a new Reader aggregate.
+   // Create a new fully populated Reader aggregate.
    Task<Result<ReaderDto>> CreateAsync(
       ReaderCreateDto dto,
       CancellationToken ct
    );
 
-   // Update mutable Reader profile data.
+   // Update mutable Reader profile data through the administrative flow.
    Task<Result<ReaderDto>> UpdateAsync(
       Guid id,
       ReaderUpdateDto dto,
@@ -26,6 +27,19 @@ public interface IReaderUseCases {
       Guid id,
       CancellationToken ct
    );
+
+   // Creates the fachlicher Reader shell for the current technical user.
+   // The operation is idempotent: if the reader already exists, it is returned.
+   Task<Result<ReaderProvisionDto>> CreateProvisionAsync(
+      string? id,
+      CancellationToken ct
+   );
+
+   // Completes or updates firstname/lastname of the current reader.
+   Task<Result<ReaderDto>> UpdateProfileAsync(
+      ReaderProfileUpdateDto dto,
+      CancellationToken ct
+   );
 }
 
 /*
@@ -34,52 +48,23 @@ Didaktik
 
 IReaderUseCases ist die Fassade für die schreibende Seite des Readers-Moduls.
 
-Controller sollen nicht jeden einzelnen Use Case als eigene Abhängigkeit
-kennen. Stattdessen hängen sie nur von IReaderUseCases ab. Die konkrete
-Fassade ReaderUseCases delegiert intern an die einzelnen Use Cases.
+Part 6 ergänzt Self-Service-Operationen für den aktuell angemeldeten Reader:
 
-Diese Fassade enthält nur Command-Operationen, also Operationen, die den
-Zustand des Systems verändern:
+- FindMeAsync
+- ProvisionMeAsync
+- UpdateMyProfileAsync
 
-- Reader anlegen
-- Reader ändern
-- Reader deaktivieren
+Diese Operationen unterscheiden sich bewusst von der klassischen
+Reader-Verwaltung. Subject und Email kommen aus dem IdentityAccessServer und
+nicht aus einem Formular.
 
-Abgrenzung:
-
-IReaderReadModel
-- Query-Seite
-- GET-Endpunkte
-- liest Daten
-- liefert DTOs aus Leseabfragen
-- filtert normale Abfragen auf aktive Reader
-
-IReaderUseCases
-- Command-Seite
-- POST, PUT, DELETE bzw. fachliche Änderungsoperationen
-- lädt Aggregate über Repositories
-- ruft fachliche Methoden auf dem Aggregate auf
-- speichert Änderungen über UnitOfWork
-
-DeactivateAsync löscht den Reader nicht physisch aus der Datenbank.
-Stattdessen wird IsActive auf false gesetzt. Das ist ein Soft Delete.
-
-Der Reader bleibt dadurch für historische Zusammenhänge erhalten. Das ist
-wichtig, sobald spätere Module wie Loans hinzukommen: Eine frühere Ausleihe
-soll weiterhin nachvollziehbar bleiben, auch wenn der Reader im normalen
-Leserbestand nicht mehr angezeigt wird.
-
-Dass DeactivateAsync nur Result und kein Result<ReaderDto> zurückgibt, ist
-bewusst gewählt. Die Operation bestätigt nur, ob die fachliche Änderung
-erfolgreich war. Ein aktualisiertes DTO ist für diesen Command nicht nötig.
+Die Fassade enthält weiterhin nur Command-/Self-Service-Anwendungsfälle. Für
+allgemeine Listen- und Suchabfragen bleibt IReaderReadModel zuständig.
 
 Lernziele
 ---------
 
-- Fassade als Vereinfachung für Controller-Abhängigkeiten verstehen
-- Query-Seite und Command-Seite im Controller trennen
-- konkrete Use Cases hinter einem Port kapseln
-- Soft Delete als fachliche Deaktivierung modellieren
-- IsActive als Sichtbarkeitsregel in ReadModels verstehen
-- spätere Erweiterbarkeit eines Moduls vorbereiten
+- technische Anmeldung und fachliches Provisioning trennen
+- Self-Service-UseCases von administrativer Reader-Verwaltung unterscheiden
+- Controller-Abhängigkeiten über eine Fassade klein halten
 */

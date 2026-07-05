@@ -6,7 +6,8 @@ public sealed record ReaderLoanInfoDto(
    string Firstname,
    string Lastname,
    string Email,
-   bool IsActive
+   bool IsActive,
+   bool IsProfileCompleted
 );
 
 /*
@@ -19,8 +20,7 @@ Es ist kein ReaderDto des Readers-Moduls und auch kein Reader-Aggregate.
 Es ist ein bewusst kleines Contract-DTO für die Kommunikation zwischen
 Modulen.
 
-Dadurch bleibt sichtbar:
-Ein Modul gibt nicht automatisch seine vollständigen internen Daten frei.
-Es veröffentlicht nur die Informationen, die ein anderes Modul wirklich
-benötigt.
+Part 6 ergänzt IsProfileCompleted. Dadurch kann an der Modulgrenze sichtbar
+werden, dass Authentifizierung allein noch nicht genügt: Ein Reader muss auch
+fachlich vollständig provisioniert sein, bevor er ausleihen darf.
 */

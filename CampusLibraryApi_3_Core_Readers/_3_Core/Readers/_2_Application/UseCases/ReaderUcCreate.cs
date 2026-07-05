@@ -48,7 +48,10 @@ internal sealed class ReaderUcCreate(
          return Result<ReaderDto>.Failure(ReaderErrors.EmailAlreadyInUse);
 
       // Validate address input and create AddressVo.
-      var addressDto = dto.AddressDto;
+      if (dto.AddressDto == null)
+         return Result<ReaderDto>.Failure(ReaderErrors.AddressIsRequired);
+
+      var addressDto = dto.AddressDto!;
       var resultAddress = AddressVo.Create(
          street: addressDto.Street,
          postalCode: addressDto.PostalCode,

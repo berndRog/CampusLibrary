@@ -4,7 +4,7 @@ public sealed record ReaderCreateDto(
    string Firstname,
    string Lastname,
    string Email,
-   AddressDto AddressDto,
+   AddressDto? AddressDto,
    string Subject,
    string? Id
 );

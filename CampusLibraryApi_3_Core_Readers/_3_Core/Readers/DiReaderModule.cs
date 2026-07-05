@@ -13,6 +13,8 @@ public static class DiReaderModule {
       services.AddScoped<ReaderUcCreate>();
       services.AddScoped<ReaderUcUpdate>();
       services.AddScoped<ReaderUcDeactivate>();
+      services.AddScoped<ReaderUcCreateProvision>();
+      services.AddScoped<ReaderUcUpdateProfile>();
 
       return services;
    }

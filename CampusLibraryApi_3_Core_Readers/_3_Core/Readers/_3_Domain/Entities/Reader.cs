@@ -1,5 +1,6 @@
 using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._2_BuildingBlocks._3_Domain.Entities;
+using CampusLibraryApi._3_Core.Loans._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
 
@@ -13,19 +14,28 @@ public sealed class Reader : AggregateRoot {
    //--- properties ------------------------------------------------------------
    // inherited from Entity + Aggregate root base class
    // public Guid Id { get; private set; } 
-   // public DateTimeOffset CreatedAt { get; private set; }
-   // public DateTimeOffset UpdatedAt { get; private set; }
+   // public DateTime CreatedAt { get; private set; }
+   // public DateTime UpdatedAt { get; private set; }
 
    // Reader profile data.
+   // A provisioned reader starts with an incomplete profile.
    public string Firstname { get; private set; } = string.Empty;
    public string Lastname { get; private set; } = string.Empty;
    public EmailVo EmailVo { get; private set; } = null!;
-   public AddressVo AddressVo { get; private set; } = null!;
-   // is reader active or deactivated?
+   public AddressVo? AddressVo { get; private set; } = null!;
+
+   // Is reader active or deactivated?
    public bool IsActive { get; private set; } = true;
-   // Technical identity subject from the Identity Server.
+
+   // Technical identity subject from the IdentityAccessServer.
    public string Subject { get; private set; } = string.Empty;
 
+   // A reader may exist before the domain profile is completed.
+   public bool IsProfileCompleted =>
+      !string.IsNullOrWhiteSpace(Firstname) &&
+      !string.IsNullOrWhiteSpace(Lastname) &&
+      AddressVo is not null;
+   
    //--- constructors ----------------------------------------------------------
    // EF Core ctor
    private Reader() {
@@ -38,7 +48,7 @@ public sealed class Reader : AggregateRoot {
       string firstname,
       string lastname,
       EmailVo emailVo,
-      AddressVo addressVo,
+      AddressVo? addressVo,
       string subject
    ) {
       Id = id;
@@ -49,7 +59,7 @@ public sealed class Reader : AggregateRoot {
       Subject = subject;
    }
 
-   // --- static factory to create a Reader object ---------------------------
+   //--- static factory for classic administrative creation --------------------
    // Expected validation errors are returned as Result failures.
    public static Result<Reader> Create(
       Guid id,
@@ -82,10 +92,10 @@ public sealed class Reader : AggregateRoot {
          return Result<Reader>.Failure(ReaderErrors.InvalidEmail);
 
       if (addressVo is null)
-         return Result<Reader>.Failure(ReaderErrors.AddressRequired);
+         return Result<Reader>.Failure(ReaderErrors.AddressIsRequired);
 
       if (string.IsNullOrWhiteSpace(subject))
-         return Result<Reader>.Failure(ReaderErrors.SubjectRequired);
+         return Result<Reader>.Failure(CommonErrors.SubjectRequired);
       
       var reader = new Reader(
          id: id,
@@ -103,8 +113,44 @@ public sealed class Reader : AggregateRoot {
       return Result<Reader>.Success(reader);
    }
 
+   //--- static factory for Part 6 provisioning --------------------------------
+   // Creates the fachlicher Reader shell from trusted token claims.
+   // The fachliches Profil is completed afterwards by UpdateMyProfile(...).
+   public static Result<Reader> Provision(
+      Guid id,
+      string subject,
+      EmailVo emailVo,
+      DateTime createdAt
+   ) {
+      subject = subject.Trim();
+
+      if (id == Guid.Empty)
+         return Result<Reader>.Failure(ReaderErrors.IdRequired);
+
+      if (string.IsNullOrWhiteSpace(subject))
+         return Result<Reader>.Failure(CommonErrors.SubjectRequired);
+
+      if (emailVo is null)
+         return Result<Reader>.Failure(ReaderErrors.InvalidEmail);
+
+      var reader = new Reader(
+         id: id,
+         firstname: string.Empty,
+         lastname: string.Empty,
+         emailVo: emailVo,
+         addressVo: null,
+         subject: subject
+      );
+
+      var initResult = reader.Initialize(createdAt);
+      if (initResult.IsFailure)
+         return Result<Reader>.Failure(initResult.Error);
+
+      return Result<Reader>.Success(reader);
+   }
+
    //--- domain methods --------------------------------------------------------
-   // Partially updates mutable reader profile data.
+   // Partially updates mutable reader profile data used by administrative flows.
    // Null means: keep the current value.
    // Firstname and Subject are intentionally not changed here.
    public Result UpdateProfile(
@@ -139,6 +185,41 @@ public sealed class Reader : AggregateRoot {
 
       return Result.Success();
    }
+
+   // Completes or changes the self-service profile data entered by the reader.
+   // Subject and email remain bound to the IdentityAccessServer token.
+   public Result UpdateMyProfile(
+      string firstname,
+      string lastname,
+      AddressVo addressVo,
+      DateTime updatedAt
+   ) {
+      firstname = firstname.Trim();
+      lastname = lastname.Trim();
+
+      if (string.IsNullOrWhiteSpace(firstname))
+         return Result.Failure(ReaderErrors.FirstnameIsRequired);
+      if (firstname.Length is < 2 or > 80)
+         return Result.Failure(ReaderErrors.InvalidFirstname);
+
+      if (string.IsNullOrWhiteSpace(lastname))
+         return Result.Failure(ReaderErrors.LastnameIsRequired);
+      if (lastname.Length is < 2 or > 80)
+         return Result.Failure(ReaderErrors.InvalidLastname);
+      
+      if(addressVo is null)
+         return Result.Failure(ReaderErrors.AddressIsRequired);
+      
+      var touchResult = Touch(updatedAt);
+      if (touchResult.IsFailure)
+         return Result.Failure(touchResult.Error);
+
+      Firstname = firstname;
+      Lastname = lastname;
+      AddressVo = addressVo;
+
+      return Result.Success();
+   }
    
    public Result Deactivate(
       DateTime updatedAt
@@ -157,32 +238,32 @@ public sealed class Reader : AggregateRoot {
 Didaktik
 --------
 
-Reader ist das erste Aggregate Root der CampusLibrary-Domäne.
+Reader ist das fachliche Aggregate Root für Bibliotheksnutzer.
 
-Das Aggregate beschreibt den fachlichen Bibliotheksnutzer. Es ist
-nicht identisch mit dem technischen Benutzerkonto im Identity Server.
-Der technische Bezug wird über Subject hergestellt.
+Part 6 ergänzt eine wichtige Unterscheidung:
 
-Die Factory-Methode Create(...) stellt sicher, dass ein Reader nur in
-einem gültigen Zustand erzeugt wird. Erwartbare Regelverletzungen
-werden als Result zurückgegeben und nicht als Exceptions geworfen.
+- Ein technischer Benutzer entsteht im IdentityAccessServer.
+- Ein fachlicher Reader entsteht in der CampusLibraryApi.
+- Beide werden über Subject verbunden.
 
-UpdateProfile(...) führt ein partielles Update aus. Nur Lastname, EmailVo
-und AddressVo können geändert werden. Null bedeutet jeweils: den aktuellen
-Wert beibehalten. Firstname und Subject bleiben unverändert.
+Create(...) bleibt der klassische Erzeugungsweg für vollständig bekannte
+Reader-Stammdaten. Provision(...) ist der neue Part-6-Erzeugungsweg:
+Subject und Email kommen aus dem Token, das fachliche Profil ist zunächst
+unvollständig.
 
-Die Value Objects EmailVo und AddressVo kapseln eigene Validierungs-
-und Normalisierungsregeln. Dadurch bleibt Reader auf seine fachliche
-Hauptverantwortung konzentriert.
+UpdateMyProfile(...) ergänzt danach Vorname und Nachname. Subject und Email
+werden dabei nicht aus einem Formular übernommen und nicht verändert.
+
+IsProfileCompleted wird berechnet. Ein provisionierter Reader darf bereits
+existieren, aber fachliche Aktionen wie Ausleihen können zusätzlich verlangen,
+dass das Profil vollständig ist.
 
 Lernziele
 ---------
 
-- Aggregate Root als Einstiegspunkt eines Konsistenzbereichs verstehen
-- Fachlichen Reader vom technischen Benutzerkonto unterscheiden
-- Factory-Methode zur Erzeugung gültiger Domain-Objekte einsetzen
-- Änderungsmethoden am Aggregate statt direkte Setter verwenden
-- partielle Updates mit nullable Eingabewerten modellieren
-- Value Objects zur Kapselung fachlicher Werte verwenden
-- Result als Fehlerstrategie in der Domain anwenden
+- technischen Benutzer und fachliches Aggregate unterscheiden
+- Provisioning als idempotenten Übergang modellieren
+- vertrauenswürdige Token-Daten von UI-Profildaten trennen
+- unvollständige fachliche Profile explizit modellieren
+- Aggregate-Methoden statt öffentliche Setter verwenden
 */
