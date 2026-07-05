@@ -3,7 +3,6 @@ using CampusLibraryApi._2_BuildingBlocks._3_Domain.Errors;
 namespace CampusLibraryApi._3_Core.Loans._3_Domain.Errors;
 
 public static class CommonErrors {
-
    
    public static readonly DomainError ReaderIdRequired =
       new(
@@ -19,6 +18,14 @@ public static class CommonErrors {
          "The reader is deactivated."
       );
    
+
+   public static readonly DomainError ReaderProfileIncomplete =
+      new(
+         WebErrorStatus.BadRequest,
+         "Contract: Reader Profile Incomplete",
+         "The reader profile is incomplete."
+      );
+
    public static readonly DomainError BookItemIdRequired =
       new(
          WebErrorStatus.BadRequest,
@@ -39,5 +46,57 @@ public static class CommonErrors {
          "Contract: Book Item Not Found",
          "The book item was not found."
       );
+   
+   public static readonly DomainError SubjectRequired =
+      new(
+         WebErrorStatus.BadRequest,
+         "Reader: SubjectRequired",
+         "Subject is required."
+      );
+   
+   public static readonly DomainError InvalidIdentitySubject =
+      new(
+         WebErrorStatus.BadRequest,
+         "Reader: Invalid IdentitySubject",
+         "The provided sub is not valid."
+      );
+   
+   public static readonly DomainError IdentityUnauthenticated =
+      new(
+         WebErrorStatus.Unauthorized,
+         "Reader: IdentityUnauthenticated",
+         "The current request is not authenticated."
+      );
+   
+   public static readonly DomainError AccessNotAllowed =
+      new(
+         WebErrorStatus.Forbidden,
+         "Reader: AccessNotAllowed",
+         "The current user is not allowed to perform this reader operation."
+      );
+
+   public static readonly DomainError NotProvisioned =
+      new(
+         WebErrorStatus.NotFound,
+         Title: "Reader: Is not provisioned",
+         Message: "No reader with the given sub exists."
+      );
+
+   
+   public static readonly DomainError IdentityEmailRequired =
+      new(
+         WebErrorStatus.BadRequest,
+         "Reader: IdentityEmailRequired",
+         "The authenticated user must provide an email claim."
+      );
+   
+   public static readonly DomainError TimestampInvalid =
+      new(
+         WebErrorStatus.BadRequest,
+         "Reader: Timestamp is invalid",
+         "The timestamp from IA-Server is invalid."
+      );
+   
+
    
 }

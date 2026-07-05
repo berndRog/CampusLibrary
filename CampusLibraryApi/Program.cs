@@ -37,6 +37,9 @@ public class Program {
       // API versioning 
       builder.Services.AddApiReaderAndVersioning();
       
+      // Authentication and authorization
+      builder.Services.AddCampusLibraryAuthentication(builder.Configuration);
+
       // Swagger
       builder.Services.AddSwagger();
 
@@ -88,6 +91,9 @@ public class Program {
       }
 
       //app.UseHttpsRedirection();
+
+      app.UseAuthentication();
+      app.UseAuthorization();
       
       app.MapControllers();
 

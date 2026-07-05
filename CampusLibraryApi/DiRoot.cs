@@ -1,10 +1,73 @@
+using System.Security.Claims;
 using Asp.Versioning;
+using CampusLibraryApi._1_Web.Security;
+using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi.Configure;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using Swashbuckle.AspNetCore.SwaggerGen;
+
 namespace CampusLibraryApi;
 
 public static class DiRoot {
+
+   // Add JWT bearer authentication and simple CampusLibrary policies.
+   public static IServiceCollection AddCampusLibraryAuthentication(
+      this IServiceCollection services,
+      IConfiguration configuration
+   ) {
+      var authority = configuration["IdentityAccessServer:Authority"]
+         ?? configuration["IdentityAccessServer:IssuerUri"]
+         ?? "https://localhost:7010";
+
+      var audience = configuration["IdentityAccessServer:Audience"]
+         ?? configuration["IdentityAccessServer:Resource"]
+         ?? "campuslibrary-api";
+
+      var requireHttpsMetadata = configuration.GetValue(
+         "IdentityAccessServer:RequireHttpsMetadata",
+         false
+      );
+
+      services.AddScoped<IIdentityGateway, IdentityGatewayHttpContext>();
+
+      services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+         .AddJwtBearer(options => {
+            options.Authority = authority;
+            options.Audience = audience;
+            options.RequireHttpsMetadata = requireHttpsMetadata;
+
+            options.TokenValidationParameters = new TokenValidationParameters {
+               ValidateIssuer = true,
+               ValidateAudience = true,
+               ValidateLifetime = true,
+               ValidateIssuerSigningKey = true,
+               NameClaimType = ClaimTypes.Name,
+               RoleClaimType = "role"
+            };
+         });
+
+      services.AddAuthorization(options => {
+         options.AddPolicy(
+            CampusLibraryPolicies.Reader,
+            policy => policy.RequireAssertion(context =>
+               context.User.Identity?.IsAuthenticated == true &&
+               HasRole(context.User, "Reader", "student")
+            )
+         );
+
+         options.AddPolicy(
+            CampusLibraryPolicies.Employee,
+            policy => policy.RequireAssertion(context =>
+               context.User.Identity?.IsAuthenticated == true &&
+               HasRole(context.User, "Employee")
+            )
+         );
+      });
+
+      return services;
+   }
    
    // Add API versioning to services
    public static IServiceCollection AddApiReaderAndVersioning(
@@ -65,5 +128,22 @@ public static class DiRoot {
       });
 
       return services;
+   }
+
+   private static bool HasRole(
+      ClaimsPrincipal user,
+      params string[] acceptedRoles
+   ) {
+      foreach (var role in acceptedRoles) {
+         if (user.IsInRole(role))
+            return true;
+
+         if (user.Claims.Any(claim =>
+                (claim.Type == ClaimTypes.Role || claim.Type == "role" || claim.Type == "roles") &&
+                string.Equals(claim.Value, role, StringComparison.OrdinalIgnoreCase)))
+            return true;
+      }
+
+      return false;
    }
 }
