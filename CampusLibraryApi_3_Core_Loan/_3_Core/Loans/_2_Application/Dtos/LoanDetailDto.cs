@@ -18,12 +18,9 @@ public sealed record LoanDetailDto(
    string Isbn,
    bool BookIsActive,
    bool IsAvailableForLoan,
-   
+
    DateTime LoanDate,
    DateTime DueDate,
-   DateTime? ReturnedAt,
-
-   int Status,
    int RenewalCount,
 
    bool IsOverdue,

@@ -22,14 +22,22 @@ public interface IReaderClient {
       CancellationToken ct = default
    );
 
-   Task<Result<ReaderDto>> CreateAsync(
-      ReaderCreateDto dto,
+   Task<Result<ReaderDto>> GetMeAsync(
       CancellationToken ct = default
    );
 
-   Task<Result<ReaderDto>> UpdateAsync(
-      Guid id,
-      ReaderUpdateDto dto,
+   Task<Result<ReaderProvisionMeDto>> ProvisionMeAsync(
+      string? id = null,
+      CancellationToken ct = default
+   );
+
+   Task<Result<ReaderDto>> UpdateMeProfileAsync(
+      ReaderProfileMeDto dto,
+      CancellationToken ct = default
+   );
+
+   Task<Result<ReaderDto>> UpdateMeAsync(
+      ReaderUpdateMeDto dto,
       CancellationToken ct = default
    );
 

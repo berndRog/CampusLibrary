@@ -7,39 +7,45 @@ namespace CampusLibraryApi._3_Core.Readers._2_Application.UseCases;
 // Facade for all Reader write and self-service use cases.
 // Controllers depend on this facade instead of depending on every single use case.
 internal sealed class ReaderUseCases(
-   ReaderUcCreate createUc,
-   ReaderUcUpdate updateUc,
-   ReaderUcDeactivate deactivatedUc,
-   ReaderUcCreateProvision createProvisionUc,
-   ReaderUcUpdateProfile updateProfileUc
-) : IReaderUseCases {
+   //ReaderUcCreate createUc,
+   //ReaderUcUpdate updateUc,
+   ReaderUcCreateMeProvision createMeProvisionUc,
+   ReaderUcUpdateMeProfile updateMeProfileUc,
+   ReaderUcUpdateMe updateMeUc,
+   ReaderUcDeactivate deactivatedUc
+   ) : IReaderUseCases {
 
-   public Task<Result<ReaderDto>> CreateAsync(
-      ReaderCreateDto dto,
+   // public Task<Result<ReaderDto>> CreateAsync(
+   //    ReaderCreateDto dto,
+   //    CancellationToken ct
+   // ) => createUc.ExecuteAsync(dto, ct);
+   //
+   // public Task<Result<ReaderDto>> UpdateAsync(
+   //    Guid id,
+   //    ReaderUpdateDto dto,
+   //    CancellationToken ct
+   // ) => updateUc.ExecuteAsync(id, dto, ct);
+   
+   public Task<Result<ReaderProvisionMeDto>> ProvisionMeAsync(
+      string? id,
       CancellationToken ct
-   ) => createUc.ExecuteAsync(dto, ct);
+   ) => createMeProvisionUc.ExecuteAsync(id, ct);
 
-   public Task<Result<ReaderDto>> UpdateAsync(
-      Guid id,
-      ReaderUpdateDto dto,
+   public Task<Result<ReaderDto>> UpdateMeProfileAsync(
+      ReaderProfileMeDto meDto,
       CancellationToken ct
-   ) => updateUc.ExecuteAsync(id, dto, ct);
-
+   ) => updateMeProfileUc.ExecuteAsync(meDto, ct);
+   
+   public Task<Result<ReaderDto>> UpdateMeAsync(
+      ReaderUpdateMeDto meDto,
+      CancellationToken ct
+   ) => updateMeUc.ExecuteAsync(meDto, ct);
+   
    public Task<Result> DeactivateAsync(
       Guid id,
       CancellationToken ct
    ) => deactivatedUc.ExecuteAsync(id, ct);
 
-
-   public Task<Result<ReaderProvisionDto>> CreateProvisionAsync(
-      string? id,
-      CancellationToken ct
-   ) => createProvisionUc.ExecuteAsync(id, ct);
-
-   public Task<Result<ReaderDto>> UpdateProfileAsync(
-      ReaderProfileUpdateDto dto,
-      CancellationToken ct
-   ) => updateProfileUc.ExecuteAsync(dto, ct);
 }
 
 /*

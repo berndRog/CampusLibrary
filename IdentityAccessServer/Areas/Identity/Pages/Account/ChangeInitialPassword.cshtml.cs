@@ -97,7 +97,8 @@ public sealed class ChangeInitialPasswordModel : PageModel {
       }
 
       user.MustChangePassword = false;
-      user.UpdatedAt = DateTimeOffset.UtcNow;
+      user.UpdatedAt = DateTime.UtcNow;
+      
       var updateResult = await _userManager.UpdateAsync(user);
       if (!updateResult.Succeeded) {
          foreach (var error in updateResult.Errors)

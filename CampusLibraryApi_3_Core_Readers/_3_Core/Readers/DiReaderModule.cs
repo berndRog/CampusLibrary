@@ -10,11 +10,11 @@ public static class DiReaderModule {
       this IServiceCollection services
    ) {
       services.AddScoped<IReaderUseCases, ReaderUseCases>();
-      services.AddScoped<ReaderUcCreate>();
-      services.AddScoped<ReaderUcUpdate>();
+      services.AddScoped<ReaderUcCreateMeProvision>();
+      services.AddScoped<ReaderUcUpdateMeProfile>();
+      services.AddScoped<ReaderUcUpdateMe>();
       services.AddScoped<ReaderUcDeactivate>();
-      services.AddScoped<ReaderUcCreateProvision>();
-      services.AddScoped<ReaderUcUpdateProfile>();
+
 
       return services;
    }

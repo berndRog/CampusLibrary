@@ -5,7 +5,6 @@ using CampusLibraryApi._3_Core.Catalog._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Loans._1_Ports.Inbound;
 using CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Loans._2_Application.Dtos;
-using CampusLibraryApi._3_Core.Loans._3_Domain.Enums;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Policies;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
@@ -68,8 +67,6 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
       createdLoanDto.Id.Should().Be(Guid.Parse(seed.Loan1Id));
       createdLoanDto.ReaderId.Should().Be(reader1.Id);
       createdLoanDto.BookItemId.Should().Be(bookItem1.Id);
-      createdLoanDto.ReturnedAt.Should().BeNull();
-      createdLoanDto.Status.Should().Be((int)LoanStatus.Borrowed);
       createdLoanDto.RenewalCount.Should().Be(0);
 
       createdLoanDto.DueDate.Should().Be(
@@ -90,8 +87,6 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
       actualLoanDto.Id.Should().Be(createdLoanDto.Id);
       actualLoanDto.ReaderId.Should().Be(reader1.Id);
       actualLoanDto.BookItemId.Should().Be(bookItem1.Id);
-      actualLoanDto.Status.Should().Be((int)LoanStatus.Borrowed);
-      actualLoanDto.ReturnedAt.Should().BeNull();
    }
 
    [Fact]
@@ -277,7 +272,7 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
 
       // Assert
       resultBorrow.IsFailure.Should().BeTrue();
-      resultBorrow.Error.Should().Be(LoanErrors.BookItemNotAvailable);
+      resultBorrow.Error.Should().Be(CommonErrors.BookItemNotFound);
 
       var resultFind = await readModel.FindByIdAsync(
          id: Guid.Parse(seed.Loan1Id),
@@ -338,11 +333,78 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
       resultBorrow.IsFailure.Should().BeTrue();
       resultBorrow.Error.Should().Be(LoanErrors.BookItemAlreadyBorrowed);
    }
+
+   [Fact]
+   public async Task BorrowAsync_same_book_different_item_already_borrowed_by_reader_fails() {
+      using var scope = Root.CreateDefaultScope();
+      var ct = TestContext.Current.CancellationToken;
+      var useCases = scope.ServiceProvider.GetRequiredService<ILoanUseCases>();
+      var readModel = scope.ServiceProvider.GetRequiredService<ILoanReadModel>();
+      var readerRepository = scope.ServiceProvider.GetRequiredService<IReaderRepository>();
+      var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
+      var loanRepository = scope.ServiceProvider.GetRequiredService<ILoanRepository>();
+      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
+
+      // Arrange
+      var readers = seed.Readers;
+      var books = seed.Books;
+      var existingLoan = seed.Loan1();
+      var book1 = books[0];
+
+      var secondBookItemOfSameBook = book1.BookItems.Single(bookItem =>
+         bookItem.Id == Guid.Parse(seed.BookItem2Id)
+      );
+
+      readerRepository.AddRange(
+         readers: readers
+      );
+
+      bookRepository.AddRange(
+         books: books
+      );
+
+      loanRepository.Add(
+         loan: existingLoan
+      );
+
+      await unitOfWork.SaveAllChangesAsync(
+         "Readers, books and existing loan inserted",
+         ct
+      );
+
+      unitOfWork.ClearChangeTracker();
+
+      const string newLoanId = "a1000010-0000-0000-0000-000000000000";
+
+      var dto = new LoanCreateDto(
+         Id: newLoanId,
+         ReaderId: existingLoan.ReaderId,
+         BookItemId: secondBookItemOfSameBook.Id
+      );
+
+      // Act
+      var resultBorrow = await useCases.BorrowAsync(
+         dto: dto,
+         ct: ct
+      );
+
+      // Assert
+      resultBorrow.IsFailure.Should().BeTrue();
+      resultBorrow.Error.Should().Be(LoanErrors.BookAlreadyBorrowedByReader);
+
+      var resultFind = await readModel.FindByIdAsync(
+         id: Guid.Parse(newLoanId),
+         ct: ct
+      );
+
+      resultFind.IsFailure.Should().BeTrue();
+   }
    #endregion
 
    #region LoanUcReturnAtDesk
    [Fact]
-   public async Task ReturnAtDeskAsync_ok_persists_returned_status_and_returned_at() {
+   public async Task ReturnAtDeskAsync_ok_deletes_loan() {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var useCases = scope.ServiceProvider.GetRequiredService<ILoanUseCases>();
@@ -376,8 +438,6 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
       var returnedLoanDto = resultReturn.Value;
 
       returnedLoanDto.Id.Should().Be(loan1.Id);
-      returnedLoanDto.Status.Should().Be((int)LoanStatus.Returned);
-      returnedLoanDto.ReturnedAt.Should().NotBeNull();
 
       unitOfWork.ClearChangeTracker();
 
@@ -386,9 +446,15 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
          ct: ct
       );
 
-      actualLoan.Should().NotBeNull();
-      actualLoan!.Status.Should().Be(LoanStatus.Returned);
-      actualLoan.ReturnedAt.Should().NotBeNull();
+      actualLoan.Should().BeNull();
+
+      var secondReturnResult = await useCases.ReturnAtDeskAsync(
+         loanId: loan1.Id,
+         ct: ct
+      );
+
+      secondReturnResult.IsFailure.Should().BeTrue();
+      secondReturnResult.Error.Should().Be(LoanErrors.LoanNotFound);
    }
 
    [Fact]
@@ -428,50 +494,6 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
       resultReturn.Error.Should().Be(LoanErrors.LoanIdRequired);
    }
 
-   [Fact]
-   public async Task ReturnAtDeskAsync_already_returned_loan_fails() {
-      using var scope = Root.CreateDefaultScope();
-      var ct = TestContext.Current.CancellationToken;
-      var useCases = scope.ServiceProvider.GetRequiredService<ILoanUseCases>();
-      var loanRepository = scope.ServiceProvider.GetRequiredService<ILoanRepository>();
-      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
-
-      // Arrange
-      var loan1 = seed.Loan1();
-
-      loanRepository.Add(
-         loan: loan1
-      );
-
-      await unitOfWork.SaveAllChangesAsync(
-         "Loan inserted",
-         ct
-      );
-
-      var resultReturned = loan1.ReturnAtDesk(
-         returnedAt: loan1.LoanDate.AddDays(1)
-      );
-
-      resultReturned.IsSuccess.Should().BeTrue();
-
-      await unitOfWork.SaveAllChangesAsync(
-         "Loan returned",
-         ct
-      );
-
-      unitOfWork.ClearChangeTracker();
-
-      // Act
-      var resultReturn = await useCases.ReturnAtDeskAsync(
-         loanId: loan1.Id,
-         ct: ct
-      );
-
-      // Assert
-      resultReturn.IsFailure.Should().BeTrue();
-      resultReturn.Error.Should().Be(LoanErrors.LoanAlreadyReturned);
-   }
    #endregion
 
    #region LoanUcRenew
@@ -511,7 +533,6 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
       var renewedLoanDto = resultRenew.Value;
 
       renewedLoanDto.Id.Should().Be(loan1.Id);
-      renewedLoanDto.Status.Should().Be((int)LoanStatus.Borrowed);
       renewedLoanDto.RenewalCount.Should().Be(1);
       renewedLoanDto.DueDate.Should().Be(
          oldDueDate.AddDays(LoanRules.StandardRenewalDays)
@@ -566,51 +587,6 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
       // Assert
       resultRenew.IsFailure.Should().BeTrue();
       resultRenew.Error.Should().Be(LoanErrors.LoanIdRequired);
-   }
-
-   [Fact]
-   public async Task RenewAsync_returned_loan_fails() {
-      using var scope = Root.CreateDefaultScope();
-      var ct = TestContext.Current.CancellationToken;
-      var useCases = scope.ServiceProvider.GetRequiredService<ILoanUseCases>();
-      var loanRepository = scope.ServiceProvider.GetRequiredService<ILoanRepository>();
-      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
-
-      // Arrange
-      var loan1 = seed.Loan1();
-
-      loanRepository.Add(
-         loan: loan1
-      );
-
-      await unitOfWork.SaveAllChangesAsync(
-         "Loan inserted",
-         ct
-      );
-
-      var resultReturned = loan1.ReturnAtDesk(
-         returnedAt: loan1.LoanDate.AddDays(1)
-      );
-
-      resultReturned.IsSuccess.Should().BeTrue();
-
-      await unitOfWork.SaveAllChangesAsync(
-         "Loan returned",
-         ct
-      );
-
-      unitOfWork.ClearChangeTracker();
-
-      // Act
-      var resultRenew = await useCases.RenewAsync(
-         loanId: loan1.Id,
-         ct: ct
-      );
-
-      // Assert
-      resultRenew.IsFailure.Should().BeTrue();
-      resultRenew.Error.Should().Be(LoanErrors.LoanAlreadyReturned);
    }
 
    [Fact]

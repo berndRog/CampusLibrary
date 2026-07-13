@@ -18,7 +18,15 @@ public static class ClaimDestinations {
       // Mandatory OIDC subject
       if (claim.Type == AuthClaims.Subject)
          return new[] { Destinations.IdentityToken, Destinations.AccessToken };
-  
+
+      // email:
+      // - useful for clients when the email scope was requested
+      // - useful for APIs as technical username/email context
+      if (claim.Type == AuthClaims.Email)
+         return principal.HasScope(Scopes.Email)
+            ? new[] { Destinations.IdentityToken, Destinations.AccessToken }
+            : new[] { Destinations.AccessToken };
+
       // preferred_username:
       // - always in access token for APIs
       // - only in identity token when the client requested profile scope
@@ -26,26 +34,27 @@ public static class ClaimDestinations {
          return principal.HasScope(Scopes.Profile)
             ? new[] { Destinations.IdentityToken, Destinations.AccessToken }
             : new[] { Destinations.AccessToken };
-      
-      // role -> UI-Navigation / AccessToken (für APIs).
+
+      // role -> UI navigation in the client and authorization in APIs.
       if (claim.Type == AuthClaims.Role)
+         return new[] { Destinations.AccessToken, Destinations.IdentityToken };
+
+      // account_type is needed by the SSR client as a stable fallback when it
+      // decides whether the post-login Reader provisioning flow must start.
+      if (claim.Type == AuthClaims.AccountType)
          return new[] { Destinations.AccessToken, Destinations.IdentityToken };
 
       if (claim.Type == AuthClaims.MustChangePassword)
          return new[] { Destinations.AccessToken, Destinations.IdentityToken };
-      
+
       // Lifecycle / housekeeping (debuggable in id_token, usable in API)
-      if (claim.Type is AuthClaims.CreatedAt or AuthClaims.UpdatedAt) 
+      if (claim.Type is AuthClaims.CreatedAt or AuthClaims.UpdatedAt)
          return new[] { Destinations.AccessToken, Destinations.IdentityToken };
-      
+
       //--- AccessToken only ---------------------------------------------------
       // Domain-specific claims → access token only
-      if (claim.Type 
-          is AuthClaims.AccountType
-          or AuthClaims.AdminRights
-          //or "customer_id"
-          //or "employee_id"
-         ) return new[] { Destinations.AccessToken };
+      if (claim.Type == AuthClaims.AdminRights)
+         return new[] { Destinations.AccessToken };
 
       // Everything else is excluded by default
       return Array.Empty<string>();
@@ -61,23 +70,11 @@ Ziel:
    Merksätze:
 1) Access Token = für APIs (Autorisierung, fachliche Checks)
 2) ID Token     = für Clients/UI (Anzeige, Login-Kontext)
-3) Minimale Profile:
-   - Wir geben nur E-Mail + preferred_username als "Profile" aus.
+3) Client-relevante Identität:
+   - Email und preferred_username werden nur für passende Scopes ausgegeben.
+   - role und account_type stehen dem SSR-Client im ID Token zur Verfügung.
 4) AdminRights gehört NICHT in den ID Token:
    - UI kann es aus dem Access Token / API ableiten,
 - verhindert unnötige Daten im Browser-Token.
-
-   Übungsidee:
-   - Lass die Studierenden testweise AdminRights in den ID Token legen
-   und diskutiert anschließend Sicherheits- und Datenminimierungsaspekte.
 -----------------------------------------------------------------------
 */
-
-
-
-
-
-
-
-
-

@@ -1,10 +1,11 @@
 @page "/catalog/books/{BookId:guid}/borrow"
+@attribute [Authorize(Roles = CampusLibraryRoles.Reader)]
 @rendermode InteractiveServer
 @inherits BasePage
 
 @inject IBookClient BookClient
 @inject ILoanClient LoanClient
-@inject ICurrentUserProvider CurrentUserProvider
+@inject IReaderClient ReaderClient
 @inject NavigationManager Navigation
 
 <PageTitle>Buch ausleihen</PageTitle>
@@ -13,19 +14,30 @@
 
 <ErrorAlert Error="Error" />
 
-@if(IsLoading || _currentUser is null) {
+@if(IsLoading) {
    <p class="text-muted">Ausleihdaten werden geladen...</p>
 }
-else if(!_currentUser.IsReader) {
-   <p>
-      Das Ausleihen von Büchern ist für die Leserperspektive vorgesehen.
-      In Teil 5 wird diese Perspektive über DevIdentity simuliert.
-   </p>
-   <button class="btn btn-outline-secondary" @onclick="Cancel">Zurück zum Katalog</button>
+else if(Error is not null) {
+   @* ErrorAlert above displays the API error. *@
+}
+else if(_readerProfile?.IsProfileCompleted != true) {
+   <div class="alert alert-warning" role="alert">
+      Bitte vervollständigen Sie zuerst Ihr Profil, bevor Sie Bücher ausleihen.
+   </div>
+   <a class="btn btn-primary" href="/readers/profile">Profil vervollständigen</a>
 }
 else if(_book is null) {
    <p>Buch nicht gefunden.</p>
    <button class="btn btn-outline-secondary" @onclick="Cancel">Zurück zum Katalog</button>
+}
+else if(_alreadyBorrowedByReader) {
+   <div class="alert alert-info" role="alert">
+      Sie haben bereits ein Exemplar dieses Buchs ausgeliehen.
+   </div>
+
+   <button class="btn btn-outline-secondary" @onclick="Cancel">
+      Zurück zum Katalog
+   </button>
 }
 else {
    <div class="card shadow-sm mb-3">
@@ -60,13 +72,10 @@ else {
 
          <dl class="row mb-0">
             <dt class="col-sm-3">Name</dt>
-            <dd class="col-sm-9">@_currentUser.DisplayName</dd>
+            <dd class="col-sm-9">@_readerProfile.Firstname @_readerProfile.Lastname</dd>
 
             <dt class="col-sm-3">E-Mail</dt>
-            <dd class="col-sm-9">@_currentUser.Email</dd>
-
-            <dt class="col-sm-3">Reader Id</dt>
-            <dd class="col-sm-9"><code>@_currentUser.ReaderId</code></dd>
+            <dd class="col-sm-9">@_readerProfile.Email</dd>
          </dl>
       </div>
    </div>
@@ -120,6 +129,8 @@ else {
 
    private BookDetailDto? _book;
 
+   private ReaderDto? _readerProfile;
+
    private IReadOnlyList<BookItemDto> _availableItems = [];
 
    private int _totalItems;
@@ -128,13 +139,18 @@ else {
 
    private Guid _selectedBookItemId;
 
-   private CurrentUserInfo? _currentUser;
+   private bool _alreadyBorrowedByReader;
 
    protected override async Task OnInitializedAsync() {
       StartLoading();
       Error = null;
 
-      _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
+      await LoadReaderProfileAsync();
+
+      if(Error is not null) {
+         StopLoading();
+         return;
+      }
 
       Result<BookDetailDto> result = await BookClient.GetByIdAsync(
          id: BookId
@@ -151,17 +167,56 @@ else {
       StopLoading();
    }
 
+   private async Task LoadReaderProfileAsync() {
+      // Provisioning is performed centrally by /entry after OIDC login.
+      // This page only loads the already existing fachlicher Reader.
+      Result<ReaderDto> readerResult = await ReaderClient.GetMeAsync();
+      if(readerResult.IsSuccess && readerResult.Value is not null)
+         _readerProfile = readerResult.Value;
+      else
+         Error = readerResult.Error;
+   }
+
    private async Task RefreshAvailableBookItemsAsync() {
       if(_book is null)
          return;
 
       Result<IEnumerable<LoanListItemDto>> loanResult = await LoanClient.GetBorrowedAsync();
 
-      HashSet<Guid> borrowedBookItemIds = loanResult.IsSuccess && loanResult.Value is not null
-         ? loanResult.Value.Select(loan => loan.BookItemId).ToHashSet()
-         : [];
+      if(loanResult.IsFailure || loanResult.Value is null) {
+         Error = loanResult.Error;
+         _availableItems = [];
+         _borrowedItems = 0;
+         return;
+      }
+
+      IReadOnlyList<LoanListItemDto> borrowedLoans =
+         loanResult.Value.ToList();
+
+      HashSet<Guid> borrowedBookItemIds = borrowedLoans
+         .Select(loan => loan.BookItemId)
+         .ToHashSet();
 
       IReadOnlyList<BookItemDto> bookItems = _book.BookItems ?? [];
+
+      if(_readerProfile is not null) {
+         Result<IEnumerable<LoanListItemDto>> myLoansResult =
+            await LoanClient.GetMyBorrowedAsync();
+
+         if(myLoansResult.IsFailure || myLoansResult.Value is null) {
+            Error = myLoansResult.Error;
+            _availableItems = [];
+            return;
+         }
+
+         HashSet<Guid> borrowedBookItemIdsByReader = myLoansResult.Value
+            .Select(loan => loan.BookItemId)
+            .ToHashSet();
+
+         _alreadyBorrowedByReader = bookItems.Any(item =>
+            borrowedBookItemIdsByReader.Contains(item.Id)
+         );
+      }
 
       _totalItems = bookItems.Count;
 
@@ -185,13 +240,18 @@ else {
    }
 
    private async Task ConfirmBorrowAsync() {
-      if(_currentUser?.ReaderId is null) {
+      if(_alreadyBorrowedByReader) {
          Error = new ApiError(
-            Status: 400,
-            Title: "Missing reader",
-            Detail: "The current reader has no ReaderId. Check DevIdentity or the login claims."
+            Status: 409,
+            Title: "Book already borrowed",
+            Detail: "You already borrowed another book item of this book."
          );
 
+         return;
+      }
+
+      if(_readerProfile?.IsProfileCompleted != true) {
+         Navigation.NavigateTo("/readers/profile");
          return;
       }
 
@@ -208,12 +268,11 @@ else {
       StartLoading();
       Error = null;
 
-      LoanCreateDto dto = new(
-         ReaderId: _currentUser.ReaderId.Value,
+      LoanBorrowMeDto dto = new(
          BookItemId: _selectedBookItemId
       );
 
-      Result<LoanDto> result = await LoanClient.BorrowAsync(
+      Result<LoanDto> result = await LoanClient.BorrowMyAsync(
          dto: dto
       );
 
@@ -224,7 +283,7 @@ else {
       }
 
       StopLoading();
-      Navigation.NavigateTo("/my/loans");
+      Navigation.NavigateTo("/loans/me");
    }
 
    private void Cancel() {

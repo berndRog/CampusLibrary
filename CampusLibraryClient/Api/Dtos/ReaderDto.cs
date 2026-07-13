@@ -7,5 +7,6 @@ public sealed record ReaderDto(
    string? Email,
    AddressDto? AddressDto,
    bool IsActive,
-   string? Subject
+   string? Subject,
+   bool IsProfileCompleted
 );

@@ -1,0 +1,262 @@
+@page "/readers/{ReaderId:guid}"
+@attribute [Authorize(Roles = CampusLibraryRoles.Employee)]
+@rendermode InteractiveServer
+@inherits BasePage
+@* Part 6: employee page for viewing one reader and deactivating the reader. *@
+
+@inject IReaderClient ReaderClient
+@inject ILoanClient LoanClient
+@inject ICurrentUserProvider CurrentUserProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Leserdetails</PageTitle>
+
+<ErrorAlert Error="Error" />
+
+@if(_saved) {
+   <div class="alert alert-success" role="alert">
+      Leser wurde deaktiviert.
+   </div>
+}
+
+@if(IsLoading || _currentUser is null) {
+   <p class="text-muted">Leser wird geladen...</p>
+}
+else if(!_currentUser.IsEmployee) {
+   <p>Diese Seite ist für Mitarbeitende vorgesehen.</p>
+}
+else if(_reader is null) {
+   <p>Kein Leser gefunden.</p>
+}
+else {
+   <div class="card shadow-sm mb-3">
+      <div class="card-body">
+         
+         <dl class="row mb-0">
+            <dt class="col-sm-3">Name</dt>
+            <dd class="col-sm-9">@Display(_reader.Firstname) @Display(_reader.Lastname)</dd>
+
+            <dt class="col-sm-3">E-Mail</dt>
+            <dd class="col-sm-9">@Display(_reader.Email)</dd>
+         </dl>
+         
+         <dl class="row mb-0">
+            <dt class="col-sm-3">Adresse</dt>
+            <dd class="col-sm-9">@Display(_reader.AddressDto?.Street), @Display(_reader.AddressDto?.PostalCode) @Display(_reader.AddressDto?.City)</dd>
+         </dl>
+      </div>
+   </div>
+
+   <div class="card border-danger shadow-sm mb-3">
+      <div class="card-body">
+         
+         @if(HasCurrentLoans) {
+            <dl class="row mb-0">
+               <dt class="col-sm-3">Aktuelle Ausleihen</dt>
+               <dd class="col-sm-9">
+                  @if(HasCurrentLoans) {
+                     <span class="badge text-bg-warning">@_currentLoans.Count</span>
+                  }
+                  else {
+                     <span class="badge text-bg-success">0</span>
+                  }
+               </dd>
+            </dl>
+            <div class="table-responsive mb-3">
+               <table class="table table-sm align-middle mb-0">
+                  <thead>
+                     <tr>
+                        <th scope="col">Titel</th>
+                        <th scope="col">Fällig am</th>
+                     </tr>
+                  </thead>
+                  <tbody>
+                     @foreach(LoanListItemDto loan in _currentLoans) {
+                        <tr>
+                           <td>@Display(loan.Title)</td>
+                           <td>@loan.DueDate.ToLocalTime().ToString("dd.MM.yyyy")</td>
+                        </tr>
+                     }
+                  </tbody>
+               </table>
+            </div>
+         }
+
+         @if(_reader.IsActive) {
+
+            @if(HasCurrentLoans) {
+               <div class="alert alert-warning" role="alert">
+                  Leser kann erst deaktiviert werden, wenn alle ausgeliehenen
+                  Exemplare zurückgegeben wurden.
+               </div>
+
+               <button class="btn btn-danger" disabled>
+                  Leser deaktivieren
+               </button>
+            }
+            else if(!_confirmDeactivate) {
+               <button class="btn btn-danger" @onclick="ShowDeactivateConfirmation" disabled="@IsLoading">
+                  Leser deaktivieren
+               </button>
+            }
+            else {
+               <div class="alert alert-warning" role="alert">
+                  Soll dieser Reader wirklich deaktiviert werden?
+               </div>
+
+               <div class="d-flex flex-wrap gap-2">
+                  <button class="btn btn-danger" @onclick="DeactivateAsync" disabled="@IsLoading">
+                     Ja, deaktivieren
+                  </button>
+                  <button class="btn btn-outline-secondary" @onclick="CancelDeactivate" disabled="@IsLoading">
+                     Abbrechen
+                  </button>
+               </div>
+            }
+         }
+         else {
+            <p class="mb-0">Leser ist deaktiviert.</p>
+         }
+      </div>
+   </div>
+
+   <button class="btn btn-outline-secondary" @onclick="BackToList">
+      Zurück zur Leserliste
+   </button>
+}
+
+@code {
+
+   [Parameter] public Guid ReaderId { get; set; }
+
+   private CurrentUserInfo? _currentUser;
+
+   private ReaderDto? _reader;
+
+   private IReadOnlyList<LoanListItemDto> _currentLoans = [];
+
+   private bool _confirmDeactivate;
+
+   private bool _saved;
+
+   private bool HasCurrentLoans => _currentLoans.Count > 0;
+
+   private string ReaderName {
+      get {
+         if(_reader is null)
+            return string.Empty;
+
+         string name = $"{_reader.Firstname} {_reader.Lastname}".Trim();
+
+         return string.IsNullOrWhiteSpace(name)
+            ? "Unvollständiges Profil"
+            : name;
+      }
+   }
+
+   protected override async Task OnInitializedAsync() {
+      _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
+
+      if(_currentUser.IsEmployee)
+         await LoadAsync();
+   }
+
+   private async Task LoadAsync() {
+      StartLoading();
+      Error = null;
+
+      // includeInactive=true keeps the detail page readable after deactivation.
+      Result<ReaderDto> result = await ReaderClient.GetByIdAsync(
+         id: ReaderId,
+         includeInactive: true
+      );
+
+      if(result.IsSuccess && result.Value is not null) {
+         _reader = result.Value;
+         await LoadCurrentLoansAsync();
+      }
+      else {
+         Error = result.Error;
+      }
+
+      StopLoading();
+   }
+
+   private async Task LoadCurrentLoansAsync() {
+      if(_reader is null)
+         return;
+
+      Result<IEnumerable<LoanListItemDto>> result =
+         await LoanClient.GetBorrowedAsync();
+
+      if(result.IsFailure || result.Value is null) {
+         _currentLoans = [];
+         Error = result.Error;
+         return;
+      }
+
+      _currentLoans = result.Value
+         .Where(loan => loan.ReaderId == _reader.Id)
+         .OrderBy(loan => loan.DueDate)
+         .ToList();
+   }
+
+   private void ShowDeactivateConfirmation() {
+      _confirmDeactivate = true;
+      _saved = false;
+   }
+
+   private void CancelDeactivate() {
+      _confirmDeactivate = false;
+   }
+
+   private async Task DeactivateAsync() {
+      if(_reader is null || HasCurrentLoans)
+         return;
+
+      StartLoading();
+      Error = null;
+      _saved = false;
+
+      Result<bool> result = await ReaderClient.DeactivateAsync(
+         id: _reader.Id
+      );
+
+      if(result.IsSuccess) {
+         _confirmDeactivate = false;
+         _saved = true;
+         await LoadAsync();
+         return;
+      }
+
+      Error = result.Error;
+      StopLoading();
+   }
+
+   private void BackToList() {
+      Navigation.NavigateTo("/readers");
+   }
+
+   private static string Display(
+      string? value
+   ) => string.IsNullOrWhiteSpace(value)
+      ? "Nicht verfügbar"
+      : value;
+
+   private static string YesNo(
+      bool value
+   ) => value ? "Ja" : "Nein";
+}
+
+@* Didaktik:
+   /readers/{id} is the employee-oriented detail page for Reader resources.
+   Reader self-service uses /readers/me/... and does not expose a Reader id
+   supplied by the client.
+
+   Deactivation is modeled as a separate command. It is not a normal profile
+   update and should stay separate from reader self-service updates.
+
+   The page displays current loans before the command is sent. The button is
+   disabled while current loans exist. The API still performs the same check
+   because UI validation cannot protect against concurrent changes.
+*@

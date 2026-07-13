@@ -1,10 +1,16 @@
 ﻿@page
 @model RegisterModel
 @{
-    ViewData["Title"] = "Register";
+    ViewData["Title"] = Model.RegistrationKind == "reader" ? "Register reader" : "Register";
 }
 
 <h1>@ViewData["Title"]</h1>
+
+@if(Model.RegistrationKind == "reader") {
+    <div class="alert alert-info" role="alert">
+        Register with email = username. The CampusLibrary reader profile is completed after login in the client.
+    </div>
+}
 
 <div class="row">
     <div class="col-md-4">

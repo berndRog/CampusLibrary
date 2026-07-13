@@ -137,4 +137,40 @@ public sealed class ReaderLoanContractIntT : TestBaseIntegration {
       result.IsFailure.Should().BeTrue();
       result.Error.Should().Be(CommonErrors.ReaderIsDeactivated);
    }
+
+   [Fact]
+   public async Task FindReaderForExistingLoanAsync_deactivated_reader_returns_reader() {
+      using var scope = Root.CreateDefaultScope();
+      var ct = TestContext.Current.CancellationToken;
+      var readerRepository = scope.ServiceProvider.GetRequiredService<IReaderRepository>();
+      var contract = scope.ServiceProvider.GetRequiredService<IReaderLoanContract>();
+      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
+
+      // Arrange
+      var reader = seed.Reader1();
+      var deactivateResult = reader.Deactivate(
+         updatedAt: reader.CreatedAt.AddDays(1)
+      );
+
+      deactivateResult.IsSuccess.Should().BeTrue();
+      readerRepository.Add(reader);
+
+      await unitOfWork.SaveAllChangesAsync(
+         "Deactivated reader inserted",
+         ct
+      );
+      unitOfWork.ClearChangeTracker();
+
+      // Act
+      var result = await contract.FindReaderForExistingLoanAsync(
+         readerId: reader.Id,
+         ct: ct
+      );
+
+      // Assert
+      result.IsSuccess.Should().BeTrue();
+      result.Value.Id.Should().Be(reader.Id);
+      result.Value.IsActive.Should().BeFalse();
+   }
 }

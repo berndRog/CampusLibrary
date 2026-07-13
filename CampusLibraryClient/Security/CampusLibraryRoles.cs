@@ -2,10 +2,9 @@ namespace CampusLibraryClient.Security;
 
 public static class CampusLibraryRoles {
 
-   public const string Reader = "reader";
+   public const string Reader = "Reader";
 
-   public const string Employee = "employee";
+   public const string Employee = "Employee";
 
-   // Backward-compatible alias for earlier drafts.
-   public const string Student = Reader;
+   public const string ReaderOrEmployee = Reader + "," + Employee;
 }

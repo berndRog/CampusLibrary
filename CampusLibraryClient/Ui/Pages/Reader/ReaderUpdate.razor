@@ -1,0 +1,236 @@
+@page "/readers/update"
+@attribute [Authorize(Roles = CampusLibraryRoles.Reader)]
+@rendermode InteractiveServer
+@inherits BasePage
+
+@inject IReaderClient ReaderClient
+@inject ICurrentUserProvider CurrentUserProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Reader-Daten ändern</PageTitle>
+
+<h3>Ändern</h3>
+
+@* <p class="text-muted"> *@
+@*    Hier können Leserinnen und Leser ausgewählte fachliche CampusLibrary-Daten *@
+@*    ändern. Die technische Identität bleibt im IdentityAccessServer. *@
+@* </p> *@
+
+<ErrorAlert Error="Error" />
+
+@if(_saved) {
+   <div class="alert alert-success" role="alert">
+      Ihre Daten wurden gespeichert.
+   </div>
+}
+
+@if(IsLoading || _currentUser is null) {
+   <p class="text-muted">Daten werden geladen...</p>
+}
+else if(!_currentUser.IsReader) {
+   @* <p>Diese Seite ist nur für angemeldete Leserinnen und Leser vorgesehen.</p> *@
+}
+else {
+   <div class="card shadow-sm mb-3">
+      <div class="card-body">
+         <h2 class="h5 card-title mb-3">Technische Identität</h2>
+
+         <dl class="row mb-0">
+            <dt class="col-sm-3">Username / Login</dt>
+            <dd class="col-sm-9">@(_currentUser.Email ?? _currentUser.DisplayName)</dd>
+
+            @* <dt class="col-sm-3">Subject</dt> *@
+            @* <dd class="col-sm-9"> *@
+            @*    @if(string.IsNullOrWhiteSpace(_reader?.Subject)) { *@
+            @*       <span class="text-muted">Noch nicht geladen</span> *@
+            @*    } *@
+            @*    else { *@
+            @*       <code>@_reader.Subject</code> *@
+            @*    } *@
+            @* </dd> *@
+            @* *@
+            @* <dt class="col-sm-3">Reader Id</dt> *@
+            @* <dd class="col-sm-9"> *@
+            @*    @if(_reader is null) { *@
+            @*       <span class="text-muted">Noch nicht geladen</span> *@
+            @*    } *@
+            @*    else { *@
+            @*       <code>@_reader.Id</code> *@
+            @*    } *@
+            @* </dd> *@
+
+            <dt class="col-sm-3">Profil vollständig</dt>
+            <dd class="col-sm-9">
+               @if(_reader?.IsProfileCompleted == true) {
+                  <span class="badge text-bg-success">Ja</span>
+               }
+               else {
+                  <span class="badge text-bg-warning">Nein</span>
+               }
+            </dd>
+         </dl>
+      </div>
+   </div>
+
+   <EditForm Model="_model" OnValidSubmit="SaveAsync">
+      <DataAnnotationsValidator />
+      <ValidationSummary />
+
+      <div class="card shadow-sm mb-3">
+         <div class="card-body">
+            <h2 class="h5 card-title mb-3">Fachliche Reader-Daten ändern</h2>
+
+            @* <div class="alert alert-secondary" role="alert"> *@
+            @*    Der Username bleibt die technische Login-Identität im *@
+            @*    IdentityAccessServer. Die fachliche Reader-E-Mail in der *@
+            @*    CampusLibrary kann davon abweichen und hier geändert werden. *@
+            @* </div> *@
+
+            <div class="row g-3">
+               <div class="col-md-6">
+                  <label class="form-label" for="firstname">Vorname</label>
+                  <input id="firstname"
+                         class="form-control"
+                         value="@DisplayFirstname"
+                         disabled />
+                  <div class="form-text">
+                     Der Vorname wird beim initialen Profilabschluss gesetzt und
+                     kann hier nicht geändert werden.
+                  </div>
+               </div>
+
+               <div class="col-md-6">
+                  <label class="form-label" for="lastname">Nachname</label>
+                  <InputText id="lastname" class="form-control" @bind-Value="_model.Lastname" />
+                  <ValidationMessage For="() => _model.Lastname" />
+               </div>
+
+               <div class="col-md-6">
+                  <label class="form-label" for="email">Fachliche E-Mail-Adresse</label>
+                  <InputText id="email" class="form-control" @bind-Value="_model.Email" />
+                  <ValidationMessage For="() => _model.Email" />
+                  <div class="form-text">
+                     Diese E-Mail gehört zum fachlichen Reader. Sie ist nicht der
+                     Login-Username im IdentityAccessServer.
+                  </div>
+               </div>
+
+               <div class="col-md-6">
+                  <label class="form-label" for="street">Straße</label>
+                  <InputText id="street" class="form-control" @bind-Value="_model.Street" />
+                  <ValidationMessage For="() => _model.Street" />
+               </div>
+
+               <div class="col-md-3">
+                  <label class="form-label" for="postalCode">PLZ</label>
+                  <InputText id="postalCode" class="form-control" @bind-Value="_model.PostalCode" />
+                  <ValidationMessage For="() => _model.PostalCode" />
+               </div>
+
+               <div class="col-md-3">
+                  <label class="form-label" for="city">Ort</label>
+                  <InputText id="city" class="form-control" @bind-Value="_model.City" />
+                  <ValidationMessage For="() => _model.City" />
+               </div>
+
+               <div class="col-md-4">
+                  <label class="form-label" for="country">Land</label>
+                  <InputText id="country" class="form-control" @bind-Value="_model.Country" />
+                  <ValidationMessage For="() => _model.Country" />
+               </div>
+            </div>
+         </div>
+      </div>
+
+      <div class="d-flex gap-2">
+         <button class="btn btn-primary" type="submit" disabled="@IsLoading">
+            Daten speichern
+         </button>
+         <button class="btn btn-outline-secondary" type="button" @onclick="Cancel">
+            Zurück zum Katalog
+         </button>
+      </div>
+   </EditForm>
+}
+
+@code {
+
+   private CurrentUserInfo? _currentUser;
+
+   private ReaderDto? _reader;
+
+   private ReaderUpdateModel _model = new();
+
+   private bool _saved;
+
+   private string DisplayFirstname =>
+      string.IsNullOrWhiteSpace(_reader?.Firstname)
+         ? "Nicht verfügbar"
+         : _reader.Firstname;
+
+   protected override async Task OnInitializedAsync() {
+      StartLoading();
+      Error = null;
+
+      _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
+
+      if(_currentUser.IsReader)
+         await LoadProfileAsync();
+
+      StopLoading();
+   }
+
+   private async Task LoadProfileAsync() {
+      Result<ReaderDto> result = await ReaderClient.GetMeAsync();
+
+      if(result.IsSuccess && result.Value is not null) {
+         _reader = result.Value;
+
+         if(!_reader.IsProfileCompleted) {
+            Navigation.NavigateTo(uri: "/readers/profile", replace: true);
+            return;
+         }
+
+         _model = ReaderUpdateModel.FromReader(_reader);
+      }
+      else {
+         Error = result.Error;
+      }
+   }
+
+   private async Task SaveAsync() {
+      StartLoading();
+      Error = null;
+      _saved = false;
+
+      Result<ReaderDto> result = await ReaderClient.UpdateMeAsync(_model.ToDto());
+
+      if(result.IsSuccess && result.Value is not null) {
+         _reader = result.Value;
+         _model = ReaderUpdateModel.FromReader(_reader);
+         _saved = true;
+      }
+      else {
+         Error = result.Error;
+      }
+
+      StopLoading();
+   }
+
+   private void Cancel() {
+      Navigation.NavigateTo("/catalog/books");
+   }
+}
+
+@* Didaktik:
+   /readers/update ist die normale Self-Service-Seite für spätere Änderungen.
+   Sie ist bewusst getrennt von /readers/profile.
+
+   /readers/profile gehört zum initialen Provisioning-/Profilabschluss-Flow.
+   /readers/update wird vom Leser aktiv über das Menü geöffnet.
+
+   Der Username bleibt die technische Login-Identität im IdentityAccessServer.
+   Reader.Email ist eine fachliche Kontaktadresse der CampusLibrary und kann
+   hier geändert werden. Der Vorname ist nach dem initialen Profilabschluss
+   nicht mehr änderbar.
+*@

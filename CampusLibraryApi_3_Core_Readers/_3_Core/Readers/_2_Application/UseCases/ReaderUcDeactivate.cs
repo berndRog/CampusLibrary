@@ -1,7 +1,6 @@
 using System.Runtime.CompilerServices;
 using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
-using CampusLibraryApi._3_Core.Readers._1_Ports;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
 using Microsoft.Extensions.Logging;
@@ -16,6 +15,7 @@ namespace CampusLibraryApi._3_Core.Readers._2_Application.UseCases;
 // but disappears from normal read model queries.
 internal sealed class ReaderUcDeactivate(
    IReaderRepository repository,
+   ILoanReaderContract loanReaderContract,
    IUnitOfWork unitOfWork,
    IClock clock,
    ILogger<ReaderUcDeactivate> logger
@@ -24,24 +24,45 @@ internal sealed class ReaderUcDeactivate(
    public async Task<Result> ExecuteAsync(
       Guid id,
       CancellationToken ct
-   ) {   
+   ) {
       // guards
-      if (id == Guid.Empty)
+      if(id == Guid.Empty)
          return Result.Failure(ReaderErrors.InvalidId);
-      
+
       var reader = await repository.FindByIdAsync(id, ct);
-      if (reader is null)
+      if(reader is null)
          return Result.Failure(ReaderErrors.ReaderNotFound);
 
-      var result = reader.Deactivate(updatedAt: clock.UtcNow);
-      if (result.IsFailure)
+      // The Reader aggregate cannot know whether Loans contains current
+      // borrowings. This cross-module rule is therefore coordinated here.
+      bool hasCurrentLoans = await loanReaderContract.ExistsForReaderAsync(
+         readerId: reader.Id,
+         ct: ct
+      );
+
+      if(hasCurrentLoans)
+         return Result.Failure(
+            ReaderErrors.ReaderCannotBeDeactivatedWithLoans
+         );
+
+      var result = reader.Deactivate(
+         updatedAt: clock.UtcNow
+      );
+
+      if(result.IsFailure)
          return result;
 
-      var rows = await unitOfWork.SaveAllChangesAsync("ReaderUcDeactivate", ct);
+      var rows = await unitOfWork.SaveAllChangesAsync(
+         "ReaderUcDeactivate",
+         ct
+      );
 
-      logger.LogInformation("ReaderUcDeactivate {Id}, rows: {Rows} ",
-         reader.Id, rows);
-      
+      logger.LogInformation(
+         "ReaderUcDeactivate {Id}, rows: {Rows}",
+         reader.Id,
+         rows
+      );
+
       return Result.Success();
    }
 }
@@ -52,32 +73,43 @@ Didaktik
 
 ReaderUcDeactivate koordiniert das fachliche Deaktivieren eines Readers.
 
-Der UseCase entscheidet nicht selbst, ob ein Reader deaktiviert werden darf.
-Diese fachliche Regel gehört in das Aggregate Reader.
+Zwei unterschiedliche Arten von Regeln werden sichtbar:
 
-Deshalb ruft der UseCase reader.Deactivate(...) auf und wertet das
-zurückgegebene Result aus.
+1. Regel innerhalb des Reader-Aggregates
+   Der Reader weiß selbst, ob er bereits deaktiviert ist. Deshalb liegt diese
+   Prüfung in Reader.Deactivate(...).
+
+2. Regel über mehrere Module
+   Ob aktuelle Ausleihen existieren, kann das Reader-Aggregate nicht wissen.
+   Die Loans gehören dem Loans-Modul. Der UseCase fragt deshalb über
+   ILoanReaderContract nach, ohne direkt auf die Loans-Tabelle zuzugreifen.
 
 Mögliche Ergebnisse:
 
 - Reader existiert nicht:
   Der UseCase gibt ReaderErrors.ReaderNotFound zurück.
 
+- Aktuelle Ausleihen existieren:
+  Der UseCase gibt ReaderErrors.ReaderCannotBeDeactivatedWithLoans zurück.
+  Der HTTP-Controller übersetzt diesen Conflict in Statuscode 409.
+
 - Reader ist bereits deaktiviert:
   Die Domain-Methode gibt ReaderErrors.IsAlreadyDeactivated zurück.
 
-- Reader ist aktiv:
-  Die Domain setzt IsActive auf false, aktualisiert UpdatedAt und der
-  UseCase speichert die Änderung über UnitOfWork.
+- Reader ist aktiv und besitzt keine aktuellen Ausleihen:
+  Die Domain setzt IsActive auf false, aktualisiert UpdatedAt und der UseCase
+  speichert die Änderung über UnitOfWork.
 
 Wichtig ist: Nur bei erfolgreicher fachlicher Änderung wird gespeichert.
 
 Lernziele
 ---------
 
-- Fachliche Regeln im Aggregate kapseln
+- Regeln innerhalb eines Aggregates von modulübergreifenden Regeln trennen
 - UseCases als Koordinatoren verstehen
+- Modulübergreifende Abfragen über kleine Contracts durchführen
 - Result für erwartbare fachliche Fehler verwenden
+- HTTP 409 Conflict für einen fachlich momentan unzulässigen Zustand verwenden
 - Speichern nur nach erfolgreicher Domain-Operation ausführen
 - Soft Delete als fachliche Deaktivierung modellieren
 */

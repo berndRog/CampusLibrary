@@ -13,7 +13,6 @@
       <span class="navbar-toggler-icon"></span>
    </button>
 
-   
    <div class="collapse navbar-collapse" id="topmenu">
       @if(_currentUser is null) {
          <span class="navbar-text">Navigation wird geladen...</span>
@@ -29,25 +28,35 @@
                </NavLink>
             </li>
 
-            <li class="nav-item">
-               <NavLink class="nav-link"
-                        href="/catalog/books"
-                        ActiveClass="active text-white">
-                  Katalog
-               </NavLink>
-            </li>
-
-            @if (_currentUser.IsReader) {
+            @if(_currentUser.IsReader || _currentUser.IsEmployee) {
                <li class="nav-item">
                   <NavLink class="nav-link"
-                           href="/my/loans"
+                           href="/catalog/books"
                            ActiveClass="active text-white">
-                     Ausleihen
+                     Katalog
                   </NavLink>
                </li>
             }
 
-            @if (_currentUser.IsEmployee) {
+            @if(_currentUser.IsReader) {
+               <li class="nav-item">
+                  <NavLink class="nav-link"
+                           href="/loans/me"
+                           ActiveClass="active text-white">
+                     Ausleihen
+                  </NavLink>
+               </li>
+
+               <li class="nav-item">
+                  <NavLink class="nav-link"
+                           href="/readers/update"
+                           ActiveClass="active text-white">
+                     Ändern
+                  </NavLink>
+               </li>
+            }
+
+            @if(_currentUser.IsEmployee) {
                <li class="nav-item">
                   <NavLink class="nav-link"
                            href="/readers"
@@ -64,6 +73,24 @@
                   </NavLink>
                </li>
             }
+
+            @if((_currentUser.IsReader || _currentUser.IsEmployee) && _authNEnabled) {
+               <li class="nav-item">
+                  <NavLink class="nav-link"
+                           href="/auth/details"
+                           ActiveClass="active text-white">
+                     Auth Details
+                  </NavLink>
+               </li>
+
+               <li class="nav-item">
+                  <NavLink class="nav-link"
+                           href="/auth/routes"
+                           ActiveClass="active text-white">
+                     Routen
+                  </NavLink>
+               </li>
+            }
          </ul>
 
          <div class="d-flex align-items-sm-center gap-2 flex-column flex-sm-row ms-sm-auto mt-2 mt-sm-0">
@@ -72,13 +99,13 @@
                   @_currentUser.DisplayName (@DisplayAccountType(_currentUser.AccountType))
                </span>
 
-               <a class="btn btn-outline-danger btn-sm" href="@LogoutUrl">
+               <a class="btn btn-outline-danger btn-sm" href="@LogoutUrl" data-enhance-nav="false">
                   Logout
                </a>
             }
             else {
                @if(_authNEnabled) {
-                  <a class="btn btn-primary btn-sm" href="@LoginUrl">
+                  <a class="btn btn-primary btn-sm" href="@LoginUrl" data-enhance-nav="false">
                      Login
                   </a>
                }
@@ -105,7 +132,7 @@
    }
 
    private string LoginUrl =>
-      "/identity/login?returnUrl=" + Uri.EscapeDataString("/");
+      "/identity/login?returnUrl=" + Uri.EscapeDataString("/entry");
 
    private string LogoutUrl => _authNEnabled
       ? "/identity/logout"
@@ -120,7 +147,20 @@
    };
 }
 
-@* Part 6 preparation:
-   With AuthNEnabled=true, the same menu can use ClaimsCurrentUserProvider.
-   In Part 5, DevIdentity only selects the UI perspective. It is not security.
+@* Part 6:
+   Routable pages use simple role checks: Reader or Employee.
+   The menu mirrors those roles so anonymous users only see the login entry.
+
+   Login goes to /entry so that the client can provision the fachlicher Reader
+   before normal reader pages are shown.
+
+   /readers/profile is intentionally NOT part of the menu. It is a mandatory
+   profile-completion page that is reached only from the provisioning flow.
+
+   /readers/update is the normal self-service page for later reader data changes.
+
+   /auth/details and /auth/routes are teaching/debug pages. They are visible in
+   the menu for authenticated users while AuthN is enabled, because Part 6
+   explicitly teaches OpenID Connect, OAuth, tokens, .NET cookies, claims
+   processing and page-level authorization.
 *@

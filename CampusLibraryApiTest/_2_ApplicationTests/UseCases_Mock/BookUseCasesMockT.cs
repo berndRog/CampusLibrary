@@ -397,12 +397,22 @@ public sealed class BookUseCasesMockT {
       // Arrange
       var ct = TestContext.Current.CancellationToken;
       var seed = new TestSeed();
-      var book1 = seed.Book1();
+      var book1 = seed.Books.First(
+         book => book.Id == Guid.Parse(seed.Book1Id)
+      );
 
       var repository = new Mock<IBookRepository>();
       repository
          .Setup(r => r.FindByIdAsync(book1.Id, ct))
          .ReturnsAsync(book1);
+
+      var loanCatalogContract = new Mock<ILoanCatalogContract>();
+      loanCatalogContract
+         .Setup(c => c.ExistsForBookItemsAsync(
+            It.IsAny<IReadOnlyCollection<Guid>>(),
+            ct
+         ))
+         .ReturnsAsync(false);
 
       var unitOfWork = new Mock<IUnitOfWork>();
       unitOfWork
@@ -411,6 +421,7 @@ public sealed class BookUseCasesMockT {
 
       var sut = new BookUcDeactivate(
          bookRepository: repository.Object,
+         loanCatalogContract: loanCatalogContract.Object,
          unitOfWork: unitOfWork.Object,
          clock: new FakeClock(CreatedAt.AddDays(1)),
          logger: Mock.Of<ILogger<BookUcDeactivate>>()
@@ -424,13 +435,80 @@ public sealed class BookUseCasesMockT {
 
       // Assert
       resultDeactivate.IsSuccess.Should().BeTrue();
+      resultDeactivate.Value.BookItemCount.Should().Be(0);
 
       book1.IsActive.Should().BeFalse();
+      book1.BookItems.Should().BeEmpty();
       book1.UpdatedAt.Should().Be(CreatedAt.AddDays(1));
 
       unitOfWork.Verify(
          u => u.SaveAllChangesAsync("BookUcDeactivate", ct),
          Times.Once
+      );
+   }
+
+   [Fact]
+   public async Task DeactivateAsync_with_current_loan_fails_and_keeps_book_items() {
+      // Arrange
+      var ct = TestContext.Current.CancellationToken;
+      var seed = new TestSeed();
+      var book1 = seed.Books.First(
+         book => book.Id == Guid.Parse(seed.Book1Id)
+      );
+      var expectedBookItemIds = book1.BookItems
+         .Select(bookItem => bookItem.Id)
+         .ToArray();
+
+      var repository = new Mock<IBookRepository>();
+      repository
+         .Setup(r => r.FindByIdAsync(book1.Id, ct))
+         .ReturnsAsync(book1);
+
+      var loanCatalogContract = new Mock<ILoanCatalogContract>();
+      loanCatalogContract
+         .Setup(c => c.ExistsForBookItemsAsync(
+            It.Is<IReadOnlyCollection<Guid>>(ids =>
+               ids.Count == expectedBookItemIds.Length &&
+               expectedBookItemIds.All(ids.Contains)
+            ),
+            ct
+         ))
+         .ReturnsAsync(true);
+
+      var unitOfWork = new Mock<IUnitOfWork>();
+
+      var sut = new BookUcDeactivate(
+         bookRepository: repository.Object,
+         loanCatalogContract: loanCatalogContract.Object,
+         unitOfWork: unitOfWork.Object,
+         clock: new FakeClock(CreatedAt.AddDays(1)),
+         logger: Mock.Of<ILogger<BookUcDeactivate>>()
+      );
+
+      // Act
+      var resultDeactivate = await sut.ExecuteAsync(
+         bookId: book1.Id,
+         ct: ct
+      );
+
+      // Assert
+      resultDeactivate.IsFailure.Should().BeTrue();
+      resultDeactivate.Error.Should().Be(
+         CatalogErrors.BookCannotBeDeactivatedWithLoans
+      );
+
+      book1.IsActive.Should().BeTrue();
+      book1.BookItems
+         .Select(bookItem => bookItem.Id)
+         .Should()
+         .BeEquivalentTo(expectedBookItemIds);
+
+      unitOfWork.Verify(
+         u => u.SaveAllChangesAsync(
+            It.IsAny<string?>(),
+            It.IsAny<CancellationToken>()
+         ),
+         Times.Never
       );
    }
 
@@ -446,10 +524,12 @@ public sealed class BookUseCasesMockT {
          .Setup(r => r.FindByIdAsync(book1.Id, ct))
          .ReturnsAsync((Book?)null);
 
+      var loanCatalogContract = new Mock<ILoanCatalogContract>();
       var unitOfWork = new Mock<IUnitOfWork>();
 
       var sut = new BookUcDeactivate(
          bookRepository: repository.Object,
+         loanCatalogContract: loanCatalogContract.Object,
          unitOfWork: unitOfWork.Object,
          clock: new FakeClock(CreatedAt),
          logger: Mock.Of<ILogger<BookUcDeactivate>>()
@@ -480,10 +560,12 @@ public sealed class BookUseCasesMockT {
       var ct = TestContext.Current.CancellationToken;
 
       var repository = new Mock<IBookRepository>();
+      var loanCatalogContract = new Mock<ILoanCatalogContract>();
       var unitOfWork = new Mock<IUnitOfWork>();
 
       var sut = new BookUcDeactivate(
          bookRepository: repository.Object,
+         loanCatalogContract: loanCatalogContract.Object,
          unitOfWork: unitOfWork.Object,
          clock: new FakeClock(CreatedAt),
          logger: Mock.Of<ILogger<BookUcDeactivate>>()

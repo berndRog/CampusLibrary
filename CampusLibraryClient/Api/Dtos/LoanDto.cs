@@ -6,7 +6,5 @@ public sealed record LoanDto(
    DateTime DueDate,
    Guid ReaderId,
    Guid BookItemId,
-   DateTime? ReturnedAt,
-   int Status,
    int RenewalCount
 );

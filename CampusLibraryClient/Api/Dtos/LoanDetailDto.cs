@@ -16,8 +16,6 @@ public sealed record LoanDetailDto(
    bool IsAvailableForLoan,
    DateTime LoanDate,
    DateTime DueDate,
-   DateTime? ReturnedAt,
-   int Status,
    int RenewalCount,
    bool IsOverdue,
    bool CanRenew

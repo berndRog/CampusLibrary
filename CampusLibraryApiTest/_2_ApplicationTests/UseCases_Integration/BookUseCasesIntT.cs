@@ -4,6 +4,8 @@ using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Catalog._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Catalog._2_Application.UseCases;
 using CampusLibraryApi._3_Core.Catalog._3_Domain.Errors;
+using CampusLibraryApi._3_Core.Loans._1_Ports.Inbound;
+using CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
 using CampusLibraryApiTest.TestInfrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -226,7 +228,9 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
 
       // Arrange
-      var book1 = seed.Book1();
+      var book1 = seed.Books.First(
+         book => book.Id == Guid.Parse(seed.Book1Id)
+      );
 
       repository.Add(book1);
 
@@ -244,6 +248,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       );
 
       resultDeactivate.IsSuccess.Should().BeTrue();
+      resultDeactivate.Value.BookItemCount.Should().Be(0);
 
       unitOfWork.ClearChangeTracker();
 
@@ -255,6 +260,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
 
       actualBook.Should().NotBeNull();
       actualBook!.IsActive.Should().BeFalse();
+      actualBook.BookItems.Should().BeEmpty();
 
       // Assert: read model hides inactive books from the normal query side.
       var resultFind = await readModel.FindByIdAsync(
@@ -263,6 +269,97 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       );
 
       resultFind.IsFailure.Should().BeTrue();
+   }
+
+   [Fact]
+   public async Task DeactivateAsync_with_current_loan_fails_then_succeeds_after_return() {
+      using var scope = Root.CreateDefaultScope();
+      var ct = TestContext.Current.CancellationToken;
+      var useCases = scope.ServiceProvider.GetRequiredService<IBookUseCases>();
+      var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
+      var loanUseCases = scope.ServiceProvider.GetRequiredService<ILoanUseCases>();
+      var loanRepository = scope.ServiceProvider.GetRequiredService<ILoanRepository>();
+      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
+
+      // Arrange
+      var book1 = seed.Books.First(
+         book => book.Id == Guid.Parse(seed.Book1Id)
+      );
+      var loan1 = seed.Loan1();
+      var expectedBookItemIds = book1.BookItems
+         .Select(bookItem => bookItem.Id)
+         .ToArray();
+
+      bookRepository.Add(book1);
+      loanRepository.Add(loan1);
+
+      await unitOfWork.SaveAllChangesAsync(
+         "Book and loan inserted",
+         ct
+      );
+
+      unitOfWork.ClearChangeTracker();
+
+      // Act
+      var resultDeactivate = await useCases.DeactivateAsync(
+         id: book1.Id,
+         ct: ct
+      );
+
+      // Assert
+      resultDeactivate.IsFailure.Should().BeTrue();
+      resultDeactivate.Error.Should().Be(
+         CatalogErrors.BookCannotBeDeactivatedWithLoans
+      );
+
+      unitOfWork.ClearChangeTracker();
+
+      var actualBook = await bookRepository.FindByIdAsync(
+         id: book1.Id,
+         ct: ct
+      );
+
+      actualBook.Should().NotBeNull();
+      actualBook!.IsActive.Should().BeTrue();
+      actualBook.BookItems
+         .Select(bookItem => bookItem.Id)
+         .Should()
+         .BeEquivalentTo(expectedBookItemIds);
+
+      // Return the item. In the simplified lifecycle this deletes the Loan.
+      var resultReturn = await loanUseCases.ReturnAtDeskAsync(
+         loanId: loan1.Id,
+         ct: ct
+      );
+
+      resultReturn.IsSuccess.Should().BeTrue();
+
+      // A new deactivation request can now complete the operation.
+      var resultDeactivateAfterReturn = await useCases.DeactivateAsync(
+         id: book1.Id,
+         ct: ct
+      );
+
+      resultDeactivateAfterReturn.IsSuccess.Should().BeTrue();
+      resultDeactivateAfterReturn.Value.BookItemCount.Should().Be(0);
+
+      unitOfWork.ClearChangeTracker();
+
+      var deletedLoan = await loanRepository.FindByIdAsync(
+         id: loan1.Id,
+         ct: ct
+      );
+
+      var deactivatedBook = await bookRepository.FindByIdAsync(
+         id: book1.Id,
+         ct: ct
+      );
+
+      deletedLoan.Should().BeNull();
+      deactivatedBook.Should().NotBeNull();
+      deactivatedBook!.IsActive.Should().BeFalse();
+      deactivatedBook.BookItems.Should().BeEmpty();
    }
 
    [Fact]

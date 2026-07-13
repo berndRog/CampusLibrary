@@ -106,7 +106,11 @@ public static class Program {
       // Bind CORS to endpoints for maximum reliability (especially /.well-known and /connect/*)
       app.MapControllers().RequireCors("Frontends");
       app.MapDefaultControllerRoute().RequireCors("Frontends");
-      app.MapRazorPages().RequireCors("Frontends");
+
+      // Identity UI is same-origin server-rendered HTML. Applying the frontend
+      // CORS policy to Razor Pages is unnecessary and causes misleading CORS
+      // failures for normal login and registration form posts.
+      app.MapRazorPages();
 
       app.UseAuthentication();
       app.UseAuthorization();
@@ -258,7 +262,7 @@ public static class Program {
             // Scopes (standard + configured API scopes)
             options
                .RegisterScopes(
-                  new[] { "openid", "profile", "offline_access" }
+                  new[] { "openid", "profile", "email", "offline_access" }
                      .Concat(auth.Apis.Values.Select(a => a.Scope))
                      .Distinct(StringComparer.Ordinal)
                      .ToArray()

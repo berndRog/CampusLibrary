@@ -1,0 +1,19 @@
+### @name Set Params
+@subject =  00000001-0000-0001-0000-000000000000
+@email = e.mustermann@t-online.de
+@password = Geh1m_
+@mustChangePassword = false
+@accountType = reader
+@createdAt = 2025-01-01T00:00:00Z
+
+@readerId = 00000001-0000-0000-0000-000000000000
+@firstname = Erika
+@lastname = Mustermann
+@street = Hauptstr. 23
+@postalCode = 29556
+@city = Suderburg
+# JSON: keep quotes for text, set to null
+@country = "DE"
+
+### 
+run ReaderProvisionTemplate.http

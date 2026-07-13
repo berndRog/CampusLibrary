@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using CampusLibraryApi._2_BuildingBlocks;
+using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Catalog._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Catalog._2_Application.Enums;
@@ -14,7 +15,8 @@ namespace CampusLibraryApi._4_Infrastructure.Persistence.Catalog;
 // Read models are used for query operations and project database data
 // directly into DTOs. They do not return domain aggregates.
 internal sealed class BookReadModelEf(
-   ICatalogDbContext bookDbContext
+   ICatalogDbContext bookDbContext,
+   ILoanCatalogContract loanCatalogContract
 ) : IBookReadModel {
 
    // Finds one book by id.
@@ -35,6 +37,56 @@ internal sealed class BookReadModelEf(
          return Result<BookDetailDto>.Failure(CatalogErrors.BookNotFound);
 
       return Result<BookDetailDto>.Success(dto);
+   }
+
+   public async Task<Result<BookDeactivationInfoDto>> FindDeactivationInfoAsync(
+      Guid id,
+      CancellationToken ct = default
+   ) {
+      if(id == Guid.Empty)
+         return Result<BookDeactivationInfoDto>.Failure(
+            CatalogErrors.InvalidBookId
+         );
+
+      bool bookExists = await bookDbContext.Books
+         .AsNoTracking()
+         .AnyAsync(book => book.Id == id, ct);
+
+      if(!bookExists)
+         return Result<BookDeactivationInfoDto>.Failure(
+            CatalogErrors.BookNotFound
+         );
+
+      List<Guid> bookItemIds = await bookDbContext.BookItems
+         .AsNoTracking()
+         .Where(bookItem => bookItem.BookId == id)
+         .Select(bookItem => bookItem.Id)
+         .ToListAsync(ct);
+
+      var loansResult = await loanCatalogContract.FindCurrentLoansForBookItemsAsync(
+         bookItemIds: bookItemIds,
+         ct: ct
+      );
+
+      if(loansResult.IsFailure)
+         return Result<BookDeactivationInfoDto>.Failure(loansResult.Error);
+
+      IReadOnlyList<BookDeactivationLoanDto> currentLoans = loansResult.Value
+         .Select(loan => new BookDeactivationLoanDto(
+            BookItemId: loan.BookItemId,
+            ReaderEmail: loan.ReaderEmail,
+            DueDate: loan.DueDate
+         ))
+         .ToList();
+
+      return Result<BookDeactivationInfoDto>.Success(
+         new BookDeactivationInfoDto(
+            BookId: id,
+            TotalItems: bookItemIds.Count,
+            BorrowedItems: currentLoans.Count,
+            CurrentLoans: currentLoans
+         )
+      );
    }
 
    // Returns books as list item DTOs.
@@ -304,6 +356,7 @@ Lernziele
 */
 /*
 using CampusLibraryApi._2_BuildingBlocks;
+using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Catalog._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Catalog._2_Application.Enums;

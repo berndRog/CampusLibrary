@@ -18,8 +18,8 @@ public static class ReaderErrors {
          "The given Id is invalid."
       );
 
-   
-   public static readonly DomainError ReaderProfileUpdateDtoRequired =
+
+   public static readonly DomainError ReaderUpdateMeProfileDtoRequired =
       new(
          WebErrorStatus.BadRequest,
          "Reader: ReaderProfileUpdateDtoRequired",
@@ -67,14 +67,14 @@ public static class ReaderErrors {
          "Reader: EmailAlreadyInUse",
          "The provided email address is already in use."
       );
-   
+
    public static readonly DomainError AddressIsRequired =
       new(
          WebErrorStatus.BadRequest,
-         "Reader: Address required", 
+         "Reader: Address required",
          "A valid address with street, postal code and city must be provided."
       );
-   
+
    public static readonly DomainError ReaderNotFound =
       new(
          WebErrorStatus.NotFound,
@@ -96,20 +96,27 @@ public static class ReaderErrors {
          "A ReaderCreateDto object must be provided."
       );
 
-   public static readonly DomainError ReaderUpdateDtoRequired =
+   public static readonly DomainError ReaderUpdateMeDtoRequired =
       new(
          WebErrorStatus.BadRequest,
          "Reader: ReaderUpdateDtoRequired",
          "A ReaderUpdateDto object must be provided."
       );
-   
+
    public static readonly DomainError IsAlreadyDeactivated =
       new(
          WebErrorStatus.BadRequest,
          "Reader: Is Already Deactivated",
          "The reader is deactivated."
       );
-   
+
+   public static readonly DomainError ReaderCannotBeDeactivatedWithLoans =
+      new(
+         WebErrorStatus.Conflict,
+         "Reader: Cannot Be Deactivated With Loans",
+         "The reader cannot be deactivated while current loans exist."
+      );
+
 
    // Address value object
    // ------------------------------------------------------------------------
@@ -161,5 +168,5 @@ public static class ReaderErrors {
          "Address: InvalidCountry",
          "The provided country is too short or too long (2–80 characters)."
       );
-   
+
 }

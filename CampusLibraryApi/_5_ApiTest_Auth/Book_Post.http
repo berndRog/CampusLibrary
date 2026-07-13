@@ -1,0 +1,614 @@
+### IA Server
+@authServer = https://localhost:7010
+@devClientId = dev-token-client
+@apiScope = campus_library_api
+
+@email = w.wagner@camplib.de
+@password = Geh1m_
+
+###
+# @name 2) GetToken
+# Get bearer token for the new employee
+POST {{authServer}}/connect/token
+Content-Type: application/x-www-form-urlencoded
+Accept: application/json
+
+grant_type=dev_password
+    &client_id={{devClientId}}
+    &email={{email}}
+    &password={{password}}
+    &scope={{apiScope}}
+
+> {%
+    client.test("Access token created", function() {
+        client.assert(response.status === 200, "Expected HTTP 200");
+        client.assert(!!response.body.access_token, "Missing access_token");
+    });
+
+    const token = response.body?.access_token;
+    client.global.set("accessTokenEmployee", token);
+    client.log("Access token for employee stored as accessTokenEmployee.");
+%}
+
+
+### API Server
+@baseUrl = https://localhost:8010/camplib/v1
+
+
+@book1Id = 00000001-0000-0000-0000-000000000000
+@book2Id = 00000002-0000-0000-0000-000000000000
+@book3Id = 00000003-0000-0000-0000-000000000000
+@book4Id = 00000004-0000-0000-0000-000000000000
+@book5Id = 00000005-0000-0000-0000-000000000000
+@book6Id = 00000006-0000-0000-0000-000000000000
+@book7Id = 00000007-0000-0000-0000-000000000000
+@book8Id = 00000008-0000-0000-0000-000000000000
+
+@book1Isbn = 9780132350884
+@book2Isbn = 9780321125217
+@book3Isbn = 9780201485677
+@book4Isbn = 9780201633610
+@book5Isbn = 9781617294532
+@book6Isbn = 9781835881224
+@book7Isbn = 9780321127426
+@book8Isbn = 9780135957059
+
+@unknownBookId = 00000999-0000-0000-0000-000000000000
+
+### BookItems: Clean Code
+@bookItem1Id = 00000001-0001-0000-0000-000000000000
+@bookItem2Id = 00000001-0002-0000-0000-000000000000
+@bookItem3Id = 00000001-0003-0000-0000-000000000000
+@bookItem4Id = 00000001-0004-0000-0000-000000000000
+
+### BookItems: Domain-Driven Design
+@bookItem5Id = 00000002-0001-0000-0000-000000000000
+@bookItem6Id = 00000002-0002-0000-0000-000000000000
+@bookItem7Id = 00000002-0003-0000-0000-000000000000
+
+### BookItems: Refactoring
+@bookItem8Id = 00000003-0001-0000-0000-000000000000
+@bookItem9Id = 00000003-0002-0000-0000-000000000000
+@bookItem10Id = 00000003-0003-0000-0000-000000000000
+@bookItem11Id = 00000003-0004-0000-0000-000000000000
+@bookItem12Id = 00000003-0005-0000-0000-000000000000
+
+### BookItems: Design Patterns
+@bookItem13Id = 00000004-0001-0000-0000-000000000000
+@bookItem14Id = 00000004-0002-0000-0000-000000000000
+@bookItem15Id = 00000004-0003-0000-0000-000000000000
+@bookItem16Id = 00000004-0004-0000-0000-000000000000
+
+### BookItems: C# in Depth
+@bookItem17Id = 00000005-0001-0000-0000-000000000000
+@bookItem18Id = 00000005-0002-0000-0000-000000000000
+@bookItem19Id = 00000005-0003-0000-0000-000000000000
+
+### BookItems: C# 13 and .NET 9
+@bookItem20Id = 00000006-0001-0000-0000-000000000000
+@bookItem21Id = 00000006-0002-0000-0000-000000000000
+@bookItem22Id = 00000006-0003-0000-0000-000000000000
+@bookItem23Id = 00000006-0004-0000-0000-000000000000
+
+### BookItems: Patterns of Enterprise Application Architecture
+@bookItem24Id = 00000007-0001-0000-0000-000000000000
+@bookItem25Id = 00000007-0002-0000-0000-000000000000
+@bookItem26Id = 00000007-0003-0000-0000-000000000000
+@bookItem27Id = 00000007-0004-0000-0000-000000000000
+@bookItem28Id = 00000007-0005-0000-0000-000000000000
+
+### BookItems: The Pragmatic Programmer
+@bookItem29Id = 00000008-0001-0000-0000-000000000000
+@bookItem30Id = 00000008-0002-0000-0000-000000000000
+@bookItem31Id = 00000008-0003-0000-0000-000000000000
+
+
+
+
+
+### 1. Create seed books =======================================================
+
+### Create seed book 1: Clean Code
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "authorsText": "Robert C. Martin",
+  "title": "Clean Code",
+  "subtitle": "A Handbook of Agile Software Craftsmanship",
+  "isbn": "{{book1Isbn}}",
+  "id": "{{book1Id}}"
+}
+
+> {%
+    client.test("Book 1 posted", function() {
+        client.assert(response.status === 200 || response.status === 204, "Expected HTTP 200/204");
+    });
+
+    client.log("Book 1 posted");
+%}
+
+
+### Create seed book 2: Domain-Driven Design
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "authorsText": "Eric Evans",
+  "title": "Domain-Driven Design",
+  "subtitle": "Tackling Complexity in the Heart of Software",
+  "isbn": "{{book2Isbn}}",
+  "id": "{{book2Id}}"
+}
+
+> {%
+    client.test("Book 2 posted", function() {
+        client.assert(response.status === 200 || response.status === 204, "Expected HTTP 200/204");
+    });
+
+    client.log("Book 2 posted");
+%}
+
+
+### Create seed book 3: Refactoring
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "authorsText": "Martin Fowler, Kent Beck",
+  "title": "Refactoring",
+  "subtitle": "Improving the Design of Existing Code",
+  "isbn": "{{book3Isbn}}",
+  "id": "{{book3Id}}"
+}
+
+> {%
+    client.test("Book 3 posted", function() {
+        client.assert(response.status === 200 || response.status === 204, "Expected HTTP 200/204");
+    });
+
+    client.log("Book 3 posted");
+%}
+
+### Create seed book 4: Design Patterns
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "authorsText": "Erich Gamma, Richard Helm, Ralph Johnson, John Vlissides",
+  "title": "Design Patterns",
+  "subtitle": "Elements of Reusable Object-Oriented Software",
+  "isbn": "{{book4Isbn}}",
+  "id": "{{book4Id}}"
+}
+
+> {%
+    client.test("Book 4 posted", function() {
+        client.assert(response.status === 200 || response.status === 204, "Expected HTTP 200/204");
+    });
+
+    client.log("Book 4 posted");
+%}
+
+### Create seed book 5: C# in Depth
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "authorsText": "Jon Skeet",
+  "title": "C# in Depth",
+  "subtitle": "Fourth Edition",
+  "isbn": "{{book5Isbn}}",
+  "id": "{{book5Id}}"
+}
+
+> {%
+    client.test("Book 5 posted", function() {
+        client.assert(response.status === 200 || response.status === 204, "Expected HTTP 200/204");
+    });
+
+    client.log("Book 5vposted");
+%}
+
+### Create seed book 6: C# 13 and .NET 9
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "authorsText": "Mark J. Price",
+  "title": "C# 13 and .NET 9",
+  "subtitle": "Modern Cross-Platform Development Fundamentals",
+  "isbn": "{{book6Isbn}}",
+  "id": "{{book6Id}}"
+}
+
+> {%
+    client.test("Book 6 posted", function() {
+        client.assert(response.status === 200 || response.status === 204, "Expected HTTP 200/204");
+    });
+
+    client.log("Book 6 posted");
+%}
+
+### Create seed book 7: Patterns of Enterprise Application Architecture
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "authorsText": "Martin Fowler",
+  "title": "Patterns of Enterprise Application Architecture",
+  "subtitle": null,
+  "isbn": "{{book7Isbn}}",
+  "id": "{{book7Id}}"
+}
+
+> {%
+    client.test("Book 7 posted", function() {
+        client.assert(response.status === 200 || response.status === 204, "Expected HTTP 200/204");
+    });
+
+    client.log("Book 7 posted");
+%}
+
+### Create seed book 8: The Pragmatic Programmer
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "authorsText": "David Thomas, Andrew Hunt",
+  "title": "The Pragmatic Programmer",
+  "subtitle": "Your Journey to Mastery",
+  "isbn": "{{book8Isbn}}",
+  "id": "{{book8Id}}"
+}
+
+> {%
+    client.test("Book 8 posted", function() {
+        client.assert(response.status === 200 || response.status === 204, "Expected HTTP 200/204");
+    });
+
+    client.log("Book 8 posted");
+%}
+
+### 2. Add BookItems ===========================================================
+
+### Add BookItems to Clean Code: 4 copies
+
+POST {{baseUrl}}/books/{{book1Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem1Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book1Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem2Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book1Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem3Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book1Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem4Id}}"
+}
+
+
+### Add BookItems to Domain-Driven Design: 3 copies
+
+POST {{baseUrl}}/books/{{book2Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem5Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book2Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem6Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book2Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem7Id}}"
+}
+
+
+### Add BookItems to Refactoring: 5 copies
+
+POST {{baseUrl}}/books/{{book3Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem8Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book3Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem9Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book3Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem10Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book3Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem11Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book3Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem12Id}}"
+}
+
+
+### Add BookItems to Design Patterns: 4 copies
+
+POST {{baseUrl}}/books/{{book4Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem13Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book4Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem14Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book4Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem15Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book4Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem16Id}}"
+}
+
+
+### Add BookItems to C# in Depth: 3 copies
+
+POST {{baseUrl}}/books/{{book5Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem17Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book5Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem18Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book5Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem19Id}}"
+}
+
+
+### Add BookItems to C# 13 and .NET 9: 4 copies
+
+POST {{baseUrl}}/books/{{book6Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem20Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book6Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem21Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book6Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem22Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book6Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem23Id}}"
+}
+
+
+### Add BookItems to Patterns of Enterprise Application Architecture: 5 copies
+
+POST {{baseUrl}}/books/{{book7Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem24Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book7Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem25Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book7Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem26Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book7Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem27Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book7Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem28Id}}"
+}
+
+
+### Add BookItems to The Pragmatic Programmer: 3 copies
+
+POST {{baseUrl}}/books/{{book8Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem29Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book8Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem30Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book8Id}}/items
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenEmployee}}
+
+{
+  "id": "{{bookItem31Id}}"
+}

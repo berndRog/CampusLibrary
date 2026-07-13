@@ -159,14 +159,14 @@ public sealed class ReaderController(
    /// </summary>
    /// <param name="ct">Cancellation token.</param>
    /// <returns>The current reader profile.</returns>
-   [Authorize(Policy = CampusLibraryPolicies.Reader)]
+   [Authorize(Policy = CampusLibraryPolicies.ReadersOnly)]
    [HttpGet("readers/me", Name = nameof(GetReaderProfileAsync))]
    [Produces("application/json")]
-   [ProducesResponseType<ReaderProvisionDto>(StatusCodes.Status200OK)]
+   [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
-   public async Task<ActionResult<ReaderProvisionDto>> GetReaderProfileAsync(
+   public async Task<ActionResult<ReaderDto>> GetReaderProfileAsync(
       CancellationToken ct
    ) {
       var result = await readerReadModel.FindMeAsync(
@@ -192,19 +192,19 @@ public sealed class ReaderController(
    /// <param name="id">Reader identity.</param>
    /// <param name="ct">Cancellation token.</param>
    /// <returns>The provisioned or existing current reader profile.</returns>
-   [Authorize(Policy = CampusLibraryPolicies.Reader)]
-   [HttpPost("readers/me/provision", Name = nameof(CreateReaderProvisionAsync))]
+   [Authorize(Policy = CampusLibraryPolicies.ReadersOnly)]
+   [HttpPost("readers/me/provision", Name = nameof(CreateReaderMeProvisionAsync))]
    [Produces("application/json")]
-   [ProducesResponseType<ReaderProvisionDto>(StatusCodes.Status200OK)]
+   [ProducesResponseType<ReaderProvisionMeDto>(StatusCodes.Status200OK)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
-   public async Task<ActionResult<ReaderProvisionDto>> CreateReaderProvisionAsync(
+   public async Task<ActionResult<ReaderProvisionMeDto>> CreateReaderMeProvisionAsync(
       [FromQuery] string? id,
       CancellationToken ct
    ) {
-      var result = await readerUseCases.CreateProvisionAsync(id, ct);
+      var result = await readerUseCases.ProvisionMeAsync(id, ct);
       if(result.IsSuccess)
          return Ok(result.Value);
 
@@ -222,23 +222,23 @@ public sealed class ReaderController(
    /// <summary>
    ///    Updates firstname and lastname of the currently authenticated reader.
    /// </summary>
-   /// <param name="dto">Profile data entered by the reader.</param>
+   /// <param name="meDto">Profile data entered by the reader.</param>
    /// <param name="ct">Cancellation token.</param>
    /// <returns>The updated current reader profile.</returns>
-   [Authorize(Policy = CampusLibraryPolicies.Reader)]
-   [HttpPut("readers/me/profile", Name = nameof(PutCustomerProfileAsync))]
+   [Authorize(Policy = CampusLibraryPolicies.ReadersOnly)]
+   [HttpPut("readers/me/profile", Name = nameof(PutReaderMeProfileAsync))]
    [Consumes("application/json")]
    [Produces("application/json")]
-   [ProducesResponseType<ReaderProvisionDto>(StatusCodes.Status200OK)]
+   [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
-   public async Task<ActionResult<ReaderProvisionDto>> PutCustomerProfileAsync(
-      [FromBody] ReaderProfileUpdateDto dto,
+   public async Task<ActionResult<ReaderDto>> PutReaderMeProfileAsync(
+      [FromBody] ReaderProfileMeDto meDto,
       CancellationToken ct
    ) {
-      var result = await readerUseCases.UpdateProfileAsync(dto, ct);
+      var result = await readerUseCases.UpdateMeProfileAsync(meDto, ct);
       if(result.IsSuccess)
          return Ok(result.Value);
 
@@ -253,6 +253,43 @@ public sealed class ReaderController(
       };
    }
 
+   /// <summary>
+   ///    Updates profile data of an authenticated reader.
+   /// </summary>
+   /// <param name="meDto">Reader data used for self-service update.</param>
+   /// <param name="ct">Cancellation token.</param>
+   /// <returns>The updated current reader profile.</returns>
+   [Authorize(Policy = CampusLibraryPolicies.ReadersOnly)]
+   [HttpPut("readers/me/update", Name = nameof(UpdateCurrentReaderAsync))]
+   [Consumes("application/json")]
+   [Produces("application/json")]
+   [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
+   public async Task<ActionResult<ReaderDto>> UpdateCurrentReaderAsync(
+      [FromBody] ReaderUpdateMeDto meDto,
+      CancellationToken ct
+   ) {
+      var result = await readerUseCases.UpdateMeAsync(meDto, ct);
+      if(result.IsSuccess)
+         return Ok(result.Value);
+
+      var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+
+      return result.Error.Status switch {
+         WebErrorStatus.BadRequest => BadRequest(problem),
+         WebErrorStatus.Unauthorized => Unauthorized(problem),
+         WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
+         WebErrorStatus.NotFound => NotFound(problem),
+         WebErrorStatus.Conflict => Conflict(problem),
+         _ => BadRequest(problem)
+      };
+   }
+
+/* deleted when using AuthN/AuthZ
    /// <summary>
    ///    Creates a new reader.
    /// </summary>
@@ -343,6 +380,7 @@ public sealed class ReaderController(
          _ => BadRequest(problem)
       };
    }
+   */
 
    /// <summary>
    ///    Deactivates an existing reader.
@@ -353,6 +391,7 @@ public sealed class ReaderController(
    // Deactivate an existing reader through the write-side use case.
    // This is a soft delete: the reader remains stored,
    // but is hidden from normal read model queries.
+   [Authorize(Policy = CampusLibraryPolicies.EmployeesOnly)]
    [HttpDelete("readers/{id:guid}", Name = nameof(DeactivateReaderAsync))]
    [ProducesResponseType(StatusCodes.Status204NoContent)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
@@ -364,10 +403,7 @@ public sealed class ReaderController(
       [FromRoute] Guid id,
       CancellationToken ct
    ) {
-      var result = await readerUseCases.DeactivateAsync(
-         id: id,
-         ct: ct
-      );
+      var result = await readerUseCases.DeactivateAsync(id, ct);
 
       if(result.IsSuccess)
          return NoContent();
@@ -387,6 +423,7 @@ public sealed class ReaderController(
       };
    }
 }
+
 
 /*
 Didaktik

@@ -13,7 +13,6 @@ namespace CampusLibraryApi._3_Core.Loans._2_Application.UseCases;
 internal sealed class LoanUcReturnAtDesk(
    ILoanRepository loanRepository,
    IUnitOfWork unitOfWork,
-   IClock clock,
    ILogger<LoanUcReturnAtDesk> logger
 ) {
 
@@ -21,42 +20,40 @@ internal sealed class LoanUcReturnAtDesk(
       Guid loanId,
       CancellationToken ct = default
    ) {
-      if (loanId == Guid.Empty)
+      if(loanId == Guid.Empty)
          return Result<LoanDto>.Failure(LoanErrors.LoanIdRequired);
 
-      // Load the Loan aggregate for a command operation.
-      // The repository returns a tracked aggregate.
+      // Only current loans are stored. Finding the loan therefore means that
+      // the referenced book item is currently borrowed.
       var loan = await loanRepository.FindByIdAsync(
          id: loanId,
          ct: ct
       );
 
-      if (loan is null)
+      if(loan is null)
          return Result<LoanDto>.Failure(LoanErrors.LoanNotFound);
 
-      // The actual return timestamp is provided by the application service.
-      var resultReturned = loan.ReturnAtDesk(
-         returnedAt: clock.UtcNow
+      // Keep the response data before deleting the aggregate.
+      LoanDto returnedLoanDto = loan.ToLoanDto();
+
+      // Returning at the desk ends the loan lifecycle. No returned loan is
+      // retained in this simplified model.
+      loanRepository.Remove(
+         loan: loan
       );
 
-      if (resultReturned.IsFailure)
-         return Result<LoanDto>.Failure(resultReturned.Error);
-
-      // Save all changes to database.
       var rows = await unitOfWork.SaveAllChangesAsync(
          "LoanUcReturnAtDesk",
          ct
       );
 
       logger.LogDebug(
-         "LoanUcReturnAtDesk {LoanId} done, rows {Rows}",
+         "LoanUcReturnAtDesk deleted loan {LoanId}, rows {Rows}",
          loan.Id,
          rows
       );
 
-      return Result<LoanDto>.Success(
-         loan.ToLoanDto()
-      );
+      return Result<LoanDto>.Success(returnedLoanDto);
    }
 }
 
@@ -67,17 +64,12 @@ Lernziele und Didaktik
 Dieser Use Case beschreibt die Rückgabe eines ausgeliehenen Exemplars am
 Service Desk.
 
-Der Use Case lädt ein Loan-Aggregate über das Repository. Danach wird die
-fachliche Änderung nicht direkt an Properties vorgenommen, sondern über die
-Domain-Methode ReturnAtDesk.
+Ein Loan repräsentiert ausschließlich eine aktuelle Ausleihe. Deshalb wird
+bei der Rückgabe kein Status gesetzt und kein ReturnedAt gespeichert. Der
+Use Case löscht stattdessen den Loan über das Repository.
 
-Die Domäne entscheidet, ob die Rückgabe erlaubt ist. Zum Beispiel darf eine
-bereits zurückgegebene Ausleihe nicht noch einmal zurückgegeben werden.
-
-Der Rückgabezeitpunkt wird nicht vom Client geliefert. Er kommt aus IClock.
-Dadurch bleibt die Anwendung testbar und die Zeitlogik liegt nicht im
-Controller.
-
-Gespeichert wird erst am Ende über IUnitOfWork. Das Repository lädt und
-verwaltet Aggregate, die Transaktion wird aber vom UnitOfWork abgeschlossen.
+Die Rückgabehistorie wird in dieser didaktisch vereinfachten Version bewusst
+nicht gespeichert. Soll später eine Historie benötigt werden, wäre dafür ein
+eigenes Archiv- oder History-Konzept geeigneter als ein zweiter Zustand im
+aktuellen Loan-Aggregate.
 */

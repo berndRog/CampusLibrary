@@ -30,6 +30,12 @@ public interface IBookReadModel {
       CancellationToken ct = default
    );
 
+   // Returns the current loan blockers shown before a book is deactivated.
+   Task<Result<BookDeactivationInfoDto>> FindDeactivationInfoAsync(
+      Guid id,
+      CancellationToken ct = default
+   );
+
    // Selects books.
    //
    // By default, only active books are returned.

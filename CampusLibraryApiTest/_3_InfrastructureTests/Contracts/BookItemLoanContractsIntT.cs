@@ -1,7 +1,6 @@
 using AwesomeAssertions;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
-using CampusLibraryApi._3_Core.Catalog._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Errors;
 using CampusLibraryApiTest.TestInfrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -82,7 +81,7 @@ public sealed class BookItemLoanContractIntT : TestBaseIntegration {
    }
 
    [Fact]
-   public async Task FindByIdAsync_deactivated_book_returns_not_available_for_loan() {
+   public async Task FindByIdAsync_deactivated_book_item_returns_not_found() {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
@@ -111,14 +110,7 @@ public sealed class BookItemLoanContractIntT : TestBaseIntegration {
       var result = await contract.FindBookItemForLoanAsync(bookItem1.Id, ct);
 
       // Assert
-      result.IsSuccess.Should().BeTrue();
-
-      var actualBookItemDto = result.Value;
-
-      actualBookItemDto.Should().NotBeNull();
-      actualBookItemDto.BookItemId.Should().Be(bookItem1.Id);
-      actualBookItemDto.BookId.Should().Be(book1.Id);
-      actualBookItemDto.BookIsActive.Should().BeFalse();
-      actualBookItemDto.IsAvailableForLoan.Should().BeFalse();
+      result.IsFailure.Should().BeTrue();
+      result.Error.Should().Be(CommonErrors.BookItemNotFound);
    }
 }

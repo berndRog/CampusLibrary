@@ -1,0 +1,536 @@
+### ============================================================
+### CampusLibrary: Borrow loans with Reader login
+###
+### Preconditions:
+### - Reader users already exist in the IdentityAccessServer.
+### - fachliche Readers are already provisioned in CampusLibraryApi.
+### - Reader profiles are completed.
+### - Books and BookItems already exist.
+###
+### This file only logs in each reader and creates loans.
+### It is not idempotent: running it twice will usually create
+### conflicts because BookItems are already borrowed.
+### ============================================================
+
+### Common configuration ========================================
+@baseUrl = https://localhost:8010/camplib/v1
+@authServer = https://localhost:7010
+@devClientId = dev-token-client
+@apiScope = campus_library_api
+@password = Geh1m_
+
+
+### Reader ids ==================================================
+@reader1Id = 00000001-0000-0000-0000-000000000000
+@reader2Id = 00000002-0000-0000-0000-000000000000
+@reader3Id = 00000003-0000-0000-0000-000000000000
+@reader4Id = 00000004-0000-0000-0000-000000000000
+@reader5Id = 00000005-0000-0000-0000-000000000000
+@reader6Id = 00000006-0000-0000-0000-000000000000
+@reader7Id = 00000099-0000-0000-0000-000000000000
+
+
+### Reader logins ===============================================
+@reader1Email = e.mustermann@t-online.de
+@reader2Email = m.mustermann@gmail.com
+@reader3Email = a.arndt@t-online.de
+@reader4Email = b.bauer@gmail.com
+@reader5Email = c.conrad@gmx.com
+@reader6Email = d.deppe@icloud.com
+@reader7Email = v.vogel@freenet.com
+
+
+### BookItem ids ================================================
+@bookItem1Id = 00000001-0001-0000-0000-000000000000
+@bookItem2Id = 00000001-0002-0000-0000-000000000000
+@bookItem3Id = 00000001-0003-0000-0000-000000000000
+@bookItem4Id = 00000001-0004-0000-0000-000000000000
+
+@bookItem5Id = 00000002-0001-0000-0000-000000000000
+@bookItem6Id = 00000002-0002-0000-0000-000000000000
+@bookItem7Id = 00000002-0003-0000-0000-000000000000
+
+@bookItem8Id = 00000003-0001-0000-0000-000000000000
+@bookItem9Id = 00000003-0002-0000-0000-000000000000
+@bookItem10Id = 00000003-0003-0000-0000-000000000000
+@bookItem11Id = 00000003-0004-0000-0000-000000000000
+@bookItem12Id = 00000003-0005-0000-0000-000000000000
+
+@bookItem13Id = 00000004-0001-0000-0000-000000000000
+@bookItem14Id = 00000004-0002-0000-0000-000000000000
+@bookItem15Id = 00000004-0003-0000-0000-000000000000
+@bookItem16Id = 00000004-0004-0000-0000-000000000000
+
+@bookItem17Id = 00000005-0001-0000-0000-000000000000
+@bookItem18Id = 00000005-0002-0000-0000-000000000000
+@bookItem19Id = 00000005-0003-0000-0000-000000000000
+
+@bookItem20Id = 00000006-0001-0000-0000-000000000000
+@bookItem21Id = 00000006-0002-0000-0000-000000000000
+@bookItem22Id = 00000006-0003-0000-0000-000000000000
+@bookItem23Id = 00000006-0004-0000-0000-000000000000
+
+@bookItem24Id = 00000007-0001-0000-0000-000000000000
+@bookItem25Id = 00000007-0002-0000-0000-000000000000
+@bookItem26Id = 00000007-0003-0000-0000-000000000000
+@bookItem27Id = 00000007-0004-0000-0000-000000000000
+@bookItem28Id = 00000007-0005-0000-0000-000000000000
+
+@bookItem29Id = 00000008-0001-0000-0000-000000000000
+@bookItem30Id = 00000008-0002-0000-0000-000000000000
+@bookItem31Id = 00000008-0003-0000-0000-000000000000
+
+
+### Loan ids =====================================================
+@loan1Id = 10000001-0000-0000-0000-000000000000
+@loan2Id = 10000002-0000-0000-0000-000000000000
+@loan3Id = 10000003-0000-0000-0000-000000000000
+@loan4Id = 10000004-0000-0000-0000-000000000000
+@loan5Id = 10000005-0000-0000-0000-000000000000
+@loan6Id = 10000006-0000-0000-0000-000000000000
+@loan7Id = 10000007-0000-0000-0000-000000000000
+@loan8Id = 10000008-0000-0000-0000-000000000000
+@loan9Id = 10000009-0000-0000-0000-000000000000
+@loan10Id = 10000010-0000-0000-0000-000000000000
+@loan11Id = 10000011-0000-0000-0000-000000000000
+@loan12Id = 10000012-0000-0000-0000-000000000000
+@loan13Id = 10000013-0000-0000-0000-000000000000
+
+
+### ============================================================
+### Reader 1: Erika Mustermann - 2 loans
+### ============================================================
+
+### @name Reader1_GetToken
+POST {{authServer}}/connect/token
+Content-Type: application/x-www-form-urlencoded
+Accept: application/json
+
+grant_type=dev_password
+    &client_id={{devClientId}}
+    &email={{reader1Email}}
+    &password={{password}}
+    &scope={{apiScope}}
+
+> {%
+    client.test("Reader 1 access token created", function() {
+        client.assert(response.status === 200, "Expected HTTP 200");
+        client.assert(!!response.body.access_token, "Missing access_token");
+    });
+
+    const token = response.body?.access_token;
+    client.global.set("accessTokenReader1", token);
+%}
+
+
+### Reader 1 borrows Clean Code copy 1
+POST {{baseUrl}}/loans
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenReader1}}
+
+{
+  "id": "{{loan1Id}}",
+  "readerId": "{{reader1Id}}",
+  "bookItemId": "{{bookItem1Id}}"
+}
+
+> {%
+    client.test("Reader 1 loan 1 created", function() {
+        client.assert(response.status === 201, "Expected HTTP 201");
+    });
+%}
+
+
+### Reader 1 borrows Domain-Driven Design copy 1
+POST {{baseUrl}}/loans
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenReader1}}
+
+{
+  "id": "{{loan2Id}}",
+  "readerId": "{{reader1Id}}",
+  "bookItemId": "{{bookItem5Id}}"
+}
+
+> {%
+    client.test("Reader 1 loan 2 created", function() {
+        client.assert(response.status === 201, "Expected HTTP 201");
+    });
+%}
+
+
+### ============================================================
+### Reader 2: Max Mustermann - 1 loan
+### ============================================================
+
+### @name Reader2_GetToken
+POST {{authServer}}/connect/token
+Content-Type: application/x-www-form-urlencoded
+Accept: application/json
+
+grant_type=dev_password
+    &client_id={{devClientId}}
+    &email={{reader2Email}}
+    &password={{password}}
+    &scope={{apiScope}}
+
+> {%
+    client.test("Reader 2 access token created", function() {
+        client.assert(response.status === 200, "Expected HTTP 200");
+        client.assert(!!response.body.access_token, "Missing access_token");
+    });
+
+    const token = response.body?.access_token;
+    client.global.set("accessTokenReader2", token);
+%}
+
+
+### Reader 2 borrows Clean Code copy 2
+POST {{baseUrl}}/loans
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenReader2}}
+
+{
+  "id": "{{loan3Id}}",
+  "readerId": "{{reader2Id}}",
+  "bookItemId": "{{bookItem2Id}}"
+}
+
+> {%
+    client.test("Reader 2 loan 1 created", function() {
+        client.assert(response.status === 201, "Expected HTTP 201");
+    });
+%}
+
+
+### ============================================================
+### Reader 3: Arne Arndt - 2 loans
+### ============================================================
+
+### @name Reader3_GetToken
+POST {{authServer}}/connect/token
+Content-Type: application/x-www-form-urlencoded
+Accept: application/json
+
+grant_type=dev_password
+    &client_id={{devClientId}}
+    &email={{reader3Email}}
+    &password={{password}}
+    &scope={{apiScope}}
+
+> {%
+    client.test("Reader 3 access token created", function() {
+        client.assert(response.status === 200, "Expected HTTP 200");
+        client.assert(!!response.body.access_token, "Missing access_token");
+    });
+
+    const token = response.body?.access_token;
+    client.global.set("accessTokenReader3", token);
+%}
+
+
+### Reader 3 borrows Refactoring copy 1
+POST {{baseUrl}}/loans
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenReader3}}
+
+{
+  "id": "{{loan4Id}}",
+  "readerId": "{{reader3Id}}",
+  "bookItemId": "{{bookItem8Id}}"
+}
+
+> {%
+    client.test("Reader 3 loan 1 created", function() {
+        client.assert(response.status === 201, "Expected HTTP 201");
+    });
+%}
+
+
+### Reader 3 borrows Design Patterns copy 1
+POST {{baseUrl}}/loans
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenReader3}}
+
+{
+  "id": "{{loan5Id}}",
+  "readerId": "{{reader3Id}}",
+  "bookItemId": "{{bookItem13Id}}"
+}
+
+> {%
+    client.test("Reader 3 loan 2 created", function() {
+        client.assert(response.status === 201, "Expected HTTP 201");
+    });
+%}
+
+
+### ============================================================
+### Reader 4: Benno Bauer - 3 loans
+### ============================================================
+
+### @name Reader4_GetToken
+POST {{authServer}}/connect/token
+Content-Type: application/x-www-form-urlencoded
+Accept: application/json
+
+grant_type=dev_password
+    &client_id={{devClientId}}
+    &email={{reader4Email}}
+    &password={{password}}
+    &scope={{apiScope}}
+
+> {%
+    client.test("Reader 4 access token created", function() {
+        client.assert(response.status === 200, "Expected HTTP 200");
+        client.assert(!!response.body.access_token, "Missing access_token");
+    });
+
+    const token = response.body?.access_token;
+    client.global.set("accessTokenReader4", token);
+%}
+
+
+### Reader 4 borrows C# in Depth copy 1
+POST {{baseUrl}}/loans
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenReader4}}
+
+{
+  "id": "{{loan6Id}}",
+  "readerId": "{{reader4Id}}",
+  "bookItemId": "{{bookItem17Id}}"
+}
+
+> {%
+    client.test("Reader 4 loan 1 created", function() {
+        client.assert(response.status === 201, "Expected HTTP 201");
+    });
+%}
+
+
+### Reader 4 borrows Refactoring copy 2
+POST {{baseUrl}}/loans
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenReader4}}
+
+{
+  "id": "{{loan7Id}}",
+  "readerId": "{{reader4Id}}",
+  "bookItemId": "{{bookItem9Id}}"
+}
+
+> {%
+    client.test("Reader 4 loan 2 created", function() {
+        client.assert(response.status === 201, "Expected HTTP 201");
+    });
+%}
+
+
+### Reader 4 borrows C# 13 and .NET 9 copy 1
+POST {{baseUrl}}/loans
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenReader4}}
+
+{
+  "id": "{{loan8Id}}",
+  "readerId": "{{reader4Id}}",
+  "bookItemId": "{{bookItem20Id}}"
+}
+
+> {%
+    client.test("Reader 4 loan 3 created", function() {
+        client.assert(response.status === 201, "Expected HTTP 201");
+    });
+%}
+
+
+### ============================================================
+### Reader 5: Christine Conrad - 1 loan
+### ============================================================
+
+### @name Reader5_GetToken
+POST {{authServer}}/connect/token
+Content-Type: application/x-www-form-urlencoded
+Accept: application/json
+
+grant_type=dev_password
+    &client_id={{devClientId}}
+    &email={{reader5Email}}
+    &password={{password}}
+    &scope={{apiScope}}
+
+> {%
+    client.test("Reader 5 access token created", function() {
+        client.assert(response.status === 200, "Expected HTTP 200");
+        client.assert(!!response.body.access_token, "Missing access_token");
+    });
+
+    const token = response.body?.access_token;
+    client.global.set("accessTokenReader5", token);
+%}
+
+
+### Reader 5 borrows Patterns of Enterprise Application Architecture copy 1
+POST {{baseUrl}}/loans
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenReader5}}
+
+{
+  "id": "{{loan9Id}}",
+  "readerId": "{{reader5Id}}",
+  "bookItemId": "{{bookItem24Id}}"
+}
+
+> {%
+    client.test("Reader 5 loan 1 created", function() {
+        client.assert(response.status === 201, "Expected HTTP 201");
+    });
+%}
+
+
+### ============================================================
+### Reader 6: Dana Deppe - 2 loans
+### ============================================================
+
+### @name Reader6_GetToken
+POST {{authServer}}/connect/token
+Content-Type: application/x-www-form-urlencoded
+Accept: application/json
+
+grant_type=dev_password
+    &client_id={{devClientId}}
+    &email={{reader6Email}}
+    &password={{password}}
+    &scope={{apiScope}}
+
+> {%
+    client.test("Reader 6 access token created", function() {
+        client.assert(response.status === 200, "Expected HTTP 200");
+        client.assert(!!response.body.access_token, "Missing access_token");
+    });
+
+    const token = response.body?.access_token;
+    client.global.set("accessTokenReader6", token);
+%}
+
+
+### Reader 6 borrows The Pragmatic Programmer copy 1
+POST {{baseUrl}}/loans
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenReader6}}
+
+{
+  "id": "{{loan10Id}}",
+  "readerId": "{{reader6Id}}",
+  "bookItemId": "{{bookItem29Id}}"
+}
+
+> {%
+    client.test("Reader 6 loan 1 created", function() {
+        client.assert(response.status === 201, "Expected HTTP 201");
+    });
+%}
+
+
+### Reader 6 borrows Design Patterns copy 2
+POST {{baseUrl}}/loans
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenReader6}}
+
+{
+  "id": "{{loan11Id}}",
+  "readerId": "{{reader6Id}}",
+  "bookItemId": "{{bookItem14Id}}"
+}
+
+> {%
+    client.test("Reader 6 loan 2 created", function() {
+        client.assert(response.status === 201, "Expected HTTP 201");
+    });
+%}
+
+
+### ============================================================
+### Reader 7: Vera Vogel - 2 loans
+### ============================================================
+
+### @name Reader7_GetToken
+POST {{authServer}}/connect/token
+Content-Type: application/x-www-form-urlencoded
+Accept: application/json
+
+grant_type=dev_password
+    &client_id={{devClientId}}
+    &email={{reader7Email}}
+    &password={{password}}
+    &scope={{apiScope}}
+
+> {%
+    client.test("Reader 7 access token created", function() {
+        client.assert(response.status === 200, "Expected HTTP 200");
+        client.assert(!!response.body.access_token, "Missing access_token");
+    });
+
+    const token = response.body?.access_token;
+    client.global.set("accessTokenReader7", token);
+%}
+
+
+### Reader 7 borrows C# 13 and .NET 9 copy 2
+POST {{baseUrl}}/loans
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenReader7}}
+
+{
+  "id": "{{loan12Id}}",
+  "readerId": "{{reader7Id}}",
+  "bookItemId": "{{bookItem21Id}}"
+}
+
+> {%
+    client.test("Reader 7 loan 1 created", function() {
+        client.assert(response.status === 201, "Expected HTTP 201");
+    });
+%}
+
+
+### Reader 7 borrows Refactoring copy 3
+POST {{baseUrl}}/loans
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenReader7}}
+
+{
+  "id": "{{loan13Id}}",
+  "readerId": "{{reader7Id}}",
+  "bookItemId": "{{bookItem10Id}}"
+}
+
+> {%
+    client.test("Reader 7 loan 2 created", function() {
+        client.assert(response.status === 201, "Expected HTTP 201");
+    });
+%}
+
+
+### ============================================================
+### Optional verification
+### ============================================================
+
+### Get all borrowed loans
+GET {{baseUrl}}/loans
+Accept: application/json
+Authorization: Bearer {{accessTokenReader1}}

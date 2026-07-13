@@ -92,6 +92,19 @@ public sealed class BookClient(
          ct: ct
       );
 
+   // GET /camplib/v1/books/{bookId}/deactivation-info
+   public Task<Result<BookDeactivationInfoDto>> GetDeactivationInfoAsync(
+      Guid bookId,
+      CancellationToken ct = default
+   ) =>
+      SendAsync<BookDeactivationInfoDto>(
+         send: () => _http.GetAsync(
+            requestUri: $"{Base}/books/{bookId}/deactivation-info",
+            cancellationToken: ct
+         ),
+         ct: ct
+      );
+
    // PATCH /camplib/v1/books/{bookId}/deactivate
    public Task<Result<BookDto>> DeactivateAsync(
       Guid bookId,

@@ -133,20 +133,27 @@ public sealed class Book : AggregateRoot {
       return Result<BookItem>.Success(bookItem);
    }
    
-   // Deactivate the Book
+   // Deactivates the Book and removes all physical copies from the aggregate.
+   // The application use case must first verify that no current Loan exists
+   // for any of these BookItems.
    public Result Deactivate(
-       DateTime updatedAt
-    ) {
-       if (!IsActive)
-          return Result.Success();
+      DateTime updatedAt
+   ) {
+      // A repeated request is idempotent only when the book is already in the
+      // complete target state. Older database versions may contain an inactive
+      // Book that still owns BookItems. Calling Deactivate again then completes
+      // the cleanup after all current loans have been returned.
+      if(!IsActive && _bookItems.Count == 0)
+         return Result.Success();
 
-       IsActive = false;
-       
-       var resultUpdated = Touch(updatedAt);
-       if (resultUpdated.IsFailure)
-          return Result.Failure(resultUpdated.Error);
+      var resultUpdated = Touch(updatedAt);
+      if(resultUpdated.IsFailure)
+         return Result.Failure(resultUpdated.Error);
 
-       return Result.Success();
+      _bookItems.Clear();
+      IsActive = false;
+
+      return Result.Success();
    }
    
    private static string NormalizeAuthorsText(
@@ -205,11 +212,11 @@ Attribute hat, wird keine eigene Domain-Klasse BookAuthor modelliert.
 Stattdessen enthält Book eine Liste von Authors. EF Core bildet diese
 Beziehung später mit einer Join-Tabelle ab.
 
-Das unterscheidet Book-Author von einem späteren Loan-Modell. Ein Loan ist
-nicht nur eine Verbindung zwischen Reader und BookItem, sondern ein eigener
-fachlicher Vorgang mit Ausleihdatum, Rückgabefrist, Rückgabedatum und Status.
-Loan hätte daher eine eigene fachliche Bedeutung und vermutlich eine eigene
-Identität.
+Das unterscheidet Book-Author vom Loan-Modell. Ein Loan ist nicht nur eine
+Verbindung zwischen Reader und BookItem, sondern ein eigener fachlicher
+Vorgang mit Ausleihdatum, Rückgabefrist, Verlängerungen und eigener Identität.
+Ein gespeicherter Loan repräsentiert eine aktuell bestehende Ausleihe und wird
+bei der Rückgabe gelöscht.
 
 Author bleibt dennoch ein eigenes Aggregate Root. Ein Author kann unabhängig
 von einem einzelnen Book existieren und mehreren Books zugeordnet werden.

@@ -18,7 +18,7 @@ public static class ReaderMappings {
          IsProfileCompleted: reader.IsProfileCompleted
       );
 
-   public static ReaderProvisionDto ToReaderProvisionDto(this Reader reader, bool wasCreated) =>
+   public static ReaderProvisionMeDto ToReaderProvisionMeDto(this Reader reader, bool wasCreated) =>
       new(
          Id: reader.Id,
          WasCreated: wasCreated

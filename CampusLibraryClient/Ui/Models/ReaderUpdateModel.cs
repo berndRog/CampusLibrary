@@ -1,21 +1,71 @@
 using System.ComponentModel.DataAnnotations;
+using CampusLibraryClient.Api.Dtos;
 
 namespace CampusLibraryClient.Ui.Models;
 
 public sealed class ReaderUpdateModel {
 
    [Required]
+   [StringLength(80)]
    public string? Lastname { get; set; }
 
    [Required]
    [EmailAddress]
+   [StringLength(120)]
    public string? Email { get; set; }
 
+   [Required]
+   [StringLength(120)]
    public string? Street { get; set; }
 
+   [Required]
+   [StringLength(20)]
    public string? PostalCode { get; set; }
 
+   [Required]
+   [StringLength(80)]
    public string? City { get; set; }
 
-   public string? Country { get; set; }
+   [Required]
+   [StringLength(80)]
+   public string? Country { get; set; } = "DE";
+
+   public static ReaderUpdateModel FromReader(
+      ReaderDto reader
+   ) => new() {
+      Lastname = reader.Lastname,
+      Email = reader.Email,
+      Street = reader.AddressDto?.Street,
+      PostalCode = reader.AddressDto?.PostalCode,
+      City = reader.AddressDto?.City,
+      Country = reader.AddressDto?.Country ?? "DE"
+   };
+
+   public ReaderUpdateMeDto ToDto() => new(
+      Lastname: Lastname?.Trim(),
+      Email: Email?.Trim(),
+      AddressDto: new AddressDto(
+         Street: Street?.Trim(),
+         PostalCode: PostalCode?.Trim(),
+         City: City?.Trim(),
+         Country: Country?.Trim()
+      )
+   );
 }
+
+/*
+Didaktik
+--------
+
+ReaderUpdateModel beschreibt die spätere Self-Service-Änderung unter
+/readers/update.
+
+Änderbar sind nur:
+- Nachname
+- fachliche Reader-E-Mail
+- Adresse
+
+Der Vorname bleibt nach dem initialen Profilabschluss unverändert. Username,
+Subject und Rolle bleiben technische IdentityAccessServer-Daten und sind hier
+nicht editierbar.
+*/

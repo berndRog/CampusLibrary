@@ -206,6 +206,7 @@ public sealed class BookRepositoryIntT : TestBaseIntegration {
       // Assert
       actualBook.Should().NotBeNull();
       actualBook!.IsActive.Should().BeFalse();
+      actualBook.BookItems.Should().BeEmpty();
       actualBook.UpdatedAt.Should().Be(updatedAt);
    }
 }

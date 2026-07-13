@@ -4,13 +4,69 @@
 @book2Id = 00000002-0000-0000-0000-000000000000
 @book3Id = 00000003-0000-0000-0000-000000000000
 @book4Id = 00000004-0000-0000-0000-000000000000
+@book5Id = 00000005-0000-0000-0000-000000000000
+@book6Id = 00000006-0000-0000-0000-000000000000
+@book7Id = 00000007-0000-0000-0000-000000000000
+@book8Id = 00000008-0000-0000-0000-000000000000
 
 @book1Isbn = 9780132350884
 @book2Isbn = 9780321125217
 @book3Isbn = 9780201485677
 @book4Isbn = 9780201633610
+@book5Isbn = 9781617294532
+@book6Isbn = 9781835881224
+@book7Isbn = 9780321127426
+@book8Isbn = 9780135957059
 
 @unknownBookId = 00000999-0000-0000-0000-000000000000
+
+### BookItems: Clean Code
+@bookItem1Id = 00000001-0001-0000-0000-000000000000
+@bookItem2Id = 00000001-0002-0000-0000-000000000000
+@bookItem3Id = 00000001-0003-0000-0000-000000000000
+@bookItem4Id = 00000001-0004-0000-0000-000000000000
+
+### BookItems: Domain-Driven Design
+@bookItem5Id = 00000002-0001-0000-0000-000000000000
+@bookItem6Id = 00000002-0002-0000-0000-000000000000
+@bookItem7Id = 00000002-0003-0000-0000-000000000000
+
+### BookItems: Refactoring
+@bookItem8Id = 00000003-0001-0000-0000-000000000000
+@bookItem9Id = 00000003-0002-0000-0000-000000000000
+@bookItem10Id = 00000003-0003-0000-0000-000000000000
+@bookItem11Id = 00000003-0004-0000-0000-000000000000
+@bookItem12Id = 00000003-0005-0000-0000-000000000000
+
+### BookItems: Design Patterns
+@bookItem13Id = 00000004-0001-0000-0000-000000000000
+@bookItem14Id = 00000004-0002-0000-0000-000000000000
+@bookItem15Id = 00000004-0003-0000-0000-000000000000
+@bookItem16Id = 00000004-0004-0000-0000-000000000000
+
+### BookItems: C# in Depth
+@bookItem17Id = 00000005-0001-0000-0000-000000000000
+@bookItem18Id = 00000005-0002-0000-0000-000000000000
+@bookItem19Id = 00000005-0003-0000-0000-000000000000
+
+### BookItems: C# 13 and .NET 9
+@bookItem20Id = 00000006-0001-0000-0000-000000000000
+@bookItem21Id = 00000006-0002-0000-0000-000000000000
+@bookItem22Id = 00000006-0003-0000-0000-000000000000
+@bookItem23Id = 00000006-0004-0000-0000-000000000000
+
+### BookItems: Patterns of Enterprise Application Architecture
+@bookItem24Id = 00000007-0001-0000-0000-000000000000
+@bookItem25Id = 00000007-0002-0000-0000-000000000000
+@bookItem26Id = 00000007-0003-0000-0000-000000000000
+@bookItem27Id = 00000007-0004-0000-0000-000000000000
+@bookItem28Id = 00000007-0005-0000-0000-000000000000
+
+### BookItems: The Pragmatic Programmer
+@bookItem29Id = 00000008-0001-0000-0000-000000000000
+@bookItem30Id = 00000008-0002-0000-0000-000000000000
+@bookItem31Id = 00000008-0003-0000-0000-000000000000
+
 
 ### 1. Create seed books =======================================================
 
@@ -68,3 +124,403 @@ Accept: application/json
   "isbn": "{{book4Isbn}}",
   "id": "{{book4Id}}"
 }
+
+
+### Create seed book 5: C# in Depth
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+
+{
+  "authorsText": "Jon Skeet",
+  "title": "C# in Depth",
+  "subtitle": "Fourth Edition",
+  "isbn": "{{book5Isbn}}",
+  "id": "{{book5Id}}"
+}
+
+
+### Create seed book 6: C# 13 and .NET 9
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+
+{
+  "authorsText": "Mark J. Price",
+  "title": "C# 13 and .NET 9",
+  "subtitle": "Modern Cross-Platform Development Fundamentals",
+  "isbn": "{{book6Isbn}}",
+  "id": "{{book6Id}}"
+}
+
+
+### Create seed book 7: Patterns of Enterprise Application Architecture
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+
+{
+  "authorsText": "Martin Fowler",
+  "title": "Patterns of Enterprise Application Architecture",
+  "subtitle": null,
+  "isbn": "{{book7Isbn}}",
+  "id": "{{book7Id}}"
+}
+
+
+### Create seed book 8: The Pragmatic Programmer
+POST {{baseUrl}}/books
+Content-Type: application/json
+Accept: application/json
+
+{
+  "authorsText": "David Thomas, Andrew Hunt",
+  "title": "The Pragmatic Programmer",
+  "subtitle": "Your Journey to Mastery",
+  "isbn": "{{book8Isbn}}",
+  "id": "{{book8Id}}"
+}
+
+
+### 2. Add BookItems ===========================================================
+
+### Add BookItems to Clean Code: 4 copies
+
+POST {{baseUrl}}/books/{{book1Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem1Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book1Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem2Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book1Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem3Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book1Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem4Id}}"
+}
+
+
+### Add BookItems to Domain-Driven Design: 3 copies
+
+POST {{baseUrl}}/books/{{book2Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem5Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book2Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem6Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book2Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem7Id}}"
+}
+
+
+### Add BookItems to Refactoring: 5 copies
+
+POST {{baseUrl}}/books/{{book3Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem8Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book3Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem9Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book3Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem10Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book3Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem11Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book3Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem12Id}}"
+}
+
+
+### Add BookItems to Design Patterns: 4 copies
+
+POST {{baseUrl}}/books/{{book4Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem13Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book4Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem14Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book4Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem15Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book4Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem16Id}}"
+}
+
+
+### Add BookItems to C# in Depth: 3 copies
+
+POST {{baseUrl}}/books/{{book5Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem17Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book5Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem18Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book5Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem19Id}}"
+}
+
+
+### Add BookItems to C# 13 and .NET 9: 4 copies
+
+POST {{baseUrl}}/books/{{book6Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem20Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book6Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem21Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book6Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem22Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book6Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem23Id}}"
+}
+
+
+### Add BookItems to Patterns of Enterprise Application Architecture: 5 copies
+
+POST {{baseUrl}}/books/{{book7Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem24Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book7Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem25Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book7Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem26Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book7Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem27Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book7Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem28Id}}"
+}
+
+
+### Add BookItems to The Pragmatic Programmer: 3 copies
+
+POST {{baseUrl}}/books/{{book8Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem29Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book8Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem30Id}}"
+}
+
+###
+POST {{baseUrl}}/books/{{book8Id}}/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{bookItem31Id}}"
+}
+
+
+### 3. Verify seed books =======================================================
+
+### Get all active books
+GET {{baseUrl}}/books
+Accept: application/json
+
+
+### Get seed book 1: Clean Code
+GET {{baseUrl}}/books/{{book1Id}}
+Accept: application/json
+
+
+### Get seed book 2: Domain-Driven Design
+GET {{baseUrl}}/books/{{book2Id}}
+Accept: application/json
+
+
+### Get seed book 3: Refactoring
+GET {{baseUrl}}/books/{{book3Id}}
+Accept: application/json
+
+
+### Get seed book 4: Design Patterns
+GET {{baseUrl}}/books/{{book4Id}}
+Accept: application/json
+
+
+### Get seed book 5: C# in Depth
+GET {{baseUrl}}/books/{{book5Id}}
+Accept: application/json
+
+
+### Get seed book 6: C# 13 and .NET 9
+GET {{baseUrl}}/books/{{book6Id}}
+Accept: application/json
+
+
+### Get seed book 7: Patterns of Enterprise Application Architecture
+GET {{baseUrl}}/books/{{book7Id}}
+Accept: application/json
+
+
+### Get seed book 8: The Pragmatic Programmer
+GET {{baseUrl}}/books/{{book8Id}}
+Accept: application/json

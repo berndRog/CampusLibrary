@@ -1,4 +1,5 @@
 @page "/catalog/books"
+@attribute [Authorize(Roles = CampusLibraryRoles.ReaderOrEmployee)]
 @rendermode InteractiveServer
 @inherits BasePage
 
@@ -10,7 +11,7 @@
 <PageTitle>Bücher</PageTitle>
 
 <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
-   <h1 class="h3 mb-0">Bücher</h1>
+   @* <h1 class="h3 mb-0">Bücher</h1> *@
 
    @if (_currentUser?.IsEmployee == true) {
       <a class="btn btn-primary" href="/catalog/books/create">
@@ -19,11 +20,11 @@
    }
 </div>
 
-<p class="text-muted">
-   Der Katalog ist für Leserinnen, Leser und Mitarbeitende sichtbar.
-   Leserinnen und Leser können ein Buch ausleihen, wenn mindestens ein Exemplar
-   tatsächlich verfügbar ist.
-</p>
+@* <p class="text-muted"> *@
+@*    Der Katalog ist für Leserinnen, Leser und Mitarbeitende sichtbar. *@
+@*    Leserinnen und Leser können ein Buch ausleihen, wenn mindestens ein Exemplar *@
+@*    tatsächlich verfügbar ist. *@
+@* </p> *@
 
 <div class="row gy-2 gx-2 align-items-end mb-3">
    <div class="col-sm-auto">
@@ -50,6 +51,9 @@
 
 @if (IsLoading || _currentUser is null) {
    <p class="text-muted">Bücher werden geladen...</p>
+}
+else if(Error is not null) {
+   @* ErrorAlert above displays the API error. *@
 }
 else if (_books.Count == 0) {
    <p>Keine Bücher gefunden.</p>
@@ -78,7 +82,10 @@ else {
 
             <tr>
                <td class="text-nowrap">
-                  @if (_currentUser.IsReader && book.IsActive && availability.AvailableItems > 0) {
+                  @if (_currentUser.IsReader && availability.BorrowedByCurrentReader) {
+                     <span class="text-muted">Bereits ausgeliehen</span>
+                  }
+                  else if (_currentUser.IsReader && book.IsActive && availability.AvailableItems > 0) {
                      <button class="btn btn-primary btn-sm"
                              @onclick="() => NavigateToBorrow(book.Id)">
                         Ausleihen
@@ -177,6 +184,7 @@ else {
 
    protected override async Task OnInitializedAsync() {
       _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
+
       await LoadAsync();
    }
 
@@ -230,9 +238,33 @@ else {
 
       Result<IEnumerable<LoanListItemDto>> loanResult = await LoanClient.GetBorrowedAsync();
 
-      HashSet<Guid> borrowedBookItemIds = loanResult.IsSuccess && loanResult.Value is not null
-         ? loanResult.Value.Select(loan => loan.BookItemId).ToHashSet()
-         : [];
+      if(loanResult.IsFailure || loanResult.Value is null) {
+         Error = loanResult.Error;
+         return;
+      }
+
+      IReadOnlyList<LoanListItemDto> borrowedLoans =
+         loanResult.Value.ToList();
+
+      HashSet<Guid> borrowedBookItemIds = borrowedLoans
+         .Select(loan => loan.BookItemId)
+         .ToHashSet();
+
+      HashSet<Guid> currentReaderBorrowedBookItemIds = [];
+
+      if(_currentUser?.IsReader == true) {
+         Result<IEnumerable<LoanListItemDto>> myLoansResult =
+            await LoanClient.GetMyBorrowedAsync();
+
+         if(myLoansResult.IsFailure || myLoansResult.Value is null) {
+            Error = myLoansResult.Error;
+            return;
+         }
+
+         currentReaderBorrowedBookItemIds = myLoansResult.Value
+            .Select(loan => loan.BookItemId)
+            .ToHashSet();
+      }
 
       foreach (BookListItemDto book in _books) {
          Result<BookDetailDto> detailResult = await BookClient.GetByIdAsync(
@@ -257,6 +289,10 @@ else {
             !borrowedBookItemIds.Contains(item.Id)
          );
 
+         bool borrowedByCurrentReader = bookItems.Any(item =>
+            currentReaderBorrowedBookItemIds.Contains(item.Id)
+         );
+
          int borrowedItems = Math.Max(
             val1: 0,
             val2: totalItems - availableItems
@@ -265,7 +301,8 @@ else {
          _availabilityByBookId[book.Id] = new BookAvailability(
             TotalItems: totalItems,
             BorrowedItems: borrowedItems,
-            AvailableItems: availableItems
+            AvailableItems: availableItems,
+            BorrowedByCurrentReader: borrowedByCurrentReader
          );
       }
    }
@@ -283,20 +320,21 @@ else {
       BookListItemDto book
    ) {
       int totalItems = book.TotalItems;
-      int borrowedItems = Math.Clamp(
+      int availableItems = Math.Clamp(
          value: book.AvailableItems,
          min: 0,
          max: totalItems
       );
-      int availableItems = Math.Max(
+      int borrowedItems = Math.Max(
          val1: 0,
-         val2: totalItems - borrowedItems
+         val2: totalItems - availableItems
       );
 
       return new BookAvailability(
          TotalItems: totalItems,
          BorrowedItems: borrowedItems,
-         AvailableItems: availableItems
+         AvailableItems: availableItems,
+         BorrowedByCurrentReader: false
       );
    }
 
@@ -307,7 +345,8 @@ else {
    private sealed record BookAvailability(
       int TotalItems,
       int BorrowedItems,
-      int AvailableItems
+      int AvailableItems,
+      bool BorrowedByCurrentReader
    );
 
 }

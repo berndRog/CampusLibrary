@@ -1,5 +1,3 @@
-using CampusLibraryClient.Security;
-
 namespace CampusLibraryClient.Extensions;
 
 public static class AuthorizationExtensions {
@@ -7,38 +5,11 @@ public static class AuthorizationExtensions {
    public static IServiceCollection ConfigureAuthZ(
       this IServiceCollection services
    ) {
-      services.AddAuthorization(options => {
-
-         options.AddPolicy(
-            name: CampusLibraryPolicies.CanReadCatalog,
-            configurePolicy: policy => policy.RequireAuthenticatedUser()
-         );
-
-         options.AddPolicy(
-            name: CampusLibraryPolicies.CanBorrowBooks,
-            configurePolicy: policy => policy.RequireRole(CampusLibraryRoles.Reader)
-         );
-
-         options.AddPolicy(
-            name: CampusLibraryPolicies.CanReadOwnLoans,
-            configurePolicy: policy => policy.RequireRole(CampusLibraryRoles.Reader)
-         );
-
-         options.AddPolicy(
-            name: CampusLibraryPolicies.CanManageReaders,
-            configurePolicy: policy => policy.RequireRole(CampusLibraryRoles.Employee)
-         );
-
-         options.AddPolicy(
-            name: CampusLibraryPolicies.CanManageCatalog,
-            configurePolicy: policy => policy.RequireRole(CampusLibraryRoles.Employee)
-         );
-
-         options.AddPolicy(
-            name: CampusLibraryPolicies.CanManageLoans,
-            configurePolicy: policy => policy.RequireRole(CampusLibraryRoles.Employee)
-         );
-      });
+      // Part 6 uses roles directly on pages and components:
+      // [Authorize(Roles = "Reader")] and
+      // [Authorize(Roles = "Employee")].
+      // No named client policies are required.
+      services.AddAuthorization();
 
       return services;
    }

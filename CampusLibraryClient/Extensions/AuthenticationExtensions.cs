@@ -18,6 +18,8 @@ public static class AuthenticationExtensions {
       services
          .AddAuthentication(options => {
             options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
             options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
          })
          .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options => {
@@ -26,6 +28,8 @@ public static class AuthenticationExtensions {
             options.AccessDeniedPath = "/access-denied";
          })
          .AddOpenIdConnect(OpenIdConnectDefaults.AuthenticationScheme, options => {
+            options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+
             options.Authority = section.GetValue<string>("Authority")
                ?? throw new InvalidOperationException("IdentityAccessServer:Authority is missing.");
 
@@ -34,6 +38,7 @@ public static class AuthenticationExtensions {
 
             options.ClientSecret = section.GetValue<string>("ClientSecret");
             options.ResponseType = OpenIdConnectResponseType.Code;
+            options.UsePkce = true;
             options.SaveTokens = true;
             options.GetClaimsFromUserInfoEndpoint = true;
 
@@ -44,17 +49,54 @@ public static class AuthenticationExtensions {
             foreach(string scope in scopes)
                options.Scope.Add(scope);
 
-            // Keep claim names predictable for the Blazor client.
+            // The client authorizes exclusively with the role claim.
+            // Keep the standard .NET role claim representation so that
+            // User.IsInRole(...) and [Authorize(Roles = ...)] use the same claim.
             options.TokenValidationParameters = new TokenValidationParameters {
                NameClaimType = "preferred_username",
                RoleClaimType = ClaimTypes.Role
             };
 
-            options.ClaimActions.MapUniqueJsonKey("preferred_username", "preferred_username");
-            options.ClaimActions.MapUniqueJsonKey(ClaimTypes.NameIdentifier, "sub");
-            options.ClaimActions.MapUniqueJsonKey(ClaimTypes.Email, "email");
-            options.ClaimActions.MapJsonKey(ClaimTypes.Role, "role");
-            options.ClaimActions.MapJsonKey(ClaimTypes.Role, "roles");
+            options.ClaimActions.MapUniqueJsonKey(
+               "preferred_username",
+               "preferred_username"
+            );
+            options.ClaimActions.MapUniqueJsonKey(
+               ClaimTypes.NameIdentifier,
+               "sub"
+            );
+            options.ClaimActions.MapUniqueJsonKey(
+               ClaimTypes.Email,
+               "email"
+            );
+            options.ClaimActions.MapJsonKey(
+               ClaimTypes.Role,
+               "role"
+            );
+            options.ClaimActions.MapJsonKey(
+               ClaimTypes.Role,
+               "roles"
+            );
+
+            options.Events = new OpenIdConnectEvents {
+               OnTicketReceived = context => {
+                  ILogger logger = context.HttpContext.RequestServices
+                     .GetRequiredService<ILoggerFactory>()
+                     .CreateLogger("CampusLibraryClient.Oidc");
+
+                  logger.LogInformation(
+                     "OIDC ticket received for {Username}. Redirecting through /entry.",
+                     context.Principal?.Identity?.Name
+                  );
+
+                  // Every successful technical login must pass through the
+                  // fachliche entry flow. The entry controller provisions a
+                  // Reader and redirects an incomplete profile to the profile page.
+                  context.ReturnUri = "/entry";
+
+                  return Task.CompletedTask;
+               }
+            };
          });
 
       return services;

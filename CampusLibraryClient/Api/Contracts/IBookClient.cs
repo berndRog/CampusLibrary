@@ -34,6 +34,11 @@ public interface IBookClient {
       CancellationToken ct = default
    );
 
+   Task<Result<BookDeactivationInfoDto>> GetDeactivationInfoAsync(
+      Guid bookId,
+      CancellationToken ct = default
+   );
+
    Task<Result<BookDto>> DeactivateAsync(
       Guid bookId,
       CancellationToken ct = default

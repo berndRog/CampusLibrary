@@ -5,6 +5,7 @@ using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Catalog._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Catalog._2_Application.Enums;
 using CampusLibraryApi._3_Core.Catalog._2_Application.UseCases;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -86,6 +87,46 @@ public sealed class BooksController(
 
       var problem = DomainProblemDetailsFactory.FromDomainError(
          result.Error, HttpContext);
+      return result.Error.Status switch {
+         WebErrorStatus.BadRequest => BadRequest(problem),
+         WebErrorStatus.Unauthorized => Unauthorized(problem),
+         WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
+         WebErrorStatus.NotFound => NotFound(problem),
+         _ => BadRequest(problem)
+      };
+   }
+
+   /// <summary>
+   ///    Returns the current loan blockers for book deactivation.
+   /// </summary>
+   /// <param name="bookId">Book unique id.</param>
+   /// <param name="ct">Cancellation token.</param>
+   /// <returns>Current loans that prevent deactivation.</returns>
+   [Authorize(Roles = "Employee")]
+   [HttpGet("books/{bookId:guid}/deactivation-info", Name = nameof(GetBookDeactivationInfoAsync))]
+   [Produces("application/json")]
+   [ProducesResponseType<BookDeactivationInfoDto>(StatusCodes.Status200OK)]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
+   public async Task<ActionResult<BookDeactivationInfoDto>> GetBookDeactivationInfoAsync(
+      [FromRoute] Guid bookId,
+      CancellationToken ct = default
+   ) {
+      var result = await bookReadModel.FindDeactivationInfoAsync(
+         id: bookId,
+         ct: ct
+      );
+
+      if(result.IsSuccess)
+         return Ok(result.Value);
+
+      var problem = DomainProblemDetailsFactory.FromDomainError(
+         result.Error,
+         HttpContext
+      );
+
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),
          WebErrorStatus.Unauthorized => Unauthorized(problem),
@@ -245,6 +286,7 @@ public sealed class BooksController(
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
    public async Task<ActionResult<BookDto>> DeactivateBookAsync(
       [FromRoute] Guid bookId,
       CancellationToken ct
@@ -267,6 +309,7 @@ public sealed class BooksController(
          WebErrorStatus.Unauthorized => Unauthorized(problem),
          WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
          WebErrorStatus.NotFound => NotFound(problem),
+         WebErrorStatus.Conflict => Conflict(problem),
          _ => BadRequest(problem)
       };
    }

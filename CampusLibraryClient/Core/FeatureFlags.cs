@@ -9,9 +9,11 @@ public static class FeatureFlags {
    // This is only a UI teaching aid and must not be treated as security.
    public const string DevIdentityEnabled = "Features:DevIdentityEnabled";
 
-   // Part 8 default: API calls are still anonymous in Part 5 and Part 6.
+   // Part 6: forwards the access token for the protected Reader /me flow.
+   // Part 7 hardens all API client calls systematically.
    public const string ApiAccessTokenEnabled = "Features:ApiAccessTokenEnabled";
 
-   // Part 8 default: role/policy based UI decisions are not active yet.
+   // Part 6: activates role/policy based protection for routable Blazor pages.
+   // Part 7 hardens API endpoints, API clients and deeper use-case checks.
    public const string AuthZEnabled = "Features:AuthZEnabled";
 }

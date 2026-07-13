@@ -6,6 +6,7 @@ using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Catalog._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Catalog._3_Domain.Enums;
+using CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
 using CampusLibraryApiTest.TestController;
 using CampusLibraryApiTest.TestInfrastructure;
 using Microsoft.Extensions.DependencyInjection;
@@ -172,6 +173,7 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
       actualBookDto.Should().NotBeNull();
       actualBookDto!.Id.Should().Be(bookId);
       actualBookDto.IsActive.Should().BeFalse();
+      actualBookDto.BookItems.Count.Should().Be(0);
    }
 
    [Fact]
@@ -664,4 +666,54 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
       responseGet.StatusCode.Should().Be(HttpStatusCode.NotFound);
       responseGetIncludingInactive.StatusCode.Should().Be(HttpStatusCode.OK);
    }
+   [Fact]
+   public async Task DeactivateAsync_with_current_loan_returns_conflict() {
+      // Arrange
+      Guid bookId = default;
+
+      await Factory.WithScopeAsync(async sp => {
+         var bookRepository = sp.GetRequiredService<IBookRepository>();
+         var loanRepository = sp.GetRequiredService<ILoanRepository>();
+         var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
+         var seed = sp.GetRequiredService<TestSeed>();
+
+         // book1 with bookitems
+         var book = seed.Books.First(b => b.Id == Guid.Parse(seed.Book1Id));
+         var loan = seed.Loan1();
+         bookId = book.Id;
+
+         bookRepository.Add(book);
+         loanRepository.Add(loan);
+
+         await unitOfWork.SaveAllChangesAsync("Book and loan inserted", _ct);
+         unitOfWork.ClearChangeTracker();
+      });
+
+      // Act
+      var responseDeactivate = await Client.PatchAsync(
+         requestUri: $"{_url}/books/{bookId}/deactivate",
+         content: null,
+         cancellationToken: _ct
+      );
+
+      // Assert
+      responseDeactivate.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+      await Factory.WithScopeAsync(async sp => {
+         var bookRepository = sp.GetRequiredService<IBookRepository>();
+         var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
+
+         unitOfWork.ClearChangeTracker();
+
+         var actualBook = await bookRepository.FindByIdAsync(
+            id: bookId,
+            ct: _ct
+         );
+
+         actualBook.Should().NotBeNull();
+         actualBook!.IsActive.Should().BeTrue();
+         actualBook.BookItems.Should().NotBeEmpty();
+      });
+   }
+
 }

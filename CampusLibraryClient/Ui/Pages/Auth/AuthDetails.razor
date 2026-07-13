@@ -1,0 +1,919 @@
+@page "/auth/details"
+@attribute [Authorize(Roles = CampusLibraryRoles.ReaderOrEmployee)]
+@using System.Globalization
+@using System.Security.Claims
+@using System.Text
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Http
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using Microsoft.AspNetCore.Authentication.OpenIdConnect
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IAuthenticationSchemeProvider SchemeProvider
+@inject IConfiguration Configuration
+
+<PageTitle>Auth Details</PageTitle>
+
+<h3>Auth Details</h3>
+
+<p>
+   ID Token und AccessToken werden vollständig angezeigt, damit sie Studirende 
+   in jwt.io analysieren können (In produktiven Systemen nur im dev mode).
+</p>
+
+@if(_isLoading) {
+   <p class="text-muted">Auth-Details werden geladen...</p>
+}
+else {
+   <section class="mb-4">
+      <h5>1. ASP.NET Core Authentication Session</h5>
+      <p class="text-muted">
+         Blazor-SSR arbeitet mit einem ClaimsPrincipal aus der lokalen
+         Cookie-Session. Login selbst wurde über OpenID Connect durchgeführt.
+      </p>
+      @Table(_sessionRows)
+   </section>
+
+   <section class="mb-4">
+      <h5>2. ClaimsPrincipal im Client</h5>
+      <p class="text-muted">
+         Claims sieht die Blazor-SSR über HttpContext.User bzw.
+         AuthenticationStateProvider.
+      </p>
+      <div class="table-responsive">
+         <table class="table table-sm table-striped align-middle">
+            <thead>
+            <tr>
+               <th>Claim Type</th>
+               <th>Value</th>
+               <th>ValueType</th>
+               <th>Issuer</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach(ClaimRow row in _claimRows) {
+               <tr>
+                  <td><code>@row.Type</code></td>
+                  <td>@row.Value</td>
+                  <td><code>@row.ValueType</code></td>
+                  <td>@row.Issuer</td>
+               </tr>
+            }
+            </tbody>
+         </table>
+      </div>
+   </section>
+
+   <section class="mb-4">
+      <h5>3. Token Store in Blazor-SSR</h5>
+      <p class="text-muted">
+         Bei <code>SaveTokens = true</code> speichert ASP.NET Core die Tokens im
+         Authentication Ticket der Cookie-Session.
+      </p>
+      <div class="table-responsive">
+         <table class="table table-sm table-striped align-middle">
+            <thead>
+            <tr>
+               <th>Token / Feld</th>
+               <th>Vorhanden</th>
+               <th>Diagnose</th>
+               <th>Verwendung</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach(TokenRow row in _tokenRows) {
+               <tr>
+                  <td>@row.Name</td>
+                  <td>@row.Present</td>
+                  <td>@row.Diagnostics</td>
+                  <td>@row.Usage</td>
+               </tr>
+            }
+            </tbody>
+         </table>
+      </div>
+   </section>
+
+   <section class="mb-4">
+      <h5>4. Vollständige JWTs zum Kopieren</h5>
+      <p class="text-muted">
+         ID Token und Access Token sind JWTs. Sie werden vollständig angezeigt, 
+         damit sie in jwt.io analysiert werden können. Refresh Token ist kein jwt-Token (opaque).
+      </p>
+      @TokenTextArea(
+         title: "ID Token",
+         token: _idToken,
+         description: "Enthält Identitätsinformationen (Id Entity) und bestätigt den Login."
+      )
+      @TokenTextArea(
+         title: "Access Token",
+         token: _accessToken,
+         description: "Token wird als Authorization Bearer ... an die CampusLibrary API gesendet."
+      )
+   </section>
+
+   <section class="mb-4">
+      <h5>5. Access Token Payload</h5>
+      <p class="text-muted">
+         Access Token wird als <code>Authorization: Bearer ...</code> an die
+         CampusLibraryApi gesendet. API validiert u. a. Issuer, Signatur,
+         Ablaufzeit und Audience.
+      </p>
+      @JwtTable(_accessTokenRows)
+   </section>
+
+   <section class="mb-4">
+      <h5>6. ID Token Payload</h5>
+      <p class="text-muted">
+         ID Token ist für den Client und bestätigt die Anmeldung.
+      </p>
+      @JwtTable(_idTokenRows)
+   </section>
+
+   <section class="mb-4">
+      <h5>7. Refresh Token und Token-Erneuerung</h5>
+      <p class="text-muted">
+         Refresh Token wird nur gegenüber dem IdentityAccessServer verwendet, 
+         um ein neues Access Token zu erhalten.
+      </p>
+      @Table(_refreshRows)
+   </section>
+
+   <section class="mb-4">
+      <h5>8. Scopes, Resource und Audience</h5>
+      <p class="text-muted">
+         OIDC-Scopes liefern Identitätsinformationen. API-Scopes führen zu einer
+         Resource/Audience im Access Token.
+      </p>
+      @Table(_scopeRows)
+   </section>
+
+   <section class="mb-4">
+      <h5>9. Von OpenID/OAuth nach .NET</h5>
+      <p class="text-muted">
+         Tabelle zeigt, wie die Konzepte aus OpenID Connect und OAuth in
+         ASP.NET Core verarbeitet werden.
+      </p>
+      @Table(_dotNetRows)
+   </section>
+
+   <section class="mb-4">
+      <h5>10. Authentication Schemes</h5>
+      <p class="text-muted">
+         Unterschiedliche Anwendungen verwenden unterschiedliche Schemes:
+         IdentityAccessServer, Blazor SSR Client und Web API haben jeweils einen
+         eigenen Auth-Kontext.
+      </p>
+      <div class="table-responsive">
+         <table class="table table-sm table-striped align-middle">
+            <thead>
+            <tr>
+               <th>Scheme</th>
+               <th>Handler</th>
+               <th>DisplayName</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach(AuthSchemeRow row in _authSchemeRows) {
+               <tr>
+                  <td><code>@row.Name</code></td>
+                  <td><code>@row.HandlerType</code></td>
+                  <td>@row.DisplayName</td>
+               </tr>
+            }
+            </tbody>
+         </table>
+      </div>
+   </section>
+
+   <section class="mb-4">
+      <h5>11. CampusLibrary Mapping</h5>
+      <p class="text-muted">
+         Part 6 trennt technische Identität vom fachlichen Reader.
+      </p>
+      @Table(_campusLibraryRows)
+   </section>
+}
+
+@code {
+
+   private bool _isLoading = true;
+
+   private IReadOnlyList<DetailRow> _sessionRows = [];
+   private IReadOnlyList<ClaimRow> _claimRows = [];
+   private IReadOnlyList<TokenRow> _tokenRows = [];
+   private IReadOnlyList<JwtClaimRow> _accessTokenRows = [];
+   private IReadOnlyList<JwtClaimRow> _idTokenRows = [];
+   private string? _idToken;
+   private string? _accessToken;
+   private string? _refreshToken;
+   private IReadOnlyList<DetailRow> _refreshRows = [];
+   private IReadOnlyList<DetailRow> _scopeRows = [];
+   private IReadOnlyList<DetailRow> _dotNetRows = [];
+   private IReadOnlyList<AuthSchemeRow> _authSchemeRows = [];
+   private IReadOnlyList<DetailRow> _campusLibraryRows = [];
+
+   protected override async Task OnInitializedAsync() {
+      AuthenticationState state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+      ClaimsPrincipal user = state.User;
+      HttpContext? httpContext = HttpContextAccessor.HttpContext;
+
+      string? idToken = await GetTokenAsync(
+         httpContext: httpContext,
+         tokenName: "id_token"
+      );
+
+      string? accessToken = await GetTokenAsync(
+         httpContext: httpContext,
+         tokenName: "access_token"
+      );
+
+      string? refreshToken = await GetTokenAsync(
+         httpContext: httpContext,
+         tokenName: "refresh_token"
+      );
+
+      string? expiresAt = await GetTokenAsync(
+         httpContext: httpContext,
+         tokenName: "expires_at"
+      );
+
+      string? tokenType = await GetTokenAsync(
+         httpContext: httpContext,
+         tokenName: "token_type"
+      );
+
+      _idToken = idToken;
+      _accessToken = accessToken;
+      _refreshToken = refreshToken;
+
+      _accessTokenRows = DecodeJwtPayload(accessToken);
+      _idTokenRows = DecodeJwtPayload(idToken);
+
+      _sessionRows = BuildSessionRows(
+         user: user,
+         httpContext: httpContext
+      );
+
+      _claimRows = user.Claims
+         .OrderBy(claim => claim.Type, StringComparer.OrdinalIgnoreCase)
+         .ThenBy(claim => claim.Value, StringComparer.OrdinalIgnoreCase)
+         .Select(claim => new ClaimRow(
+            Type: claim.Type,
+            Value: claim.Value,
+            ValueType: claim.ValueType,
+            Issuer: claim.Issuer
+         ))
+         .ToList();
+
+      _tokenRows = BuildTokenRows(
+         idToken: idToken,
+         accessToken: accessToken,
+         refreshToken: refreshToken,
+         expiresAt: expiresAt,
+         tokenType: tokenType
+      );
+
+      _refreshRows = BuildRefreshRows(
+         refreshToken: refreshToken,
+         expiresAt: expiresAt
+      );
+
+      _scopeRows = BuildScopeRows(
+         accessTokenRows: _accessTokenRows
+      );
+
+      _dotNetRows = BuildDotNetRows();
+
+      _authSchemeRows = (await SchemeProvider.GetAllSchemesAsync())
+         .OrderBy(scheme => scheme.Name, StringComparer.OrdinalIgnoreCase)
+         .Select(scheme => new AuthSchemeRow(
+            Name: scheme.Name,
+            HandlerType: scheme.HandlerType.Name,
+            DisplayName: scheme.DisplayName ?? "-"
+         ))
+         .ToList();
+
+      _campusLibraryRows = BuildCampusLibraryRows(
+         user: user,
+         accessTokenRows: _accessTokenRows
+      );
+
+      _isLoading = false;
+   }
+
+   private static async Task<string?> GetTokenAsync(
+      HttpContext? httpContext,
+      string tokenName
+   ) {
+      if(httpContext is null)
+         return null;
+
+      return await httpContext.GetTokenAsync(tokenName);
+   }
+
+   private IReadOnlyList<DetailRow> BuildSessionRows(
+      ClaimsPrincipal user,
+      HttpContext? httpContext
+   ) {
+      ClaimsIdentity? identity = user.Identity as ClaimsIdentity;
+
+      return [
+         new DetailRow(
+            Name: "IsAuthenticated",
+            Value: user.Identity?.IsAuthenticated == true ? "true" : "false",
+            Description: "Lokaler Authentifizierungsstatus im Blazor SSR Client."
+         ),
+         new DetailRow(
+            Name: "AuthenticationType",
+            Value: user.Identity?.AuthenticationType ?? "-",
+            Description: "Meist die Cookie-Authentifizierung des Clients."
+         ),
+         new DetailRow(
+            Name: "Name",
+            Value: user.Identity?.Name ?? "-",
+            Description: "Wird über NameClaimType aus den Claims abgeleitet."
+         ),
+         new DetailRow(
+            Name: "NameClaimType",
+            Value: identity?.NameClaimType ?? "-",
+            Description: "Konfiguration in TokenValidationParameters."
+         ),
+         new DetailRow(
+            Name: "RoleClaimType",
+            Value: identity?.RoleClaimType ?? "-",
+            Description: "Konfiguration in TokenValidationParameters."
+         ),
+         new DetailRow(
+            Name: "Claims count",
+            Value: user.Claims.Count().ToString(CultureInfo.InvariantCulture),
+            Description: "Anzahl Claims im ClaimsPrincipal."
+         ),
+         new DetailRow(
+            Name: "HttpContext available",
+            Value: httpContext is null ? "Nein" : "Ja",
+            Description: "Für gespeicherte Tokens wird HttpContext benötigt."
+         ),
+         new DetailRow(
+            Name: "Request path",
+            Value: httpContext?.Request.Path.Value ?? "-",
+            Description: "Aktueller SSR-/HTTP-Kontext, falls verfügbar."
+         )
+      ];
+   }
+
+   private static IReadOnlyList<TokenRow> BuildTokenRows(
+      string? idToken,
+      string? accessToken,
+      string? refreshToken,
+      string? expiresAt,
+      string? tokenType
+   ) => [
+      new TokenRow(
+         Name: "id_token",
+         Present: Present(idToken),
+         Diagnostics: DescribeToken(idToken),
+         Usage: "Login und Identität für den Client. Nicht an die API senden."
+      ),
+      new TokenRow(
+         Name: "access_token",
+         Present: Present(accessToken),
+         Diagnostics: DescribeToken(accessToken),
+         Usage: "Bearer Token für CampusLibraryApi."
+      ),
+      new TokenRow(
+         Name: "refresh_token",
+         Present: Present(refreshToken),
+         Diagnostics: DescribeToken(refreshToken),
+         Usage: "Nur für den IdentityAccessServer, um neue Access Tokens zu holen."
+      ),
+      new TokenRow(
+         Name: "expires_at",
+         Present: Present(expiresAt),
+         Diagnostics: DescribeExpiresAt(expiresAt),
+         Usage: "Ablaufzeit des gespeicherten Access Tokens."
+      ),
+      new TokenRow(
+         Name: "token_type",
+         Present: Present(tokenType),
+         Diagnostics: tokenType ?? "-",
+         Usage: "Typisch: Bearer."
+      )
+   ];
+
+   private static IReadOnlyList<DetailRow> BuildRefreshRows(
+      string? refreshToken,
+      string? expiresAt
+   ) {
+      bool accessTokenStillValid = IsAccessTokenStillValid(expiresAt);
+      bool refreshRecommended = ShouldRefreshSoon(expiresAt);
+
+      return [
+         new DetailRow(
+            Name: "Refresh Token vorhanden",
+            Value: string.IsNullOrWhiteSpace(refreshToken) ? "Nein" : "Ja",
+            Description: "Voraussetzung ist typischerweise der Scope offline_access."
+         ),
+         new DetailRow(
+            Name: "Refresh Token Diagnose",
+            Value: DescribeToken(refreshToken),
+            Description: "Länge und gekürzte Vorschau. Der Refresh Token ist kein Token für die API und wird nicht in jwt.io analysiert."
+         ),
+         new DetailRow(
+            Name: "Access Token läuft ab",
+            Value: DescribeExpiresAt(expiresAt),
+            Description: "Gespeicherter expires_at-Wert aus dem Authentication Ticket."
+         ),
+         new DetailRow(
+            Name: "Access Token noch gültig",
+            Value: accessTokenStillValid ? "Ja" : "Nein / unbekannt",
+            Description: "Vergleich mit DateTimeOffset.UtcNow."
+         ),
+         new DetailRow(
+            Name: "Refresh bald sinnvoll",
+            Value: refreshRecommended ? "Ja" : "Nein / unbekannt",
+            Description: "Beispielregel: weniger als zwei Minuten Restlaufzeit."
+         ),
+         new DetailRow(
+            Name: "Token Endpoint",
+            Value: "IdentityAccessServer /connect/token",
+            Description: "Refresh läuft über grant_type=refresh_token."
+         )
+      ];
+   }
+
+   private IReadOnlyList<DetailRow> BuildScopeRows(
+      IReadOnlyList<JwtClaimRow> accessTokenRows
+   ) {
+      string configuredScopes = string.Join(
+         separator: ", ",
+         values: Configuration.GetSection("IdentityAccessServer:Scopes").Get<string[]>() ?? []
+      );
+
+      string scopeClaim = FindJwtClaim(
+         rows: accessTokenRows,
+         claimTypes: ["scope", "scp"]
+      ) ?? "-";
+
+      string audience = FindJwtClaim(
+         rows: accessTokenRows,
+         claimTypes: ["aud"]
+      ) ?? "-";
+
+      return [
+         new DetailRow(
+            Name: "Konfigurierte Client-Scopes",
+            Value: configuredScopes,
+            Description: "Scopes, die der CampusLibraryClient beim Login anfordert."
+         ),
+         new DetailRow(
+            Name: "OIDC-Scopes",
+            Value: "openid, profile, email",
+            Description: "Liefern Identitätsinformationen für den Client."
+         ),
+         new DetailRow(
+            Name: "Offline Access",
+            Value: "offline_access",
+            Description: "Erlaubt einen Refresh Token."
+         ),
+         new DetailRow(
+            Name: "API-Scope",
+            Value: "campus_library_api",
+            Description: "Führt im IA-Server zur Resource/Audience campus-library-api."
+         ),
+         new DetailRow(
+            Name: "Scope Claim im Access Token",
+            Value: scopeClaim,
+            Description: "Vom IdentityAccessServer tatsächlich ausgestellte Scopes."
+         ),
+         new DetailRow(
+            Name: "Audience im Access Token",
+            Value: audience,
+            Description: "Muss zur ValidAudience der CampusLibraryApi passen."
+         )
+      ];
+   }
+
+   private static IReadOnlyList<DetailRow> BuildDotNetRows() => [
+      new DetailRow(
+         Name: "Authorization Code",
+         Value: "OpenIdConnectHandler",
+         Description: "Tauscht den Code serverseitig gegen Tokens."
+      ),
+      new DetailRow(
+         Name: "ID Token",
+         Value: "Tokenvalidierung + ClaimsPrincipal",
+         Description: "Bestätigt die Anmeldung des Benutzers beim Client."
+      ),
+      new DetailRow(
+         Name: "Access Token",
+         Value: "Authentication Ticket + AccessTokenHandler",
+         Description: "Wird aus der Cookie-Session gelesen und an API-Requests gehängt."
+      ),
+      new DetailRow(
+         Name: "Refresh Token",
+         Value: "HttpContext.GetTokenAsync(\"refresh_token\")",
+         Description: "Bleibt im Client und wird nur gegen den IA-Server verwendet."
+      ),
+      new DetailRow(
+         Name: "SaveTokens = true",
+         Value: "OpenIdConnectOptions",
+         Description: "Speichert id_token, access_token, refresh_token und expires_at im Authentication Ticket."
+      ),
+      new DetailRow(
+         Name: "Cookie",
+         Value: CookieAuthenticationDefaults.AuthenticationScheme,
+         Description: "Lokale SSR-Session des CampusLibraryClient."
+      ),
+      new DetailRow(
+         Name: "OpenID Connect",
+         Value: OpenIdConnectDefaults.AuthenticationScheme,
+         Description: "Challenge-Scheme für Login beim IdentityAccessServer."
+      ),
+      new DetailRow(
+         Name: "Bearer",
+         Value: "JwtBearerHandler in der API",
+         Description: "CampusLibraryApi validiert das Access Token."
+      ),
+      new DetailRow(
+         Name: "ValidAudience",
+         Value: "campus-library-api",
+         Description: "Muss zum aud-Claim im Access Token passen."
+      )
+   ];
+
+   private static IReadOnlyList<DetailRow> BuildCampusLibraryRows(
+      ClaimsPrincipal user,
+      IReadOnlyList<JwtClaimRow> accessTokenRows
+   ) {
+      string? subject = FindClaim(
+         user: user,
+         claimTypes: [ClaimTypes.NameIdentifier, "sub"]
+      ) ?? FindJwtClaim(
+         rows: accessTokenRows,
+         claimTypes: ["sub"]
+      );
+
+      string? email = FindClaim(
+         user: user,
+         claimTypes: [ClaimTypes.Email, "email", "preferred_username"]
+      ) ?? FindJwtClaim(
+         rows: accessTokenRows,
+         claimTypes: ["email", "preferred_username"]
+      );
+
+      string? role = FindClaim(
+         user: user,
+         claimTypes: [ClaimTypes.Role, "role", "roles"]
+      ) ?? FindJwtClaim(
+         rows: accessTokenRows,
+         claimTypes: ["role", "roles"]
+      );
+
+      return [
+         new DetailRow(
+            Name: "sub / Subject",
+            Value: subject ?? "-",
+            Description: "Technische Benutzer-ID aus dem IdentityAccessServer. Wird in Reader.Subject gespeichert."
+         ),
+         new DetailRow(
+            Name: "email / preferred_username",
+            Value: email ?? "-",
+            Description: "Technischer Username. Wird beim Provisioning als Reader.Email verwendet."
+         ),
+         new DetailRow(
+            Name: "role",
+            Value: role ?? "-",
+            Description: "Steuert UI-Entscheidungen und API-Policies, z. B. Reader oder Employee."
+         ),
+         new DetailRow(
+            Name: "Reader.Id",
+            Value: "Kommt aus GET /camplib/v1/readers/me",
+            Description: "Fachliche Reader-ID aus der CampusLibraryApi, nicht aus dem Token."
+         ),
+         new DetailRow(
+            Name: "Profilvollständigkeit",
+            Value: "GET /readers/me -> IsProfileCompleted",
+            Description: "Vorname, Nachname und Adresse sind fachlich erforderlich."
+         )
+      ];
+   }
+
+   private static IReadOnlyList<JwtClaimRow> DecodeJwtPayload(
+      string? token
+   ) {
+      if(string.IsNullOrWhiteSpace(token))
+         return [];
+
+      string[] parts = token.Split('.');
+
+      if(parts.Length < 2)
+         return [new JwtClaimRow("Invalid token", "JWT has fewer than two parts.", "")];
+
+      try {
+         string json = Encoding.UTF8.GetString(Base64UrlDecode(parts[1]));
+         using JsonDocument document = JsonDocument.Parse(json);
+
+         return document.RootElement
+            .EnumerateObject()
+            .Select(property => new JwtClaimRow(
+               Type: property.Name,
+               Value: FormatJsonElement(
+                  name: property.Name,
+                  element: property.Value
+               ),
+               Meaning: ExplainJwtClaim(property.Name)
+            ))
+            .OrderBy(row => row.Type, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+      }
+      catch(Exception ex) {
+         return [new JwtClaimRow("Invalid token", ex.Message, "Payload konnte nicht decodiert werden.")];
+      }
+   }
+
+   private static byte[] Base64UrlDecode(
+      string value
+   ) {
+      string padded = value
+         .Replace('-', '+')
+         .Replace('_', '/');
+
+      padded = padded.PadRight(
+         totalWidth: padded.Length + (4 - padded.Length % 4) % 4,
+         paddingChar: '='
+      );
+
+      return Convert.FromBase64String(padded);
+   }
+
+   private static string FormatJsonElement(
+      string name,
+      JsonElement element
+   ) {
+      string value = element.ValueKind switch {
+         JsonValueKind.String => element.GetString() ?? string.Empty,
+         JsonValueKind.Array => string.Join(
+            separator: ", ",
+            values: element.EnumerateArray().Select(item => FormatJsonElement(name, item))
+         ),
+         JsonValueKind.Number => element.GetRawText(),
+         JsonValueKind.True => "true",
+         JsonValueKind.False => "false",
+         JsonValueKind.Null => "null",
+         _ => element.GetRawText()
+      };
+
+      if((name is "exp" or "iat" or "nbf") &&
+         long.TryParse(
+            s: value,
+            provider: CultureInfo.InvariantCulture,
+            result: out long unixSeconds
+         )) {
+         DateTimeOffset timestamp = DateTimeOffset.FromUnixTimeSeconds(unixSeconds);
+         return $"{value} ({timestamp:yyyy-MM-dd HH:mm:ss} UTC)";
+      }
+
+      return value;
+   }
+
+   private static string ExplainJwtClaim(
+      string claimType
+   ) => claimType switch {
+      "iss" => "Issuer: ausstellender IdentityAccessServer.",
+      "sub" => "Subject: stabile technische Benutzer-ID.",
+      "aud" => "Audience: Ziel-Resource/API des Tokens.",
+      "exp" => "Expiration: Ablaufzeitpunkt des Tokens.",
+      "iat" => "Issued at: Ausstellungszeitpunkt.",
+      "nbf" => "Not before: Token ist erst ab diesem Zeitpunkt gültig.",
+      "scope" or "scp" => "Scopes: gewährte Berechtigungen.",
+      "role" or "roles" => "Rolle für UI/Policies.",
+      "email" => "E-Mail-Adresse / Username.",
+      "preferred_username" => "Bevorzugter Username.",
+      "azp" => "Authorized party / Client-ID.",
+      "nonce" => "OIDC-Schutz gegen Replay im Login-Flow.",
+      _ => ""
+   };
+
+   private static string Present(
+      string? value
+   ) => string.IsNullOrWhiteSpace(value) ? "Nein" : "Ja";
+
+   private static string DescribeToken(
+      string? token
+   ) {
+      if(string.IsNullOrWhiteSpace(token))
+         return "-";
+
+      string preview = token.Length <= 20
+         ? token
+         : $"{token[..10]}...{token[^10..]}";
+
+      return $"Länge: {token.Length}, Preview: {preview}";
+   }
+
+   private static string DescribeExpiresAt(
+      string? expiresAt
+   ) {
+      if(string.IsNullOrWhiteSpace(expiresAt))
+         return "-";
+
+      if(DateTimeOffset.TryParse(
+            input: expiresAt,
+            formatProvider: CultureInfo.InvariantCulture,
+            styles: DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+            result: out DateTimeOffset parsed
+         )) {
+         TimeSpan remaining = parsed - DateTimeOffset.UtcNow;
+         return $"{parsed:yyyy-MM-dd HH:mm:ss} UTC, Restlaufzeit: {remaining.TotalMinutes:F0} Minuten";
+      }
+
+      return expiresAt;
+   }
+
+   private static bool IsAccessTokenStillValid(
+      string? expiresAt
+   ) => TryParseExpiresAt(
+      expiresAt: expiresAt,
+      parsed: out DateTimeOffset parsed
+   ) && parsed > DateTimeOffset.UtcNow;
+
+   private static bool ShouldRefreshSoon(
+      string? expiresAt
+   ) => TryParseExpiresAt(
+      expiresAt: expiresAt,
+      parsed: out DateTimeOffset parsed
+   ) && parsed <= DateTimeOffset.UtcNow.AddMinutes(2);
+
+   private static bool TryParseExpiresAt(
+      string? expiresAt,
+      out DateTimeOffset parsed
+   ) {
+      if(string.IsNullOrWhiteSpace(expiresAt)) {
+         parsed = default;
+         return false;
+      }
+
+      return DateTimeOffset.TryParse(
+         input: expiresAt,
+         formatProvider: CultureInfo.InvariantCulture,
+         styles: DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+         result: out parsed
+      );
+   }
+
+   private static string? FindJwtClaim(
+      IReadOnlyList<JwtClaimRow> rows,
+      IEnumerable<string> claimTypes
+   ) {
+      foreach(string claimType in claimTypes) {
+         string? value = rows.FirstOrDefault(row => string.Equals(
+            a: row.Type,
+            b: claimType,
+            comparisonType: StringComparison.OrdinalIgnoreCase
+         ))?.Value;
+
+         if(!string.IsNullOrWhiteSpace(value))
+            return value;
+      }
+
+      return null;
+   }
+
+   private static string? FindClaim(
+      ClaimsPrincipal user,
+      IEnumerable<string> claimTypes
+   ) {
+      foreach(string claimType in claimTypes) {
+         string? value = user.FindFirst(claimType)?.Value;
+
+         if(!string.IsNullOrWhiteSpace(value))
+            return value;
+      }
+
+      return null;
+   }
+
+   private sealed record DetailRow(
+      string Name,
+      string Value,
+      string Description
+   );
+
+   private sealed record ClaimRow(
+      string Type,
+      string Value,
+      string ValueType,
+      string Issuer
+   );
+
+   private sealed record TokenRow(
+      string Name,
+      string Present,
+      string Diagnostics,
+      string Usage
+   );
+
+   private sealed record JwtClaimRow(
+      string Type,
+      string Value,
+      string Meaning
+   );
+
+   private sealed record AuthSchemeRow(
+      string Name,
+      string HandlerType,
+      string DisplayName
+   );
+}
+
+@code {
+   private RenderFragment<IReadOnlyList<DetailRow>> Table => rows => @<div class="table-responsive">
+      <table class="table table-sm table-striped align-middle">
+         <thead>
+         <tr>
+            <th>Name</th>
+            <th>Wert</th>
+            <th>Bedeutung</th>
+         </tr>
+         </thead>
+         <tbody>
+         @foreach(DetailRow row in rows) {
+            <tr>
+               <td>@row.Name</td>
+               <td>@row.Value</td>
+               <td>@row.Description</td>
+            </tr>
+         }
+         </tbody>
+      </table>
+   </div>;
+
+   private RenderFragment TokenTextArea(
+      string title,
+      string? token,
+      string description
+   ) => @<div class="mb-3">
+      <h3 class="h5">@title</h3>
+      <p class="text-muted mb-2">@description</p>
+      @if(string.IsNullOrWhiteSpace(token)) {
+         <p class="text-muted">Nicht vorhanden.</p>
+      }
+      else {
+         <textarea class="form-control font-monospace small"
+                   rows="7"
+                   readonly>@token</textarea>
+         <div class="form-text">
+            Vollständiger JWT, kopierbar für Lernzwecke. Nicht in produktiven
+            Umgebungen anzeigen.
+         </div>
+      }
+   </div>;
+
+   private RenderFragment<IReadOnlyList<JwtClaimRow>> JwtTable => rows => @<div class="table-responsive">
+      @if(rows.Count == 0) {
+         <p class="text-muted">Keine JWT-Claims verfügbar.</p>
+      }
+      else {
+         <table class="table table-sm table-striped align-middle">
+            <thead>
+            <tr>
+               <th>Claim</th>
+               <th>Wert</th>
+               <th>Bedeutung</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach(JwtClaimRow row in rows) {
+               <tr>
+                  <td><code>@row.Type</code></td>
+                  <td>@row.Value</td>
+                  <td>@row.Meaning</td>
+               </tr>
+            }
+            </tbody>
+         </table>
+      }
+   </div>;
+}
+
+@* Didaktik:
+   Diese Seite verbindet drei Sichten:
+
+   1. OpenID Connect / OAuth:
+      ID Token, Access Token, Refresh Token, Scopes, Audience.
+
+   2. ASP.NET Core:
+      Cookie-Session, ClaimsPrincipal, Authentication Schemes und gespeicherte
+      Tokens im Authentication Ticket.
+
+   3. CampusLibrary:
+      sub/email/role werden als technische Identität gelesen. Der fachliche
+      Reader entsteht erst durch Provisioning in der CampusLibraryApi.
+
+   ID Token und Access Token werden auf dieser Lernseite bewusst vollständig
+   angezeigt, damit Studierende sie kopieren und in JWT-Analysewerkzeugen
+   untersuchen können. Refresh Tokens bleiben besonders sensibel und dürfen nicht
+   als normale UI-Daten behandelt werden.
+*@

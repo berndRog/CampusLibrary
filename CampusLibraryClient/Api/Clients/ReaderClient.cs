@@ -1,4 +1,3 @@
-using System.Net.Http.Json;
 using System.Text.Json;
 using CampusLibraryClient.Api.Contracts;
 using CampusLibraryClient.Api.Dtos;
@@ -11,12 +10,7 @@ public sealed class ReaderClient(
    IHttpClientFactory factory,
    JsonSerializerOptions json,
    ILogger<ReaderClient> logger
-) : BaseApiClient<ReaderClient>(
-   factory: factory,
-   json: json,
-   logger: logger
-), IReaderClient {
-
+) : BaseApiClient<ReaderClient>(factory, json, logger), IReaderClient {
    private const string Base = "camplib/v1";
 
    // GET /camplib/v1/readers?includeInactive=false
@@ -54,20 +48,55 @@ public sealed class ReaderClient(
    ) =>
       SendAsync<ReaderDto>(
          send: () => _http.GetAsync(
-            requestUri: $"{Base}/readers/email?email={Uri.EscapeDataString(email)}&includeInactive={QueryStringBuilder.Bool(includeInactive)}",
+            requestUri:
+            $"{Base}/readers/email?email={Uri.EscapeDataString(email)}&includeInactive={QueryStringBuilder.Bool(includeInactive)}",
             cancellationToken: ct
          ),
          ct: ct
       );
 
-   // POST /camplib/v1/readers
-   public Task<Result<ReaderDto>> CreateAsync(
-      ReaderCreateDto dto,
+   // GET /camplib/v1/readers/me
+   // Returns the current Reader self-service view.
+   public Task<Result<ReaderDto>> GetMeAsync(
       CancellationToken ct = default
    ) =>
       SendAsync<ReaderDto>(
-         send: () => _http.PostAsJsonAsync(
-            requestUri: $"{Base}/readers",
+         send: () => _http.GetAsync(
+            requestUri: $"{Base}/readers/me",
+            cancellationToken: ct
+         ),
+         ct: ct
+      );
+
+   // POST /camplib/v1/readers/me/provision?id={optionalId}
+   // Idempotently provisions the fachlicher Reader for the current technical user.
+   public Task<Result<ReaderProvisionMeDto>> ProvisionMeAsync(
+      string? id = null,
+      CancellationToken ct = default
+   ) {
+      string uri = string.IsNullOrWhiteSpace(id)
+         ? $"{Base}/readers/me/provision"
+         : $"{Base}/readers/me/provision?id={Uri.EscapeDataString(id)}";
+
+      return SendAsync<ReaderProvisionMeDto>(
+         send: () => _http.PostAsync(
+            requestUri: uri,
+            content: null,
+            cancellationToken: ct
+         ),
+         ct: ct
+      );
+   }
+
+   // PUT /camplib/v1/readers/me/profile
+   // Completes the initial fachliche profile after provisioning.
+   public Task<Result<ReaderDto>> UpdateMeProfileAsync(
+      ReaderProfileMeDto dto,
+      CancellationToken ct = default
+   ) =>
+      SendAsync<ReaderDto>(
+         send: () => _http.PutAsJsonAsync(
+            requestUri: $"{Base}/readers/me/profile",
             value: dto,
             options: _json,
             cancellationToken: ct
@@ -75,15 +104,16 @@ public sealed class ReaderClient(
          ct: ct
       );
 
-   // PUT /camplib/v1/readers/{id}
-   public Task<Result<ReaderDto>> UpdateAsync(
-      Guid id,
-      ReaderUpdateDto dto,
+   // PUT /camplib/v1/readers/me/update
+   // Performs the later self-service update.
+   // Firstname is intentionally not part of ReaderUpdateMeDto.
+   public Task<Result<ReaderDto>> UpdateMeAsync(
+      ReaderUpdateMeDto dto,
       CancellationToken ct = default
    ) =>
       SendAsync<ReaderDto>(
          send: () => _http.PutAsJsonAsync(
-            requestUri: $"{Base}/readers/{id}",
+            requestUri: $"{Base}/readers/me/update",
             value: dto,
             options: _json,
             cancellationToken: ct
@@ -92,6 +122,7 @@ public sealed class ReaderClient(
       );
 
    // DELETE /camplib/v1/readers/{id} -> 204 No Content
+   // Administrative deactivation remains available for employee/admin flows.
    public Task<Result<bool>> DeactivateAsync(
       Guid id,
       CancellationToken ct = default

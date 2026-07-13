@@ -20,7 +20,7 @@ public static class AuthClaims {
 
    /// <summary>
    /// User email address.
-   /// Used as primary login identifier for customers.
+   /// Used as primary login identifier.
    /// </summary>
    public const string Email = "email";
 
@@ -32,14 +32,14 @@ public static class AuthClaims {
 
    /// <summary>
    /// Role claim used by ASP.NET authorization.
-   /// Values: "Customer" | "Owner" | "Employee"
+   /// Values: "Customer" | "Reader" | "Employee"
    /// </summary>
-   public const string Role = "role"; 
-   
+   public const string Role = "role";
+
    //--- Domain-specific claims -------------------------------------------
    /// <summary>
    /// Account classification (domain specific).
-   /// Values: "customer" | "owner" | "employee"
+   /// Values: "customer" | "reader" | "employee"
    /// </summary>
    public const string AccountType = "account_type";
 

@@ -1,20 +1,29 @@
 @page "/readers"
+@attribute [Authorize(Roles = CampusLibraryRoles.Employee)]
 @rendermode InteractiveServer
 @inherits BasePage
-@* Part 8: protect this page with [Authorize(Policy = CampusLibraryPolicies.CanManageReaders)]. *@
+@* Part 6: employee page for viewing readers and opening reader details. *@
 
 @inject IReaderClient ReaderClient
 @inject ICurrentUserProvider CurrentUserProvider
 
 <PageTitle>Leser</PageTitle>
 
-<h1 class="h3 mb-3">Leser</h1>
+<div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+   <button class="btn btn-outline-secondary" @onclick="LoadAsync" disabled="@IsLoading">
+      Neu laden
+   </button>
 
-<p class="text-muted">
-   Mitarbeiteransicht. Leserinnen und Leser werden von Bibliotheksmitarbeitenden verwaltet.
-</p>
-
-<button class="btn btn-outline-secondary mb-3" @onclick="LoadAsync">Neu laden</button>
+   <div class="form-check mb-0">
+      <input id="includeInactive"
+             type="checkbox"
+             class="form-check-input"
+             @bind="_includeInactive" />
+      <label class="form-check-label" for="includeInactive">
+         Inaktive Leser einbeziehen
+      </label>
+   </div>
+</div>
 
 <ErrorAlert Error="Error" />
 
@@ -36,14 +45,15 @@ else {
                <th scope="col">Nachname</th>
                <th scope="col">E-Mail</th>
                <th scope="col">Status</th>
+               <th scope="col" class="text-end">Aktion</th>
             </tr>
          </thead>
          <tbody>
             @foreach(ReaderDto reader in _readers) {
                <tr>
-                  <td>@reader.Firstname</td>
-                  <td>@reader.Lastname</td>
-                  <td>@reader.Email</td>
+                  <td>@Display(reader.Firstname)</td>
+                  <td>@Display(reader.Lastname)</td>
+                  <td>@Display(reader.Email)</td>
                   <td>
                      @if(reader.IsActive) {
                         <span class="badge text-bg-success">Aktiv</span>
@@ -51,6 +61,12 @@ else {
                      else {
                         <span class="badge text-bg-secondary">Inaktiv</span>
                      }
+                  </td>
+                  <td class="text-end">
+                     <a class="btn btn-sm btn-outline-primary"
+                        href="@ReaderDetailsUrl(reader.Id)">
+                        Details
+                     </a>
                   </td>
                </tr>
             }
@@ -65,6 +81,8 @@ else {
 
    private CurrentUserInfo? _currentUser;
 
+   private bool _includeInactive;
+
    protected override async Task OnInitializedAsync() {
       _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
       await LoadAsync();
@@ -74,7 +92,9 @@ else {
       StartLoading();
       Error = null;
 
-      Result<IEnumerable<ReaderDto>> result = await ReaderClient.GetAllAsync();
+      Result<IEnumerable<ReaderDto>> result = await ReaderClient.GetAllAsync(
+         includeInactive: _includeInactive
+      );
 
       if(result.IsSuccess && result.Value is not null)
          _readers = result.Value.ToList();
@@ -83,4 +103,22 @@ else {
 
       StopLoading();
    }
+
+   private static string ReaderDetailsUrl(
+      Guid readerId
+   ) => $"/readers/{readerId}";
+
+   private static string Display(
+      string? value
+   ) => string.IsNullOrWhiteSpace(value)
+      ? "Nicht verfügbar"
+      : value;
 }
+
+@* Didaktik:
+   /readers is the employee-oriented overview for Reader resources.
+   It links to /readers/{id}, where employees can inspect the selected Reader
+   and deactivate the Reader if necessary.
+
+   Reader self-service remains separate and uses /readers/me/... routes.
+*@

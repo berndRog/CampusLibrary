@@ -1,10 +1,14 @@
 using IdentityAccessServer.Infrastructure.Identity;
+using IdentityAccessServer.Infrastructure.Persistence.Converters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace IdentityAccessServer.Infrastructure.Persistence.Configurations;
 
-public sealed class ConfigApplicationUser : IEntityTypeConfiguration<ApplicationUser> {
+public sealed class ConfigApplicationUser(
+   UtcDateTimeConverter utcDtConv
+) : IEntityTypeConfiguration<ApplicationUser> {
+   
    public void Configure(EntityTypeBuilder<ApplicationUser> builder) {
       builder.ToTable("AspNetUsers");
 
@@ -30,9 +34,11 @@ public sealed class ConfigApplicationUser : IEntityTypeConfiguration<Application
          .HasColumnOrder(6);
 
       builder.Property(u => u.CreatedAt)
+         .HasConversion(utcDtConv)
          .HasColumnOrder(7);
 
       builder.Property(u => u.UpdatedAt)
+         .HasConversion(utcDtConv)
          .HasColumnOrder(8);
 
       builder.Property(u => u.NormalizedUserName)

@@ -327,6 +327,7 @@ public sealed class BookUt {
       result.IsSuccess.Should().BeTrue();
 
       book1.IsActive.Should().BeFalse();
+      book1.BookItems.Should().BeEmpty();
       book1.CreatedAt.Should().Be(_seed.Book1().CreatedAt);
       book1.UpdatedAt.Should().Be(updatedAt);
    }

@@ -199,6 +199,7 @@ public sealed class OidcController(
          preferred_username = User.FindFirst(AuthClaims.PreferredUsername)?.Value,
          email = User.FindFirst(AuthClaims.Email)?.Value,
          role = User.FindFirst(AuthClaims.Role)?.Value,
+         account_type = User.FindFirst(AuthClaims.AccountType)?.Value,
          admin_rights = User.FindFirst(AuthClaims.AdminRights)?.Value,
          created_at = User.FindFirst(AuthClaims.CreatedAt)?.Value,
          updated_at = User.FindFirst(AuthClaims.UpdatedAt)?.Value
@@ -258,6 +259,9 @@ public sealed class OidcController(
          SetOrReplaceClaim(identity, AuthClaims.PreferredUsername, user.UserName);
 
       var accountType = user.AccountType.Trim().ToLowerInvariant();
+      if (accountType == "student")
+         accountType = "reader";
+
       if (user.AdminRights > 0)
          accountType = "employee";
 
@@ -265,6 +269,7 @@ public sealed class OidcController(
 
       var role = accountType switch {
          "employee" => "Employee",
+         "reader" => "Reader",
          "customer" => "Customer",
          _ => "Customer"
       };

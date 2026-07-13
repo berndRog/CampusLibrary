@@ -12,6 +12,13 @@ public interface IReaderLoanContract {
       Guid readerId,
       CancellationToken ct
    );
+
+   // Finds reader data for displaying an already existing loan.
+   // Existing loans remain readable even if the Reader was deactivated later.
+   Task<Result<ReaderLoanInfoDto>> FindReaderForExistingLoanAsync(
+      Guid readerId,
+      CancellationToken ct
+   );
 }
 
 /*

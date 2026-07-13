@@ -4,6 +4,29 @@
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 
+@{
+  // Preserve the OIDC return URL while the user moves between Identity pages.
+  //
+  // During an authorization-code flow the login page is opened with a URL like:
+  // /Identity/Account/Login?ReturnUrl=/connect/authorize?...
+  //
+  // Losing this value would turn the login into a standalone Identity login.
+  // The user would then be redirected to "/" instead of back to the OIDC
+  // authorization endpoint and finally to the CampusLibrary client.
+  string returnUrl = Context.Request.Query["returnUrl"].ToString();
+
+  if (string.IsNullOrWhiteSpace(returnUrl))
+    returnUrl = Context.Request.Query["ReturnUrl"].ToString();
+
+  string? currentPage = ViewContext.RouteData.Values["page"]?.ToString();
+
+  bool isLoginPage = string.Equals(
+    currentPage,
+    "/Account/Login",
+    StringComparison.OrdinalIgnoreCase
+  );
+}
+
 <ul class="navbar-nav">
   @if (SignInManager.IsSignedIn(User))
   {
@@ -34,10 +57,16 @@
       </form>
     </li>
   }
-  else
+  else if (!isLoginPage)
   {
     <li class="nav-item">
-      <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Login">Login</a>
+      <a
+        class="nav-link text-dark"
+        asp-area="Identity"
+        asp-page="/Account/Login"
+        asp-route-returnUrl="@(string.IsNullOrWhiteSpace(returnUrl) ? null : returnUrl)">
+        Login
+      </a>
     </li>
   }
 </ul>

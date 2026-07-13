@@ -1,0 +1,212 @@
+@page "/auth/routes"
+@attribute [Authorize(Roles = CampusLibraryRoles.ReaderOrEmployee)]
+
+@using System.Reflection
+
+<h3>Client-Routen</h3>
+
+<p>
+   In Teil 6 gibt es im Client nur die Rollen <code>Reader</code> und <code>Employee</code>. 
+   Der systematische Schutz der API-Clients, API-Endpunkte, ReadModels und UseCases wird in
+   Part 7 weiter vertieft.
+</p>
+
+<h5>Blazor-Seiten</h5>
+
+<table class="table table-striped table-sm align-middle">
+   <thead>
+      <tr>
+         <th>Client-URL</th>
+         <th>Komponente</th>
+         <th>Zugriffsschutz</th>
+         <th>Rollen / Zugriff</th>
+      </tr>
+   </thead>
+   <tbody>
+      @foreach(var route in _pageRoutes) {
+         <tr>
+            <td><code>@route.Url</code></td>
+            <td>
+               <div>@route.Component</div>
+               <div class="small text-muted">@route.Namespace</div>
+            </td>
+            <td><code>@route.AccessRule</code></td>
+            <td>@route.AllowedRoles</td>
+         </tr>
+      }
+   </tbody>
+</table>
+
+<h5>Weitere Client-URLs</h5>
+
+<p>
+   URLs sind keine Razor-Seiten mit <code>&#64;page</code>, gehören aber zum
+   Login-/Logout- und Einstiegspfad des Clients.
+</p>
+
+<table class="table table-striped table-sm align-middle">
+   <thead>
+      <tr>
+         <th>Client-URL</th>
+         <th>Baustein</th>
+         <th>Zugriff / Zweck</th>
+      </tr>
+   </thead>
+   <tbody>
+      @foreach(var route in _controllerRoutes) {
+         <tr>
+            <td><code>@route.Url</code></td>
+            <td>@route.Component</td>
+            <td>@route.Description</td>
+         </tr>
+      }
+   </tbody>
+</table>
+
+@code {
+
+   private IReadOnlyList<PageRouteInfo> _pageRoutes = [];
+
+   private readonly IReadOnlyList<ControllerRouteInfo> _controllerRoutes = [
+      new(
+         Url: "/entry",
+         Component: "EntryController",
+         Description: "Login-Einstieg nach OIDC-Callback; provisioniert Reader und leitet weiter."
+      ),
+      new(
+         Url: "/identity/login?returnUrl=/entry",
+         Component: "IdentityController.Login",
+         Description: "Startet den OpenID-Connect-Login am IdentityAccessServer."
+      ),
+      new(
+         Url: "/identity/logout",
+         Component: "IdentityController.Logout",
+         Description: "Startet Logout über lokale Cookie-Session und IdentityAccessServer."
+      ),
+      new(
+         Url: "/signin-oidc",
+         Component: "OpenIdConnect middleware",
+         Description: "Technische OIDC-Callback-URL; keine eigene Blazor-Seite."
+      ),
+      new(
+         Url: "/signout-callback-oidc",
+         Component: "OpenIdConnect middleware",
+         Description: "Technische Logout-Callback-URL; keine eigene Blazor-Seite."
+      )
+   ];
+
+   protected override void OnInitialized() {
+      _pageRoutes = LoadPageRoutes();
+   }
+
+   private static IReadOnlyList<PageRouteInfo> LoadPageRoutes() {
+      return GetComponentTypes()
+         .SelectMany(type => type.GetCustomAttributes<RouteAttribute>()
+            .Select(attribute => CreatePageRouteInfo(
+               type: type,
+               url: attribute.Template
+            )))
+         .OrderBy(route => route.Url)
+         .ThenBy(route => route.Component)
+         .ToList();
+   }
+
+   private static PageRouteInfo CreatePageRouteInfo(
+      Type type,
+      string url
+   ) {
+      var allowAnonymous = type.GetCustomAttributes<AllowAnonymousAttribute>(inherit: true)
+         .Any();
+
+      if(allowAnonymous)
+         return new PageRouteInfo(
+            Url: url,
+            Component: type.Name,
+            Namespace: type.Namespace ?? string.Empty,
+            AccessRule: "AllowAnonymous",
+            AllowedRoles: "Alle"
+         );
+
+      var authorizeAttributes = type
+         .GetCustomAttributes<AuthorizeAttribute>(inherit: true)
+         .ToList();
+
+      if(authorizeAttributes.Count == 0)
+         return new PageRouteInfo(
+            Url: url,
+            Component: type.Name,
+            Namespace: type.Namespace ?? string.Empty,
+            AccessRule: "nicht explizit geschützt",
+            AllowedRoles: "abhängig von Layout/API"
+         );
+
+      var roles = authorizeAttributes
+         .SelectMany(attribute => SplitRoles(attribute.Roles))
+         .Distinct(StringComparer.OrdinalIgnoreCase)
+         .ToList();
+
+      var accessRule = roles.Count > 0
+         ? $"Authorize(Roles = \"{string.Join(',', roles)}\")"
+         : "Authorize";
+
+      var allowedRoles = roles.Count > 0
+         ? string.Join(", ", roles)
+         : "angemeldete Benutzer";
+
+      return new PageRouteInfo(
+         Url: url,
+         Component: type.Name,
+         Namespace: type.Namespace ?? string.Empty,
+         AccessRule: accessRule,
+         AllowedRoles: allowedRoles
+      );
+   }
+
+   private static IEnumerable<string> SplitRoles(
+      string? roles
+   ) {
+      if(string.IsNullOrWhiteSpace(roles))
+         return [];
+
+      return roles
+         .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+         .Where(role => !string.IsNullOrWhiteSpace(role));
+   }
+
+   private static IEnumerable<Type> GetComponentTypes() {
+      try {
+         return typeof(Program).Assembly
+            .GetTypes()
+            .Where(type => typeof(IComponent).IsAssignableFrom(type));
+      }
+      catch(ReflectionTypeLoadException ex) {
+         return ex.Types
+            .Where(type => type is not null && typeof(IComponent).IsAssignableFrom(type))
+            .Cast<Type>();
+      }
+   }
+
+   private sealed record PageRouteInfo(
+      string Url,
+      string Component,
+      string Namespace,
+      string AccessRule,
+      string AllowedRoles
+   );
+
+   private sealed record ControllerRouteInfo(
+      string Url,
+      string Component,
+      string Description
+   );
+}
+
+@* Part 6:
+   This page is a teaching and diagnostics page. It makes client-side route
+   protection visible. The client uses only the technical roles Reader and
+   Employee here.
+
+   It intentionally describes page-level authorization only. The systematic
+   hardening of API clients, API endpoints, ReadModels and UseCases is continued
+   in Part 7.
+*@

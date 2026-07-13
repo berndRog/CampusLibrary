@@ -7,16 +7,31 @@ namespace CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
 // The concrete implementation is provided by Infrastructure.
 public interface ILoanReadModel {
 
-   // Finds one loan by its id.
+   // Finds one current loan by its id.
    // Returns a detailed DTO enriched with reader and book item information.
    Task<Result<LoanDetailDto>> FindByIdAsync(
       Guid id,
       CancellationToken ct
    );
 
+   // Finds one current loan only if it belongs to the given Reader.
+   // This method is used by Reader self-service endpoints.
+   Task<Result<LoanDetailDto>> FindByIdForReaderAsync(
+      Guid id,
+      Guid readerId,
+      CancellationToken ct
+   );
+
    // Returns all currently borrowed loans.
-   // A borrowed loan has LoanStatus.Borrowed and no return timestamp.
+   // Every stored Loan represents an active borrowing process.
    Task<Result<IReadOnlyList<LoanListItemDto>>> FindAllBorrowedAsync(
+      CancellationToken ct
+   );
+
+   // Returns all current loans of one Reader.
+   // The filtering is performed in the API and not in the client.
+   Task<Result<IReadOnlyList<LoanListItemDto>>> FindBorrowedByReaderIdAsync(
+      Guid readerId,
       CancellationToken ct
    );
 }
@@ -27,19 +42,16 @@ Lernziele und Didaktik
 
 Dieses Interface ist der ReadModel-Port des Loans-Moduls.
 
-Reader und Book verwenden IsActive, weil sie aktiviert oder deaktiviert
-werden können.
+Nur aktuelle Ausleihen werden gespeichert. Ein vorhandener Loan bedeutet,
+dass das referenzierte BookItem ausgeliehen ist. Zurückgegebene Loans werden
+nicht mehr im ReadModel angezeigt, weil sie bei der Rückgabe gelöscht werden.
 
-BookItem und Loan verwenden Status, weil sie fachliche Zustände besitzen.
+Die Methoden mit ReaderId unterstützen Self-Service-Endpunkte wie:
 
-Für Loan bedeutet der Status Borrowed, dass ein Exemplar aktuell ausgeliehen
-ist. Deshalb heißt die Listenabfrage FindAllBorrowedAsync und nicht
-FindAllActiveAsync.
+- GET /loans/me
+- GET /loans/me/{id}
 
-Damit bleibt die Sprache im Modell eindeutig:
-
-- Reader ist aktiv oder deaktiviert.
-- Book ist aktiv oder deaktiviert.
-- BookItem ist verfügbar, nicht verfügbar, verloren oder beschädigt.
-- Loan ist ausgeliehen, zurückgegeben oder storniert.
+Wichtig ist dabei: Der Client entscheidet nicht selbst, welche Loan-Datensätze
+zum angemeldeten Reader gehören. Die API bestimmt zuerst den fachlichen Reader
+aus dem Token-Subject und filtert anschließend serverseitig.
 */

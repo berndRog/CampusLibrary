@@ -1,4 +1,5 @@
 @page "/catalog/books/{BookId:guid}/deactivate"
+@attribute [Authorize(Roles = CampusLibraryRoles.Employee)]
 @rendermode InteractiveServer
 @inherits BasePage
 
@@ -65,21 +66,66 @@ else {
                }
             </dd>
 
-            <dt class="col-sm-3">Exemplare</dt>
+            <dt class="col-sm-3">Exemplare insgesamt</dt>
             <dd class="col-sm-9">@CurrentItemCount</dd>
+
+            <dt class="col-sm-3">Davon ausgeliehen</dt>
+            <dd class="col-sm-9">
+               @if(BorrowedItemCount > 0) {
+                  <span class="badge text-bg-danger">@BorrowedItemCount</span>
+               }
+               else {
+                  <span class="badge text-bg-success">0</span>
+               }
+            </dd>
          </dl>
       </div>
    </div>
 
    @if(_book.IsActive) {
-      <div class="alert alert-warning" role="alert">
-         Das Buch wird deaktiviert. Die zugehörigen Exemplare werden gemäß
-         API-Use-Case entfernt beziehungsweise stehen anschließend nicht mehr
-         für neue Ausleihen zur Verfügung.
-      </div>
+      @if(BorrowedItemCount > 0) {
+         <div class="alert alert-danger" role="alert">
+            Das Buch kann derzeit nicht deaktiviert werden, weil
+            @BorrowedItemCount @BorrowedItemLabel ausgeliehen.
+         </div>
+
+         <div class="card shadow-sm mb-3">
+            <div class="card-body">
+               <h2 class="h5 card-title mb-3">Aktuelle Ausleihen</h2>
+
+               <div class="table-responsive">
+                  <table class="table table-sm align-middle mb-0">
+                     <thead>
+                     <tr>
+                        <th scope="col">Reader-E-Mail</th>
+                        <th scope="col">Fällig am</th>
+                     </tr>
+                     </thead>
+                     <tbody>
+                     @foreach(BookDeactivationLoanDto loan in CurrentLoans) {
+                        <tr>
+                           <td>@loan.ReaderEmail</td>
+                           <td>@loan.DueDate.ToLocalTime().ToString("dd.MM.yyyy")</td>
+                        </tr>
+                     }
+                     </tbody>
+                  </table>
+               </div>
+            </div>
+         </div>
+      }
+      else {
+         <div class="alert alert-warning" role="alert">
+            Bei erfolgreicher Deaktivierung werden alle zugehörigen Exemplare
+            dauerhaft gelöscht.
+         </div>
+      }
 
       <div class="d-flex flex-wrap gap-2">
-         <button class="btn btn-danger" @onclick="DeactivateAsync" disabled="@IsLoading">
+         <button
+            class="btn btn-danger"
+            @onclick="DeactivateAsync"
+            disabled="@(!CanDeactivate || IsLoading)">
             Buch deaktivieren
          </button>
 
@@ -106,40 +152,77 @@ else {
 
    private BookDetailDto? _book;
 
+   private BookDeactivationInfoDto? _deactivationInfo;
+
    private bool _deactivated;
 
    private IReadOnlyList<BookItemDto> CurrentItems =>
       _book?.BookItems ?? [];
 
+   private IReadOnlyList<BookDeactivationLoanDto> CurrentLoans =>
+      _deactivationInfo?.CurrentLoans ?? [];
+
    private int CurrentItemCount =>
-      CurrentItems.Count > 0
+      _deactivationInfo?.TotalItems ??
+      (CurrentItems.Count > 0
          ? CurrentItems.Count
-         : _book?.TotalItems ?? 0;
+         : _book?.TotalItems ?? 0);
+
+   private int BorrowedItemCount =>
+      _deactivationInfo?.BorrowedItems ?? 0;
+
+   private bool CanDeactivate =>
+      _book?.IsActive == true &&
+      _deactivationInfo is not null &&
+      BorrowedItemCount == 0;
+
+   private string BorrowedItemLabel =>
+      BorrowedItemCount == 1
+         ? "Exemplar ist"
+         : "Exemplare sind";
 
    protected override async Task OnInitializedAsync() {
       _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
-      await LoadBookAsync();
+      await LoadPageAsync();
    }
 
-   private async Task LoadBookAsync() {
+   private async Task LoadPageAsync() {
       StartLoading();
       Error = null;
 
-      Result<BookDetailDto> result = await BookClient.GetByIdAsync(
+      Result<BookDetailDto> bookResult = await BookClient.GetByIdAsync(
          id: BookId,
          includeInactive: true
       );
 
-      if(result.IsSuccess && result.Value is not null)
-         _book = result.Value;
-      else
-         Error = result.Error;
+      if(bookResult.IsFailure || bookResult.Value is null) {
+         Error = bookResult.Error;
+         StopLoading();
+         return;
+      }
+
+      _book = bookResult.Value;
+
+      if(_currentUser?.IsEmployee == true) {
+         Result<BookDeactivationInfoDto> infoResult =
+            await BookClient.GetDeactivationInfoAsync(
+               bookId: BookId
+            );
+
+         if(infoResult.IsFailure || infoResult.Value is null) {
+            Error = infoResult.Error;
+            StopLoading();
+            return;
+         }
+
+         _deactivationInfo = infoResult.Value;
+      }
 
       StopLoading();
    }
 
    private async Task DeactivateAsync() {
-      if(_currentUser?.IsEmployee != true || _book?.IsActive != true)
+      if(_currentUser?.IsEmployee != true || !CanDeactivate)
          return;
 
       StartLoading();
@@ -150,13 +233,15 @@ else {
       );
 
       if(result.IsFailure) {
-         Error = result.Error;
+         var deactivateError = result.Error;
          StopLoading();
+         await LoadPageAsync();
+         Error = deactivateError;
          return;
       }
 
       _deactivated = true;
-      await LoadBookAsync();
+      await LoadPageAsync();
    }
 
    private void BackToCatalog() {

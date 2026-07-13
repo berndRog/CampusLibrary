@@ -27,6 +27,15 @@ public sealed class SeedUsersHostedService(IServiceProvider sp) : IHostedService
       //    adminRights: AdminRights.None
       // );
       
+      // await EnsureUserAsync(
+      //    users,
+      //    id: Guid.Parse("00000000-0003-0000-0000-000000000000"),
+      //    email: "r.reader@library.local",
+      //    password: "Geh1m_",
+      //    accountType: "reader",
+      //    adminRights: AdminRights.None
+      // );
+      
       // ----------------------------
       // Admin demo user (Employee)
       // Example rights: manage cars + bookings + customers + employees
@@ -47,6 +56,8 @@ public sealed class SeedUsersHostedService(IServiceProvider sp) : IHostedService
       //    accountType: "employee",
       //    adminRights: (AdminRights) 511
       // );
+
+
       await EnsureUserAsync(
          users,
          id: Guid.Parse("00000000-0099-0000-0000-000000000000"),

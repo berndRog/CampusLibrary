@@ -5,7 +5,6 @@ using CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
 using CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Loans._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Entities;
-using CampusLibraryApi._3_Core.Loans._3_Domain.Enums;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Policies;
 using Microsoft.EntityFrameworkCore;
@@ -38,15 +37,37 @@ internal sealed class LoanReadModelEf(
       return await ToDetailDtoAsync(loan, ct);
    }
 
+   public async Task<Result<LoanDetailDto>> FindByIdForReaderAsync(
+      Guid id,
+      Guid readerId,
+      CancellationToken ct
+   ) {
+      if(id == Guid.Empty)
+         return Result<LoanDetailDto>.Failure(LoanErrors.InvalidLoanId);
+
+      if(readerId == Guid.Empty)
+         return Result<LoanDetailDto>.Failure(LoanErrors.InvalidReaderId);
+
+      LoanProjectionDto? loan = await loanDbContext.Loans
+         .AsNoTracking()
+         .Where(loan => loan.Id == id && loan.ReaderId == readerId)
+         .Select(LoanToProjectionDto)
+         .FirstOrDefaultAsync(ct);
+
+      // Do not disclose whether the loan exists for another Reader.
+      if(loan is null)
+         return Result<LoanDetailDto>.Failure(LoanErrors.LoanNotFound);
+
+      return await ToDetailDtoAsync(loan, ct);
+   }
+
    public async Task<Result<IReadOnlyList<LoanListItemDto>>> FindAllBorrowedAsync(
       CancellationToken ct
    ) {
+      // Only current loans are stored. Therefore every row represents a
+      // borrowed book item and no status filter is required.
       List<LoanProjectionDto> loans = await loanDbContext.Loans
          .AsNoTracking()
-         .Where(loan =>
-            loan.Status == LoanStatus.Borrowed &&
-            loan.ReturnedAt == null
-         )
          .OrderBy(loan => loan.LoanPeriodVo.DueDate)
          .ThenBy(loan => loan.LoanPeriodVo.LoanDate)
          .ThenBy(loan => loan.Id)
@@ -58,7 +79,43 @@ internal sealed class LoanReadModelEf(
          var resultDto = await ToListItemDtoAsync(loan, ct);
          if(resultDto.IsFailure)
             return Result<IReadOnlyList<LoanListItemDto>>.Failure(resultDto.Error);
-         
+
+         dtos.Add(resultDto.Value);
+      }
+
+      return Result<IReadOnlyList<LoanListItemDto>>.Success(dtos);
+   }
+
+   public async Task<Result<IReadOnlyList<LoanListItemDto>>> FindBorrowedByReaderIdAsync(
+      Guid readerId,
+      CancellationToken ct
+   ) {
+      if(readerId == Guid.Empty)
+         return Result<IReadOnlyList<LoanListItemDto>>.Failure(
+            LoanErrors.InvalidReaderId
+         );
+
+      List<LoanProjectionDto> loans = await loanDbContext.Loans
+         .AsNoTracking()
+         .Where(loan => loan.ReaderId == readerId)
+         .OrderBy(loan => loan.LoanPeriodVo.DueDate)
+         .ThenBy(loan => loan.LoanPeriodVo.LoanDate)
+         .ThenBy(loan => loan.Id)
+         .Select(LoanToProjectionDto)
+         .ToListAsync(ct);
+
+      List<LoanListItemDto> dtos = [];
+      foreach(LoanProjectionDto loan in loans) {
+         Result<LoanListItemDto> resultDto = await ToListItemDtoAsync(
+            loan: loan,
+            ct: ct
+         );
+
+         if(resultDto.IsFailure)
+            return Result<IReadOnlyList<LoanListItemDto>>.Failure(
+               resultDto.Error
+            );
+
          dtos.Add(resultDto.Value);
       }
 
@@ -67,21 +124,11 @@ internal sealed class LoanReadModelEf(
 
    private static readonly Expression<Func<Loan, LoanProjectionDto>> LoanToProjectionDto =
       loan => new LoanProjectionDto(
-         // Id:
          loan.Id,
-         // ReaderId:
          loan.ReaderId,
-         // BookItemId:
          loan.BookItemId,
-         // LoanDate:
          loan.LoanPeriodVo.LoanDate,
-         // DueDate:
          loan.LoanPeriodVo.DueDate,
-         // ReturnedAt:
-         loan.ReturnedAt,
-         // Status:
-         (int)loan.Status,
-         // RenewalCount:
          loan.RenewalCount
       );
 
@@ -90,7 +137,7 @@ internal sealed class LoanReadModelEf(
       CancellationToken ct
    ) {
       var readerResult = await readerLoanContract
-         .FindReaderForLoanAsync(loan.ReaderId, ct);
+         .FindReaderForExistingLoanAsync(loan.ReaderId, ct);
       if(readerResult.IsFailure)
          return Result<LoanDetailDto>.Failure(readerResult.Error);
 
@@ -124,9 +171,6 @@ internal sealed class LoanReadModelEf(
 
             LoanDate: loan.LoanDate,
             DueDate: loan.DueDate,
-            ReturnedAt: loan.ReturnedAt,
-
-            Status: loan.Status,
             RenewalCount: loan.RenewalCount,
 
             IsOverdue: IsOverdue(
@@ -145,7 +189,7 @@ internal sealed class LoanReadModelEf(
       LoanProjectionDto loan,
       CancellationToken ct
    ) {
-      var readerResult = await readerLoanContract.FindReaderForLoanAsync(
+      var readerResult = await readerLoanContract.FindReaderForExistingLoanAsync(
          readerId: loan.ReaderId,
          ct: ct
       );
@@ -180,7 +224,6 @@ internal sealed class LoanReadModelEf(
             LoanDate: loan.LoanDate,
             DueDate: loan.DueDate,
 
-            Status: loan.Status,
             IsOverdue: IsOverdue(
                loan: loan,
                utcNow: clock.UtcNow
@@ -192,26 +235,23 @@ internal sealed class LoanReadModelEf(
    private static bool IsOverdue(
       LoanProjectionDto loan,
       DateTime utcNow
-   ) => loan.ReturnedAt is null && loan.DueDate < utcNow;
+   ) => loan.DueDate < utcNow;
 
    private static bool CanRenew(
       LoanProjectionDto loan,
       DateTime utcNow
-   ) => loan.Status == (int)LoanStatus.Borrowed &&
-      loan.ReturnedAt is null &&
-      !IsOverdue(
+   ) => !IsOverdue(
          loan: loan,
          utcNow: utcNow
       ) &&
       loan.RenewalCount < LoanRules.MaxRenewals;
+
    private sealed record LoanProjectionDto(
       Guid Id,
       Guid ReaderId,
       Guid BookItemId,
       DateTime LoanDate,
       DateTime DueDate,
-      DateTime? ReturnedAt,
-      int Status,
       int RenewalCount
    );
 }

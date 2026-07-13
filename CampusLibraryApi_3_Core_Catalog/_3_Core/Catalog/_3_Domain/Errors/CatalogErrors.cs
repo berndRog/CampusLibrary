@@ -28,13 +28,13 @@ public static class CatalogErrors {
          "The book was not found."
       );
 
-   public static readonly DomainError AuthorsAreRequired = 
+   public static readonly DomainError AuthorsAreRequired =
       new(
          WebErrorStatus.BadRequest,
          "Catalog: Book Author(s) Is/Are Required",
          "At least one author is required."
    );
-   
+
    public static readonly DomainError TitleIsRequired =
       new(
          WebErrorStatus.BadRequest,
@@ -62,7 +62,14 @@ public static class CatalogErrors {
          "Catalog: Book Already Exists",
          "A book with this ISBN already exists."
       );
-   
+
+   public static readonly DomainError BookCannotBeDeactivatedWithLoans =
+      new(
+         WebErrorStatus.Conflict,
+         "Catalog: Book Cannot Be Deactivated With Loans",
+         "The book cannot be deactivated while one of its book items is borrowed."
+      );
+
    public static readonly DomainError BookCreateDtoRequired =
       new(
          WebErrorStatus.BadRequest,
@@ -108,14 +115,14 @@ public static class CatalogErrors {
          "Catalog: Invalid uthor Id",
          "The given author Id is invalid."
       );
-   
+
    public static readonly DomainError AuthorIdRequired =
       new(
          WebErrorStatus.BadRequest,
          "Catalog: Author Id Required",
          "The author id is required."
       );
-   
+
    public static readonly DomainError AuthorNotFound =
       new(
          WebErrorStatus.NotFound,
@@ -129,7 +136,7 @@ public static class CatalogErrors {
          "Catalog: Author Firstname Required",
          "A first name must be provided."
       );
-   
+
    public static readonly DomainError InvalidFirstname =
       new(
          WebErrorStatus.BadRequest,
@@ -157,8 +164,8 @@ public static class CatalogErrors {
          "Catalog: Author Already Exists",
          "An author with this name already exists."
       );
-   
-      
+
+
    public static readonly DomainError AuthorCreateDtoRequired =
       new(
          WebErrorStatus.BadRequest,
@@ -175,14 +182,14 @@ public static class CatalogErrors {
          "Catalog: Book Author Id Required",
          "The book author id is required."
       );
-   
+
    public static readonly DomainError InvalidBookAuthorId =
       new(
          WebErrorStatus.BadRequest,
          "Catalog: Invalid Book Author Id",
          "The given book author Id is invalid."
       );
-   
+
    public static readonly DomainError AuthorAlreadyAssigned =
       new(
          WebErrorStatus.Conflict,
@@ -196,7 +203,7 @@ public static class CatalogErrors {
          "Catalog: Book Author NotFound",
          "The book-author assignment was not found."
       );
-   
+
 
    // BookItem entity
    // ------------------------------------------------------------------------
@@ -206,14 +213,14 @@ public static class CatalogErrors {
          "Catalog: Book Item Id Required",
          "The book item id is required."
       );
-   
+
    public static readonly DomainError InvalidBookItemId =
       new(
          WebErrorStatus.BadRequest,
          "Catalog: Invalid BookItem Id",
          "The given BookItem Id is invalid."
       );
-   
+
    public static readonly DomainError BookItemNotFound =
       new(
          WebErrorStatus.NotFound,
@@ -248,7 +255,7 @@ public static class CatalogErrors {
          "BookItem: InvalidStatus",
          "The given book item status is invalid."
       );
-   
+
    public static readonly DomainError BookItemAddDtoRequired =
       new(
          WebErrorStatus.BadRequest,

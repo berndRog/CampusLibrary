@@ -93,6 +93,7 @@ namespace IdentityAccessServer.Areas.Identity.Pages.Account {
 
       public async Task<IActionResult> OnPostAsync(string returnUrl = null) {
          returnUrl ??= Url.Content("~/");
+         ReturnUrl = returnUrl;
 
          ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 

@@ -1,0 +1,19 @@
+### @name Set Params
+@subject =  00000005-0000-0001-0000-000000000000
+@email = c.conrad@gmx.com
+@password = Geh1m_
+@mustChangePassword = false
+@accountType = reader
+@createdAt = 2025-01-01T00:00:00Z
+
+@readerId = 00000005-0000-0000-0000-000000000000
+@firstname = Christine 
+@lastname = Conrad
+@street = Berliner Platz 8
+@postalCode = 29614
+@city = Soltau
+# JSON: keep quotes for text, set to null
+@country = "DE"
+
+### 
+run ReaderProvisionTemplate.http

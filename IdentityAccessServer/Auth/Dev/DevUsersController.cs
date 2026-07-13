@@ -28,7 +28,7 @@ public sealed class DevUsersController(
    [AllowAnonymous]
    [HttpPost]
    public async Task<IActionResult> Create(
-      [FromBody] DevCreateUserRequest request
+      [FromBody] DevUserCreateDto dto
    ) {
       if (!env.IsDevelopment())
          return NotFound();
@@ -36,48 +36,65 @@ public sealed class DevUsersController(
       if (!ModelState.IsValid)
          return ValidationProblem(ModelState);
 
-      var accountType = NormalizeAccountType(request.AccountType);
+      var accountType = NormalizeAccountType(dto.AccountType);
       if (accountType is null) {
-         ModelState.AddModelError(nameof(request.AccountType), "Allowed values are 'customer' or 'employee'.");
+         ModelState.AddModelError(nameof(dto.AccountType), "Allowed values are 'customer', 'reader' or 'employee'.");
          return ValidationProblem(ModelState);
       }
 
-      if (!string.IsNullOrWhiteSpace(request.ConfirmPassword) &&
-          !string.Equals(request.Password, request.ConfirmPassword, StringComparison.Ordinal)) {
-         ModelState.AddModelError(nameof(request.ConfirmPassword), "Password and confirmation password do not match.");
+      if (!string.IsNullOrWhiteSpace(dto.ConfirmPassword) &&
+          !string.Equals(dto.Password, dto.ConfirmPassword, StringComparison.Ordinal)) {
+         ModelState.AddModelError(nameof(dto.ConfirmPassword), "Password and confirmation password do not match.");
          return ValidationProblem(ModelState);
       }
 
-      var existing = await users.FindByEmailAsync(request.Email);
+      var existing = await users.FindByEmailAsync(dto.Email);
       if (existing is not null) {
          return Conflict(new ProblemDetails {
             Title = "User already exists",
-            Detail = $"A user with email '{request.Email}' already exists.",
+            Detail = $"A user with email '{dto.Email}' already exists.",
             Status = StatusCodes.Status409Conflict
          });
       }
-
-      var now = DateTimeOffset.UtcNow;
+      
+      // min AdminRights for employees
       var adminRights = accountType == "employee"
-         ? request.AdminRights ?? AdminRights.ViewEmployees
+         ? dto.AdminRights ?? AdminRights.ViewEmployees
          : AdminRights.None;
 
-      var mustChangePassword = accountType == "employee"
-         ? request.MustChangePassword ?? true
-         : false;
-
+      // default: users must change their password , employees not
+      // take input value when given 
+      var mustChangePassword = dto.MustChangePassword ?? true;
+      if (dto.MustChangePassword is null && 
+          accountType == "employee") mustChangePassword = false;
+      
+      // sub ject must be a valid Guid 
+      if (!string.IsNullOrWhiteSpace(dto.Subject?.Trim()) &&
+          !Guid.TryParse(dto.Subject, out _)) {
+         return BadRequest("Subject must be a valid Guid.");
+      }
+      var subject = string.IsNullOrWhiteSpace(dto.Subject)
+         ? Guid.NewGuid().ToString()
+         : dto.Subject?.Trim();
+      
+      // check timestamp
+      var createdAt = dto.CreatedAt ?? DateTime.UtcNow;
+      if( createdAt.Kind != DateTimeKind.Utc) 
+         return BadRequest("CreatedAt must be UTC.");
+      
       var user = new ApplicationUser {
-         UserName = request.Email,
-         Email = request.Email,
-         EmailConfirmed = request.EmailConfirmed,
+         Id = subject!,
+         UserName = dto.Email,
+         Email = dto.Email,
+         EmailConfirmed = dto.EmailConfirmed,
          AccountType = accountType,
          AdminRights = adminRights,
          MustChangePassword = mustChangePassword,
-         CreatedAt = now,
-         UpdatedAt = now
+         CreatedAt = createdAt,
+         UpdatedAt = createdAt
       };
 
-      var result = await users.CreateAsync(user, request.Password);
+      var result = await users.CreateAsync(user, dto.Password);
       if (!result.Succeeded) {
          foreach (var error in result.Errors)
             ModelState.AddModelError(error.Code, error.Description);
@@ -87,27 +104,27 @@ public sealed class DevUsersController(
 
       logger.LogInformation(
          "Dev user created: email='{Email}', accountType='{AccountType}', adminRights='{AdminRights}', mustChangePassword='{MustChangePassword}'",
-         user.Email,
-         user.AccountType,
-         user.AdminRights,
-         user.MustChangePassword
-      );
+         user.Email, user.AccountType, user.AdminRights, user.MustChangePassword);
 
-      return Created($"/dev/users/{user.Id}", new DevCreateUserResponse(
-         user.Id,
-         user.Email!,
-         user.AccountType,
-         (int)user.AdminRights,
-         user.MustChangePassword,
-         user.EmailConfirmed,
-         user.CreatedAt,
-         user.UpdatedAt
-      ));
+      return Created($"/dev/users/{user.Id}", new DevUserCreateDto{
+         Email = user.Email!,
+         EmailConfirmed = user.EmailConfirmed,
+                
+         Password =  "******",
+         ConfirmPassword = "******",
+         MustChangePassword = user.MustChangePassword,
+        
+         Subject = user.Id,
+         AccountType = user.AccountType,
+         AdminRights = user.AdminRights,
+ 
+         CreatedAt = user.CreatedAt
+      });
    }
 
    private static string? NormalizeAccountType(string? accountType) {
       var normalized = (accountType ?? "customer").Trim().ToLowerInvariant();
-      return normalized is "customer" or "employee"
+      return normalized is "customer" or "reader" or "employee"
          ? normalized
          : null;
    }
@@ -130,18 +147,9 @@ public sealed class DevUsersController(
       public bool? MustChangePassword { get; init; }
 
       public AdminRights? AdminRights { get; init; }
-   }
 
-   public sealed record DevCreateUserResponse(
-      string Id,
-      string Email,
-      string AccountType,
-      int AdminRights,
-      bool MustChangePassword,
-      bool EmailConfirmed,
-      DateTimeOffset CreatedAt,
-      DateTimeOffset UpdatedAt
-   );
+      public string? Subject { get; init; } = null;
+   }
 }
 #endif
 

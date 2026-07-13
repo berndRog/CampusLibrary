@@ -72,6 +72,26 @@ internal sealed class LoanUcBorrow(
       if(borrowedLoan is not null)
          return Result<LoanDto>.Failure(LoanErrors.BookItemAlreadyBorrowed);
 
+      // A reader may borrow only one physical copy of the same book at a time.
+      // Loan stores the concrete BookItemId, while Catalog owns the relation
+      // between BookItem and Book. Therefore, the BookId of every currently
+      // borrowed item is resolved through the Catalog contract.
+      var borrowedLoansByReader = await loanRepository
+         .FindBorrowedByReaderIdAsync(dto.ReaderId, ct);
+
+      foreach(var existingLoan in borrowedLoansByReader) {
+         var existingBookItemResult = await bookItemLoanContract
+            .FindBookItemForLoanAsync(existingLoan.BookItemId, ct);
+
+         if(existingBookItemResult.IsFailure)
+            return Result<LoanDto>.Failure(existingBookItemResult.Error);
+
+         if(existingBookItemResult.Value.BookId == bookItem.BookId)
+            return Result<LoanDto>.Failure(
+               LoanErrors.BookAlreadyBorrowedByReader
+            );
+      }
+
       // Create the loan period using the domain rules of the Loans module.
       var loanDate = clock.UtcNow;
 
@@ -86,7 +106,7 @@ internal sealed class LoanUcBorrow(
          return Result<LoanDto>.Failure(loanPeriodResult.Error);
 
       // Create the Loan aggregate.
-      // The created loan starts with LoanStatus.Borrowed in the domain.
+      // The existence of the created Loan represents the borrowed state.
       var resultLoan = Loan.Create(
          id: resultId.Value,
          readerId: dto.ReaderId,
@@ -140,14 +160,19 @@ Stattdessen werden die besitzenden Module über Contracts gefragt:
 
 Dadurch bleibt die fachliche Zuständigkeit klar getrennt.
 
-Loans besitzen kein IsActive-Flag. Der Zustand einer Ausleihe wird über
-LoanStatus modelliert. Eine offene Ausleihe hat den Status Borrowed.
+Loans besitzen kein IsActive-Flag. Der Zustand einer Ausleihe wird durch
+die Existenz eines Loan modelliert. Bei der Rückgabe wird der Loan gelöscht.
 
 Deshalb prüft der Use Case nicht auf eine "aktive" Ausleihe, sondern auf eine
 bereits bestehende Borrowed-Ausleihe für dasselbe konkrete BookItem.
 
 Ein BookItem beschreibt ein physisches Exemplar. Dieses Exemplar darf nicht
 gleichzeitig mehrfach ausgeliehen sein.
+
+Zusätzlich darf ein Reader nicht mehrere Exemplare desselben Book gleichzeitig
+ausleihen. Loan speichert nur die konkrete BookItemId. Die Zuordnung eines
+BookItem zu seinem Book bleibt Eigentum des Catalog-Moduls und wird deshalb
+über IBookItemLoanContract ermittelt.
 
 Der Client liefert keine Leihdauer. Die Leihdauer ist eine fachliche Regel
 des Loans-Moduls und wird hier aus LoanRules und LoanPeriodVo gebildet.

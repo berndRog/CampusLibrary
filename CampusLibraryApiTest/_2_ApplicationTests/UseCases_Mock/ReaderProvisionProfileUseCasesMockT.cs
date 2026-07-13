@@ -24,8 +24,10 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
    private const string Username = "reader.one@example.org";
    private const string ReaderId = "10000000-0000-0000-0000-000000000001";
 
+   #region ReaderUcCreateMeProvision
+
    [Fact]
-   public async Task CreateProvisionAsync_creates_incomplete_reader_from_identity() {
+   public async Task CreateMeProvisionAsync_creates_incomplete_reader_from_identity() {
       // Arrange
       var ct = TestContext.Current.CancellationToken;
       var identityGateway = NewReaderIdentity();
@@ -40,14 +42,14 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
 
       var unitOfWork = new Mock<IUnitOfWork>();
       unitOfWork
-         .Setup(u => u.SaveAllChangesAsync("ReaderUcCreateProvision", ct))
+         .Setup(u => u.SaveAllChangesAsync("ReaderUcCreateMeProvision", ct))
          .ReturnsAsync(1);
 
-      var sut = new ReaderUcCreateProvision(
+      var sut = new ReaderUcCreateMeProvision(
          identityGateway: identityGateway,
          repository: repository.Object,
          unitOfWork: unitOfWork.Object,
-         logger: Mock.Of<ILogger<ReaderUcCreateProvision>>()
+         logger: Mock.Of<ILogger<ReaderUcCreateMeProvision>>()
       );
 
       // Act
@@ -72,14 +74,15 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
          )),
          Times.Once
       );
+
       unitOfWork.Verify(
-         u => u.SaveAllChangesAsync("ReaderUcCreateProvision", ct),
+         u => u.SaveAllChangesAsync("ReaderUcCreateMeProvision", ct),
          Times.Once
       );
    }
 
    [Fact]
-   public async Task CreateProvisionAsync_existing_subject_is_idempotent() {
+   public async Task CreateMeProvisionAsync_existing_subject_is_idempotent() {
       // Arrange
       var ct = TestContext.Current.CancellationToken;
       var reader = NewProvisionedReader();
@@ -91,11 +94,11 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
 
       var unitOfWork = new Mock<IUnitOfWork>();
 
-      var sut = new ReaderUcCreateProvision(
+      var sut = new ReaderUcCreateMeProvision(
          identityGateway: NewReaderIdentity(),
          repository: repository.Object,
          unitOfWork: unitOfWork.Object,
-         logger: Mock.Of<ILogger<ReaderUcCreateProvision>>()
+         logger: Mock.Of<ILogger<ReaderUcCreateMeProvision>>()
       );
 
       // Act
@@ -108,6 +111,7 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
       result.IsSuccess.Should().BeTrue();
       result.Value.Id.Should().Be(reader.Id);
       result.Value.WasCreated.Should().BeFalse();
+
       repository.Verify(r => r.Add(It.IsAny<Reader>()), Times.Never);
       unitOfWork.Verify(
          u => u.SaveAllChangesAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
@@ -116,10 +120,10 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
    }
 
    [Fact]
-   public async Task CreateProvisionAsync_employee_user_fails() {
+   public async Task CreateMeProvisionAsync_employee_user_fails() {
       // Arrange
       var ct = TestContext.Current.CancellationToken;
-      var sut = new ReaderUcCreateProvision(
+      var sut = new ReaderUcCreateMeProvision(
          identityGateway: new FakeIdentityGateway {
             Subject = Subject,
             Username = Username,
@@ -130,7 +134,7 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
          },
          repository: Mock.Of<IReaderRepository>(),
          unitOfWork: Mock.Of<IUnitOfWork>(),
-         logger: Mock.Of<ILogger<ReaderUcCreateProvision>>()
+         logger: Mock.Of<ILogger<ReaderUcCreateMeProvision>>()
       );
 
       // Act
@@ -145,7 +149,7 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
    }
 
    [Fact]
-   public async Task CreateProvisionAsync_duplicate_email_fails() {
+   public async Task CreateMeProvisionAsync_duplicate_email_fails() {
       // Arrange
       var ct = TestContext.Current.CancellationToken;
       var existingReader = Reader.Create(
@@ -166,11 +170,11 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
          .Setup(r => r.FindByEmailAsync(It.IsAny<EmailVo>(), ct))
          .ReturnsAsync(existingReader);
 
-      var sut = new ReaderUcCreateProvision(
+      var sut = new ReaderUcCreateMeProvision(
          identityGateway: NewReaderIdentity(),
          repository: repository.Object,
          unitOfWork: Mock.Of<IUnitOfWork>(),
-         logger: Mock.Of<ILogger<ReaderUcCreateProvision>>()
+         logger: Mock.Of<ILogger<ReaderUcCreateMeProvision>>()
       );
 
       // Act
@@ -185,8 +189,12 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
       repository.Verify(r => r.Add(It.IsAny<Reader>()), Times.Never);
    }
 
+   #endregion
+
+   #region ReaderUcUpdateMeProfile
+
    [Fact]
-   public async Task UpdateProfileAsync_ok_completes_profile() {
+   public async Task UpdateMeProfileAsync_ok_completes_profile() {
       // Arrange
       var ct = TestContext.Current.CancellationToken;
       var reader = NewProvisionedReader();
@@ -198,18 +206,18 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
 
       var unitOfWork = new Mock<IUnitOfWork>();
       unitOfWork
-         .Setup(u => u.SaveAllChangesAsync("ReaderUcUpdateProfile", ct))
+         .Setup(u => u.SaveAllChangesAsync("ReaderUcUpdateMeProfile", ct))
          .ReturnsAsync(1);
 
-      var sut = new ReaderUcUpdateProfile(
+      var sut = new ReaderUcUpdateMeProfile(
          identityGateway: NewReaderIdentity(),
          repository: repository.Object,
          unitOfWork: unitOfWork.Object,
          clock: new FakeClock(UpdatedAt),
-         logger: Mock.Of<ILogger<ReaderUcUpdateProfile>>()
+         logger: Mock.Of<ILogger<ReaderUcUpdateMeProfile>>()
       );
 
-      var dto = new ReaderProfileUpdateDto(
+      var dto = new ReaderProfileMeDto(
          Firstname: "Alice",
          Lastname: "Reader",
          AddressDto: CreateAddressDto()
@@ -217,7 +225,7 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
 
       // Act
       var result = await sut.ExecuteAsync(
-         dto: dto,
+         meDto: dto,
          ct: ct
       );
 
@@ -229,14 +237,15 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
       result.Value.Subject.Should().Be(Subject);
       result.Value.AddressDto.Should().BeEquivalentTo(dto.AddressDto);
       result.Value.IsProfileCompleted.Should().BeTrue();
+
       unitOfWork.Verify(
-         u => u.SaveAllChangesAsync("ReaderUcUpdateProfile", ct),
+         u => u.SaveAllChangesAsync("ReaderUcUpdateMeProfile", ct),
          Times.Once
       );
    }
 
    [Fact]
-   public async Task UpdateProfileAsync_not_provisioned_fails() {
+   public async Task UpdateMeProfileAsync_not_provisioned_fails() {
       // Arrange
       var ct = TestContext.Current.CancellationToken;
       var repository = new Mock<IReaderRepository>();
@@ -244,15 +253,15 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
          .Setup(r => r.FindBySubjectAsync(Subject, ct))
          .ReturnsAsync((Reader?)null);
 
-      var sut = new ReaderUcUpdateProfile(
+      var sut = new ReaderUcUpdateMeProfile(
          identityGateway: NewReaderIdentity(),
          repository: repository.Object,
          unitOfWork: Mock.Of<IUnitOfWork>(),
          clock: new FakeClock(UpdatedAt),
-         logger: Mock.Of<ILogger<ReaderUcUpdateProfile>>()
+         logger: Mock.Of<ILogger<ReaderUcUpdateMeProfile>>()
       );
 
-      var dto = new ReaderProfileUpdateDto(
+      var dto = new ReaderProfileMeDto(
          Firstname: "Alice",
          Lastname: "Reader",
          AddressDto: CreateAddressDto()
@@ -260,7 +269,7 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
 
       // Act
       var result = await sut.ExecuteAsync(
-         dto: dto,
+         meDto: dto,
          ct: ct
       );
 
@@ -270,7 +279,7 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
    }
 
    [Fact]
-   public async Task UpdateProfileAsync_without_address_fails() {
+   public async Task UpdateMeProfileAsync_without_address_fails() {
       // Arrange
       var ct = TestContext.Current.CancellationToken;
       var reader = NewProvisionedReader();
@@ -280,15 +289,15 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
          .Setup(r => r.FindBySubjectAsync(Subject, ct))
          .ReturnsAsync(reader);
 
-      var sut = new ReaderUcUpdateProfile(
+      var sut = new ReaderUcUpdateMeProfile(
          identityGateway: NewReaderIdentity(),
          repository: repository.Object,
          unitOfWork: Mock.Of<IUnitOfWork>(),
          clock: new FakeClock(UpdatedAt),
-         logger: Mock.Of<ILogger<ReaderUcUpdateProfile>>()
+         logger: Mock.Of<ILogger<ReaderUcUpdateMeProfile>>()
       );
 
-      var dto = new ReaderProfileUpdateDto(
+      var dto = new ReaderProfileMeDto(
          Firstname: "Alice",
          Lastname: "Reader",
          AddressDto: null!
@@ -296,7 +305,7 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
 
       // Act
       var result = await sut.ExecuteAsync(
-         dto: dto,
+         meDto: dto,
          ct: ct
       );
 
@@ -304,6 +313,149 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
       result.IsFailure.Should().BeTrue();
       result.Error.Should().Be(ReaderErrors.AddressIsRequired);
    }
+
+   #endregion
+
+   #region ReaderUcUpdateMe
+
+   [Fact]
+   public async Task UpdateMeAsync_ok_updates_only_mutable_self_service_data() {
+      // Arrange
+      var ct = TestContext.Current.CancellationToken;
+      var reader = NewCompletedReader();
+      var newEmail = "reader.changed@example.org";
+
+      var repository = new Mock<IReaderRepository>();
+      repository
+         .Setup(r => r.FindBySubjectAsync(Subject, ct))
+         .ReturnsAsync(reader);
+      repository
+         .Setup(r => r.FindByEmailAsync(It.IsAny<EmailVo>(), ct))
+         .ReturnsAsync((Reader?)null);
+
+      var unitOfWork = new Mock<IUnitOfWork>();
+      unitOfWork
+         .Setup(u => u.SaveAllChangesAsync("ReaderUcUpdateMe", ct))
+         .ReturnsAsync(1);
+
+      var sut = new ReaderUcUpdateMe(
+         identityGateway: NewReaderIdentity(),
+         repository: repository.Object,
+         unitOfWork: unitOfWork.Object,
+         clock: new FakeClock(UpdatedAt),
+         logger: Mock.Of<ILogger<ReaderUcUpdateMe>>()
+      );
+
+      var dto = new ReaderUpdateMeDto(
+         Lastname: "Changed",
+         Email: newEmail,
+         AddressDto: CreateSecondAddressDto()
+      );
+
+      // Act
+      var result = await sut.ExecuteAsync(
+         meDto: dto,
+         ct: ct
+      );
+
+      // Assert
+      result.IsSuccess.Should().BeTrue();
+      result.Value.Firstname.Should().Be("Alice");
+      result.Value.Lastname.Should().Be("Changed");
+      result.Value.Email.Should().Be(newEmail);
+      result.Value.Subject.Should().Be(Subject);
+      result.Value.AddressDto.Should().BeEquivalentTo(dto.AddressDto);
+      result.Value.IsProfileCompleted.Should().BeTrue();
+
+      unitOfWork.Verify(
+         u => u.SaveAllChangesAsync("ReaderUcUpdateMe", ct),
+         Times.Once
+      );
+   }
+
+   [Fact]
+   public async Task UpdateMeAsync_not_provisioned_fails() {
+      // Arrange
+      var ct = TestContext.Current.CancellationToken;
+      var repository = new Mock<IReaderRepository>();
+      repository
+         .Setup(r => r.FindBySubjectAsync(Subject, ct))
+         .ReturnsAsync((Reader?)null);
+
+      var sut = new ReaderUcUpdateMe(
+         identityGateway: NewReaderIdentity(),
+         repository: repository.Object,
+         unitOfWork: Mock.Of<IUnitOfWork>(),
+         clock: new FakeClock(UpdatedAt),
+         logger: Mock.Of<ILogger<ReaderUcUpdateMe>>()
+      );
+
+      var dto = new ReaderUpdateMeDto(
+         Lastname: "Changed",
+         Email: "reader.changed@example.org",
+         AddressDto: CreateAddressDto()
+      );
+
+      // Act
+      var result = await sut.ExecuteAsync(
+         meDto: dto,
+         ct: ct
+      );
+
+      // Assert
+      result.IsFailure.Should().BeTrue();
+      result.Error.Should().Be(ReaderErrors.ReaderNotFound);
+   }
+
+   [Fact]
+   public async Task UpdateMeAsync_duplicate_email_fails() {
+      // Arrange
+      var ct = TestContext.Current.CancellationToken;
+      var reader = NewCompletedReader();
+      var otherReader = Reader.Create(
+         id: Guid.Parse("10000000-0000-0000-0000-000000000099"),
+         firstname: "Other",
+         lastname: "Reader",
+         emailVo: CreateEmail("other.reader@example.org"),
+         addressVo: CreateAddressVo(),
+         subject: "other-subject",
+         createdAt: CreatedAt
+      ).GetValueOrThrow();
+
+      var repository = new Mock<IReaderRepository>();
+      repository
+         .Setup(r => r.FindBySubjectAsync(Subject, ct))
+         .ReturnsAsync(reader);
+      repository
+         .Setup(r => r.FindByEmailAsync(It.IsAny<EmailVo>(), ct))
+         .ReturnsAsync(otherReader);
+
+      var sut = new ReaderUcUpdateMe(
+         identityGateway: NewReaderIdentity(),
+         repository: repository.Object,
+         unitOfWork: Mock.Of<IUnitOfWork>(),
+         clock: new FakeClock(UpdatedAt),
+         logger: Mock.Of<ILogger<ReaderUcUpdateMe>>()
+      );
+
+      var dto = new ReaderUpdateMeDto(
+         Lastname: "Changed",
+         Email: otherReader.EmailVo.Value,
+         AddressDto: null
+      );
+
+      // Act
+      var result = await sut.ExecuteAsync(
+         meDto: dto,
+         ct: ct
+      );
+
+      // Assert
+      result.IsFailure.Should().BeTrue();
+      result.Error.Should().Be(ReaderErrors.EmailAlreadyInUse);
+   }
+
+   #endregion
 
    private static FakeIdentityGateway NewReaderIdentity() =>
       new() {
@@ -323,6 +475,21 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
          createdAt: CreatedAt
       ).GetValueOrThrow();
 
+   private static Reader NewCompletedReader() {
+      var reader = NewProvisionedReader();
+
+      var result = reader.UpdateMyProfile(
+         firstname: "Alice",
+         lastname: "Reader",
+         addressVo: CreateAddressVo(),
+         updatedAt: UpdatedAt
+      );
+
+      result.IsSuccess.Should().BeTrue();
+
+      return reader;
+   }
+
    private static EmailVo CreateEmail(string email) =>
       EmailVo.Create(email).GetValueOrThrow();
 
@@ -337,6 +504,14 @@ public sealed class ReaderProvisionProfileUseCasesMockT {
    private static AddressDto CreateAddressDto() =>
       new(
          Street: "Profilstraße 1",
+         PostalCode: "29556",
+         City: "Suderburg",
+         Country: "DE"
+      );
+
+   private static AddressDto CreateSecondAddressDto() =>
+      new(
+         Street: "Neue Straße 7",
          PostalCode: "29556",
          City: "Suderburg",
          Country: "DE"

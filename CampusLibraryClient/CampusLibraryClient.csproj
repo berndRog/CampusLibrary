@@ -26,5 +26,8 @@
     <Compile Include="..\Shared\Logging\SharedWebAppLogging.cs" Link="Shared\Logging\SharedWebAppLogging.cs" />
     <Compile Include="..\Shared\Logging\TokenRefreshEvent.cs" Link="Shared\Logging\TokenRefreshEvent.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Remove="AuthDetails.razor" />
+  </ItemGroup>
   
 </Project>

@@ -58,13 +58,13 @@ public sealed class ApplicationUser : IdentityUser {
    /// When the account was created (registration completed).
    /// Immutable.
    /// </summary>
-   public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+   public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
    /// <summary>
    /// Last meaningful activity timestamp.
    /// Updated on login, password change, or profile update.
    /// </summary>
-   public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+   public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 /*
 Didactic goals:

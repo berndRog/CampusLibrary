@@ -1,10 +1,12 @@
 using AwesomeAssertions;
+using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Inbound;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
+using CampusLibraryApi._3_Core.Readers._2_Application.Mappings;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
-using Microsoft.Extensions.DependencyInjection;
 using CampusLibraryApiTest.TestInfrastructure;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CampusLibraryApiTest._2_ApplicationTests.UseCases_Integration;
 
@@ -18,14 +20,14 @@ public sealed class ReaderProvisionProfileUseCasesIntT : TestBaseIntegration {
    }
 
    [Fact]
-   public async Task CreateProvisionAsync_then_UpdateProfileAsync_persists_reader_profile() {
+   public async Task CreateMeProvisionAsync_then_UpdateMeProfileAsync_then_UpdateMeAsync_persists_reader_data() {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var useCases = scope.ServiceProvider.GetRequiredService<IReaderUseCases>();
       var readModel = scope.ServiceProvider.GetRequiredService<IReaderReadModel>();
 
       // Act 1: provision from FakeIdentityGateway in DiTestModules.
-      var resultProvision = await useCases.CreateProvisionAsync(
+      var resultProvision = await useCases.ProvisionMeAsync(
          id: ReaderId,
          ct: ct
       );
@@ -37,6 +39,7 @@ public sealed class ReaderProvisionProfileUseCasesIntT : TestBaseIntegration {
 
       var resultReadAfterProvision = await readModel.FindByIdAsync(
          id: resultProvision.Value.Id,
+         includeInactive: false,
          ct: ct
       );
 
@@ -46,9 +49,9 @@ public sealed class ReaderProvisionProfileUseCasesIntT : TestBaseIntegration {
       resultReadAfterProvision.Value.AddressDto.Should().BeNull();
       resultReadAfterProvision.Value.IsProfileCompleted.Should().BeFalse();
 
-      // Act 2: complete profile.
-      var resultProfile = await useCases.UpdateProfileAsync(
-         dto: new ReaderProfileUpdateDto(
+      // Act 2: complete initial profile.
+      var resultProfile = await useCases.UpdateMeProfileAsync(
+         meDto: new ReaderProfileMeDto(
             Firstname: "Alice",
             Lastname: "Reader",
             AddressDto: new AddressDto(
@@ -68,36 +71,54 @@ public sealed class ReaderProvisionProfileUseCasesIntT : TestBaseIntegration {
       resultProfile.Value.IsProfileCompleted.Should().BeTrue();
       resultProfile.Value.AddressDto.Should().NotBeNull();
 
-      var resultReadAfterProfile = await readModel.FindByIdAsync(
+      // Act 3: later self-service update.
+      var resultUpdate = await useCases.UpdateMeAsync(
+         meDto: new ReaderUpdateMeDto(
+            Lastname: "Changed",
+            Email: "reader.changed@example.org",
+            AddressDto: new AddressDto(
+               Street: "Neue Straße 7",
+               PostalCode: "29556",
+               City: "Suderburg",
+               Country: "DE"
+            )
+         ),
+         ct: ct
+      );
+
+      // Assert 3: firstname remains unchanged, mutable data changed.
+      resultUpdate.IsSuccess.Should().BeTrue();
+      resultUpdate.Value.Firstname.Should().Be("Alice");
+      resultUpdate.Value.Lastname.Should().Be("Changed");
+      resultUpdate.Value.Email.Should().Be("reader.changed@example.org");
+      resultUpdate.Value.IsProfileCompleted.Should().BeTrue();
+
+      var resultReadAfterUpdate = await readModel.FindByIdAsync(
          id: resultProvision.Value.Id,
          ct: ct
       );
 
-      resultReadAfterProfile.IsSuccess.Should().BeTrue();
-      resultReadAfterProfile.Value.IsProfileCompleted.Should().BeTrue();
-      resultReadAfterProfile.Value.Firstname.Should().Be("Alice");
-      resultReadAfterProfile.Value.Lastname.Should().Be("Reader");
-      resultReadAfterProfile.Value.AddressDto.Should().BeEquivalentTo(resultProfile.Value.AddressDto);
+      resultReadAfterUpdate.IsSuccess.Should().BeTrue();
+      resultReadAfterUpdate.Value.Should().BeEquivalentTo(resultUpdate.Value);
    }
 
-
    [Fact]
-   public async Task UpdateProfileAsync_without_address_keeps_profile_incomplete() {
+   public async Task UpdateMeProfileAsync_without_address_keeps_profile_incomplete() {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var useCases = scope.ServiceProvider.GetRequiredService<IReaderUseCases>();
       var readModel = scope.ServiceProvider.GetRequiredService<IReaderReadModel>();
 
       // Arrange: provisioning may technically persist AddressVo as null.
-      var resultProvision = await useCases.CreateProvisionAsync(
+      var resultProvision = await useCases.ProvisionMeAsync(
          id: ReaderId,
          ct: ct
       );
       resultProvision.IsSuccess.Should().BeTrue();
 
       // Act: fachlich, address is still required for completing the profile.
-      var resultProfile = await useCases.UpdateProfileAsync(
-         dto: new ReaderProfileUpdateDto(
+      var resultProfile = await useCases.UpdateMeProfileAsync(
+         meDto: new ReaderProfileMeDto(
             Firstname: "Alice",
             Lastname: "Reader",
             AddressDto: null!
@@ -120,17 +141,17 @@ public sealed class ReaderProvisionProfileUseCasesIntT : TestBaseIntegration {
    }
 
    [Fact]
-   public async Task CreateProvisionAsync_is_idempotent() {
+   public async Task CreateMeProvisionAsync_is_idempotent() {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var useCases = scope.ServiceProvider.GetRequiredService<IReaderUseCases>();
 
       // Act
-      var resultFirst = await useCases.CreateProvisionAsync(
+      var resultFirst = await useCases.ProvisionMeAsync(
          id: ReaderId,
          ct: ct
       );
-      var resultSecond = await useCases.CreateProvisionAsync(
+      var resultSecond = await useCases.ProvisionMeAsync(
          id: null,
          ct: ct
       );
@@ -140,5 +161,64 @@ public sealed class ReaderProvisionProfileUseCasesIntT : TestBaseIntegration {
       resultSecond.IsSuccess.Should().BeTrue();
       resultSecond.Value.Id.Should().Be(resultFirst.Value.Id);
       resultSecond.Value.WasCreated.Should().BeFalse();
+   }
+
+   [Fact]
+   public async Task UpdateMeAsync_duplicate_email_fails_and_keeps_existing_data() {
+      using var scope = Root.CreateDefaultScope();
+      var ct = TestContext.Current.CancellationToken;
+      var useCases = scope.ServiceProvider.GetRequiredService<IReaderUseCases>();
+      var repository = scope.ServiceProvider.GetRequiredService<IReaderRepository>();
+      var readModel = scope.ServiceProvider.GetRequiredService<IReaderReadModel>();
+      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
+
+      // Arrange: create current reader through self-service flow.
+      var resultProvision = await useCases.ProvisionMeAsync(
+         id: ReaderId,
+         ct: ct
+      );
+      resultProvision.IsSuccess.Should().BeTrue();
+
+      var resultProfile = await useCases.UpdateMeProfileAsync(
+         meDto: new ReaderProfileMeDto(
+            Firstname: "Alice",
+            Lastname: "Reader",
+            AddressDto: seed.Address1Vo.ToAddressDto()!
+         ),
+         ct: ct
+      );
+      resultProfile.IsSuccess.Should().BeTrue();
+
+      // Add another reader with a different email.
+      var otherReader = seed.Reader2();
+      repository.Add(otherReader);
+      await unitOfWork.SaveAllChangesAsync("Other reader inserted", ct);
+      unitOfWork.ClearChangeTracker();
+
+      // Act: current reader tries to use the other reader's email.
+      var resultUpdate = await useCases.UpdateMeAsync(
+         meDto: new ReaderUpdateMeDto(
+            Lastname: "Changed",
+            Email: otherReader.EmailVo.Value,
+            AddressDto: null
+         ),
+         ct: ct
+      );
+
+      unitOfWork.ClearChangeTracker();
+
+      // Assert
+      resultUpdate.IsFailure.Should().BeTrue();
+      resultUpdate.Error.Should().Be(ReaderErrors.EmailAlreadyInUse);
+
+      var resultRead = await readModel.FindByIdAsync(
+         id: resultProvision.Value.Id,
+         ct: ct
+      );
+
+      resultRead.IsSuccess.Should().BeTrue();
+      resultRead.Value.Lastname.Should().Be("Reader");
+      resultRead.Value.Email.Should().NotBe(otherReader.EmailVo.Value);
    }
 }

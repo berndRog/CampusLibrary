@@ -22,7 +22,7 @@ public interface ILoanUseCases {
    );
 
    // Returns a borrowed book item at the service desk.
-   // The actual return timestamp is provided by the application service.
+   // Returning ends the lifecycle and deletes the Loan.
    Task<Result<LoanDto>> ReturnAtDeskAsync(
       Guid loanId,
       CancellationToken ct
@@ -43,7 +43,7 @@ Die Methoden sind bewusst als Commands formuliert:
 
 - BorrowAsync legt eine neue Ausleihe an.
 - RenewAsync verlängert eine aktuell ausgeliehene Ausleihe.
-- ReturnAtDeskAsync registriert die Rückgabe eines ausgeliehenen Exemplars.
+- ReturnAtDeskAsync beendet die Ausleihe und löscht den Loan.
 
 Leseoperationen stehen hier nicht. Sie gehören in diesem Projekt konsequent
 in ein ReadModel. Dadurch bleibt die Trennung zwischen schreibenden Use Cases
@@ -52,6 +52,6 @@ und lesenden Projektionen sichtbar.
 Wichtig ist außerdem: Der Client liefert bei BorrowAsync keine Leihdauer.
 Die Leihdauer ist eine fachliche Regel des Loans-Moduls.
 
-Loans besitzen kein IsActive-Flag. Der fachliche Zustand wird über
-LoanStatus modelliert. Eine offene Ausleihe hat den Status Borrowed.
+Ein Loan repräsentiert ausschließlich eine offene Ausleihe. Bei der Rückgabe
+wird der Loan gelöscht; ein zusätzlicher Status ist deshalb nicht notwendig.
 */

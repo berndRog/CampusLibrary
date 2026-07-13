@@ -154,6 +154,62 @@ public sealed class ReaderUcDeactivateUt {
    }
 
    [Fact]
+   public async Task ExecuteAsync_current_loans_fails_with_conflict() {
+      // Arrange
+      var ct = TestContext.Current.CancellationToken;
+
+      var reader = CreateReader(
+         id: Guid.Parse("10000000-0000-0000-0000-000000000000"),
+         firstname: "Erika",
+         lastname: "Mustermann",
+         email: "erika.mustermann@example.com",
+         subject: "subject-001",
+         createdAt: CreatedAt
+      );
+
+      var repository = new Mock<IReaderRepository>();
+      repository
+         .Setup(r => r.FindByIdAsync(reader.Id, ct))
+         .ReturnsAsync(reader);
+
+      var loanReaderContract = new Mock<ILoanReaderContract>();
+      loanReaderContract
+         .Setup(c => c.ExistsForReaderAsync(reader.Id, ct))
+         .ReturnsAsync(true);
+
+      var unitOfWork = new Mock<IUnitOfWork>();
+      var clock = new Mock<IClock>();
+
+      var uc = CreateUseCase(
+         repository: repository,
+         unitOfWork: unitOfWork,
+         clock: clock,
+         loanReaderContract: loanReaderContract
+      );
+
+      // Act
+      var result = await uc.ExecuteAsync(
+         id: reader.Id,
+         ct: ct
+      );
+
+      // Assert
+      result.IsFailure.Should().BeTrue();
+      result.Error.Should().Be(
+         ReaderErrors.ReaderCannotBeDeactivatedWithLoans
+      );
+      reader.IsActive.Should().BeTrue();
+
+      unitOfWork.Verify(
+         u => u.SaveAllChangesAsync(
+            It.IsAny<string?>(),
+            It.IsAny<CancellationToken>()
+         ),
+         Times.Never
+      );
+   }
+
+   [Fact]
    public async Task ExecuteAsync_already_deactivated_reader_fails() {
       // Arrange
       var ct = TestContext.Current.CancellationToken;
@@ -217,9 +273,12 @@ public sealed class ReaderUcDeactivateUt {
    private static ReaderUcDeactivate CreateUseCase(
       Mock<IReaderRepository> repository,
       Mock<IUnitOfWork> unitOfWork,
-      Mock<IClock> clock
+      Mock<IClock> clock,
+      Mock<ILoanReaderContract>? loanReaderContract = null
    ) => new(
       repository: repository.Object,
+      loanReaderContract: loanReaderContract?.Object
+         ?? Mock.Of<ILoanReaderContract>(),
       unitOfWork: unitOfWork.Object,
       clock: clock.Object,
       logger: Mock.Of<ILogger<ReaderUcDeactivate>>()

@@ -1,4 +1,5 @@
 @page "/"
+@attribute [Authorize(Roles = CampusLibraryRoles.ReaderOrEmployee)]
 @rendermode InteractiveServer
 
 @inject ICurrentUserProvider CurrentUserProvider

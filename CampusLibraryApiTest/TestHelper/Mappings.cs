@@ -14,25 +14,25 @@ public static class Mappings {
       Id: reader.Id.ToString()
    );
    
-   public static ReaderUpdateDto ToReaderUpdateDto(Reader reader) => new(
+   public static ReaderUpdateMeDto ToReaderUpdateDto(Reader reader) => new(
       Lastname: reader.Lastname,
       Email: reader.EmailVo.Value,
       AddressDto: reader.AddressVo.ToAddressDto()
    );
 
-   public static ReaderUpdateDto ToReaderUpdateLastnameDto(Reader reader) => new(
+   public static ReaderUpdateMeDto ToReaderUpdateLastnameDto(Reader reader) => new(
       Lastname: reader.Lastname,
       Email: null,
       AddressDto: null
    );
 
-   public static ReaderUpdateDto ToReaderUpdateEmailDto(Reader reader) => new(
+   public static ReaderUpdateMeDto ToReaderUpdateEmailDto(Reader reader) => new(
       Lastname: null,
       Email: reader.EmailVo.Value,
       AddressDto: null
    );
 
-   public static ReaderUpdateDto ToReaderUpdateAddressDto(Reader reader) => new(
+   public static ReaderUpdateMeDto ToReaderUpdateAddressDto(Reader reader) => new(
       Lastname: null,
       Email: null,
       AddressDto: reader.AddressVo.ToAddressDto()

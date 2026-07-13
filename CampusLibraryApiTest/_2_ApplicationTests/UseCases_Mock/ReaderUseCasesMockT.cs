@@ -1,377 +1,222 @@
 using AwesomeAssertions;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
-using CampusLibraryApi._3_Core.Readers._1_Ports;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
-using CampusLibraryApi._3_Core.Readers._2_Application.Mappings;
 using CampusLibraryApi._3_Core.Readers._2_Application.UseCases;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
-using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
-using CampusLibraryApiTest.TestHelper.Mappings;
 using CampusLibraryApiTest.TestInfrastructure;
 using Microsoft.Extensions.Logging;
 using Moq;
+
 namespace CampusLibraryApiTest._2_ApplicationTests.UseCases_Mock;
 
 public sealed class ReaderUseCasesMockT {
-   private static readonly DateTime CreatedAt =
-      new(2025, 01, 01, 00, 00, 00, DateTimeKind.Utc);
+   private static readonly DateTime UpdatedAt =
+      new(2025, 01, 02, 00, 00, 00, DateTimeKind.Utc);
 
-   #region ReaderUcCreate
-   [Fact]
-   public async Task CreateAsync_ok() {
-      // Arrange
-      var ct = TestContext.Current.CancellationToken;
-      var seed = new TestSeed();
-      var reader1 = seed.Reader1();
-      var dto = Mappings.ToReaderCreateDto(reader1);
-      
-      var repository = new Mock<IReaderRepository>();
-      repository
-         .Setup(r => r.ExistsBySubjectAsync(dto.Subject, ct))
-         .ReturnsAsync(false);
-      repository
-         .Setup(r => r.FindByEmailAsync(It.IsAny<EmailVo>(), ct))
-         .ReturnsAsync((Reader?)null);
-
-      var unitOfWork = new Mock<IUnitOfWork>();
-      unitOfWork
-         .Setup(u => u.SaveAllChangesAsync("ReaderUcCreate", ct))
-         .ReturnsAsync(1);
-
-      var sut = new ReaderUcCreate(
-         repository: repository.Object,
-         unitOfWork: unitOfWork.Object,
-         clock: new FakeClock(CreatedAt),
-         logger: Mock.Of<ILogger<ReaderUcCreate>>()
-      );
-
-      // Act
-      var resultCreate = await sut.ExecuteAsync(dto, ct);
-      resultCreate.IsSuccess.Should().BeTrue();
-
-      // Assert
-      var actualDto = resultCreate.Value;
-      actualDto.Id.Should().Be(dto.Id);
-
-      repository.Verify(
-         r => r.Add(It.Is<Reader>(reader =>
-            reader.Id == reader1.Id &&
-            reader.EmailVo.Value == reader1.EmailVo.Value &&
-            reader.Subject == reader1.Subject
-         )),
-         Times.Once
-      );
-
-      unitOfWork.Verify(
-         u => u.SaveAllChangesAsync("ReaderUcCreate", ct),
-         Times.Once
-      );
-   }
+   #region ReaderUcDeactivate
 
    [Fact]
-   public async Task CreateAsync_duplicate_subject_fails() {
+   public async Task DeactivateAsync_ok_deactivates_reader() {
       // Arrange
       var ct = TestContext.Current.CancellationToken;
       var seed = new TestSeed();
       var reader = seed.Reader1();
-      var dto = Mappings.ToReaderCreateDto(reader); 
-      
-      var repository = new Mock<IReaderRepository>();
-      repository
-         .Setup(r => r.ExistsBySubjectAsync(dto.Subject, ct))
-         .ReturnsAsync(true);
 
-      var unitOfWork = new Mock<IUnitOfWork>();
-      
-      var sut = new ReaderUcCreate(
-         repository: repository.Object,
-         unitOfWork: unitOfWork.Object,
-         clock: new FakeClock(CreatedAt),
-         logger: Mock.Of<ILogger<ReaderUcCreate>>()
-      );
-
-      // Act
-      var result = await sut.ExecuteAsync(dto, ct);
-
-      // Assert
-      result.IsFailure.Should().BeTrue();
-      result.Error.Should().Be(ReaderErrors.SubjectAlreadyExists);
-
-      repository.Verify(
-         r => r.Add(It.IsAny<Reader>()),
-         Times.Never
-      );
-      unitOfWork.Verify(
-         u => u.SaveAllChangesAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()),
-         Times.Never
-      );
-   }
-
-   [Fact]
-   public async Task CreateAsync_duplicate_email_fails() {
-      // Arrange
-      var ct = TestContext.Current.CancellationToken;
-      var seed = new TestSeed();
-      var reader1 = seed.Reader1();
-      var dto = Mappings.ToReaderCreateDto(reader1);
-      var reader2 = seed.Reader2();
-      var result2 = reader2.UpdateProfile(null, reader1.EmailVo, null, reader1.UpdatedAt);
-      result2.IsSuccess.Should().BeTrue();
-      
-      var repository = new Mock<IReaderRepository>();
-      repository
-         .Setup(r => r.ExistsBySubjectAsync(dto.Subject, ct))
-         .ReturnsAsync(false);
-      repository
-         .Setup(r => r.FindByEmailAsync(It.IsAny<EmailVo>(), ct))
-         .ReturnsAsync(reader2);
-
-      var unitOfWork = new Mock<IUnitOfWork>();
-      
-      var sut = new ReaderUcCreate(
-         repository: repository.Object,
-         unitOfWork: unitOfWork.Object,
-         clock: new FakeClock(CreatedAt),
-         logger: Mock.Of<ILogger<ReaderUcCreate>>()
-      );
-
-      // Act
-      var result = await sut.ExecuteAsync(dto, ct);
-
-      // Assert
-      result.IsFailure.Should().BeTrue();
-      result.Error.Should().Be(ReaderErrors.EmailAlreadyInUse);
-
-      repository.Verify(
-         r => r.Add(It.IsAny<Reader>()),
-         Times.Never
-      );
-      unitOfWork.Verify(
-         u => u.SaveAllChangesAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()),
-         Times.Never
-      );
-   }
-
-   [Fact]
-   public async Task CreateAsync_invalid_email_fails() {
-      // Arrange
-      var ct = TestContext.Current.CancellationToken;
-      var seed = new TestSeed();
-      var reader1 = seed.Reader1();
-      var dto = Mappings.ToReaderCreateDto(reader1) with {
-         Email = "invalid-email"
-      };
-
-      var repository = new Mock<IReaderRepository>();
-      repository
-         .Setup(r => r.ExistsBySubjectAsync(dto.Subject, ct))
-         .ReturnsAsync(false);
-
-      var unitOfWork = new Mock<IUnitOfWork>();
-      
-      var sut = new ReaderUcCreate(
-         repository: repository.Object,
-         unitOfWork: unitOfWork.Object,
-         clock: new FakeClock(CreatedAt),
-         logger: Mock.Of<ILogger<ReaderUcCreate>>()
-      );
-
-      // Act
-      var result = await sut.ExecuteAsync(dto, ct);
-
-      // Assert
-      result.IsFailure.Should().BeTrue();
-      result.Error.Should().Be(ReaderErrors.InvalidEmail);
-
-      repository.Verify(
-         r => r.Add(It.IsAny<Reader>()),
-         Times.Never
-      );
-      unitOfWork.Verify(
-         u => u.SaveAllChangesAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()),
-         Times.Never
-      );
-   }
-
-   [Fact]
-   public async Task CreateAsync_invalid_id_fails() {
-      // Arrange
-      var ct = TestContext.Current.CancellationToken;
-      var seed = new TestSeed();
-      var reader1 = seed.Reader1();
-      var dto = Mappings.ToReaderCreateDto(reader1) with {
-         Id = "not-a-guid"
-      };
-  
-      var repository = new Mock<IReaderRepository>();
-      repository
-         .Setup(r => r.ExistsBySubjectAsync(dto.Subject, ct))
-         .ReturnsAsync(false);
-      repository
-         .Setup(r => r.FindByEmailAsync(It.IsAny<EmailVo>(), ct))
-         .ReturnsAsync((Reader?)null);
-
-      var unitOfWork = new Mock<IUnitOfWork>();
-      
-      var sut = new ReaderUcCreate(
-         repository: repository.Object,
-         unitOfWork: unitOfWork.Object,
-         clock: new FakeClock(CreatedAt),
-         logger: Mock.Of<ILogger<ReaderUcCreate>>()
-      );
-
-      // Act
-      var result = await sut.ExecuteAsync(dto, ct);
-
-      // Assert
-      result.IsFailure.Should().BeTrue();
-      result.Error.Should().Be(ReaderErrors.InvalidId);
-
-      repository.Verify(
-         r => r.Add(It.IsAny<Reader>()),
-         Times.Never
-      );
-      unitOfWork.Verify(
-         u => u.SaveAllChangesAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()),
-         Times.Never
-      );
-   }
-   #endregion
-   
-   #region ReaderUcUpdate
-   [Fact]
-   public async Task UpdateAsync_ok() {
-      // Arrange
-      var ct = TestContext.Current.CancellationToken;
-      var seed = new TestSeed();
-      var reader = seed.Reader1();
-      var dto = Mappings.ToReaderUpdateDto(reader) with {
-         Lastname = "Meier",
-         Email = "e.meier@gmx.de",
-         AddressDto = seed.Address4Vo.ToAddressDto()
-      };
-      
       var repository = new Mock<IReaderRepository>();
       repository
          .Setup(r => r.FindByIdAsync(reader.Id, ct))
          .ReturnsAsync(reader);
-      repository
-         .Setup(r => r.FindByEmailAsync(It.IsAny<EmailVo>(), ct))
-         .ReturnsAsync((Reader?)null);
 
       var unitOfWork = new Mock<IUnitOfWork>();
-      
       unitOfWork
-         .Setup(u => u.SaveAllChangesAsync("ReaderUcUpdate", ct))
+         .Setup(u => u.SaveAllChangesAsync("ReaderUcDeactivate", ct))
          .ReturnsAsync(1);
 
-      var sut = new ReaderUcUpdate(
+      var sut = new ReaderUcDeactivate(
          repository: repository.Object,
+         loanReaderContract: Mock.Of<ILoanReaderContract>(),
          unitOfWork: unitOfWork.Object,
-         clock: new FakeClock(CreatedAt),
-         logger: Mock.Of<ILogger<ReaderUcUpdate>>()
+         clock: new FakeClock(UpdatedAt),
+         logger: Mock.Of<ILogger<ReaderUcDeactivate>>()
       );
 
       // Act
-      var result = await sut.ExecuteAsync(reader.Id, dto, ct);
+      var result = await sut.ExecuteAsync(
+         id: reader.Id,
+         ct: ct
+      );
 
       // Assert
       result.IsSuccess.Should().BeTrue();
-      var actualDto = result.Value;
-      actualDto.Should().BeEquivalentTo(dto);
+      reader.IsActive.Should().BeFalse();
 
       unitOfWork.Verify(
-         u => u.SaveAllChangesAsync("ReaderUcUpdate", ct),
+         u => u.SaveAllChangesAsync("ReaderUcDeactivate", ct),
          Times.Once
       );
    }
 
    [Fact]
-   public async Task UpdateAsync_reader_not_found_fails() {
+   public async Task DeactivateAsync_unknown_reader_fails() {
       // Arrange
       var ct = TestContext.Current.CancellationToken;
-      var seed = new TestSeed();
-      var reader = seed.Reader1();
-      var dto = Mappings.ToReaderUpdateDto(reader) with {
-         Lastname = "Meier",
-         Email = "e.meier@gmx.de",
-         AddressDto = seed.Address4Vo.ToAddressDto()
-      };
-      
+      var unknownId = Guid.Parse("99000000-0000-0000-0000-000000000000");
+
       var repository = new Mock<IReaderRepository>();
       repository
-         .Setup(r => r.FindByIdAsync(reader.Id, ct))
+         .Setup(r => r.FindByIdAsync(unknownId, ct))
          .ReturnsAsync((Reader?)null);
 
       var unitOfWork = new Mock<IUnitOfWork>();
 
-      var sut = new ReaderUcUpdate(
+      var sut = new ReaderUcDeactivate(
          repository: repository.Object,
+         loanReaderContract: Mock.Of<ILoanReaderContract>(),
          unitOfWork: unitOfWork.Object,
-         clock: new FakeClock(CreatedAt),
-         logger: Mock.Of<ILogger<ReaderUcUpdate>>()
+         clock: new FakeClock(UpdatedAt),
+         logger: Mock.Of<ILogger<ReaderUcDeactivate>>()
       );
 
       // Act
-      var result = await sut.ExecuteAsync(reader.Id, dto, ct);
+      var result = await sut.ExecuteAsync(
+         id: unknownId,
+         ct: ct
+      );
 
       // Assert
       result.IsFailure.Should().BeTrue();
       result.Error.Should().Be(ReaderErrors.ReaderNotFound);
 
       unitOfWork.Verify(
-         u => u.SaveAllChangesAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+         u => u.SaveAllChangesAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
          Times.Never
       );
    }
 
    [Fact]
-   public async Task UpdateAsync_duplicate_email_fails() {
+   public async Task DeactivateAsync_empty_id_fails() {
       // Arrange
       var ct = TestContext.Current.CancellationToken;
-      var seed = new TestSeed();
-      var reader1 = seed.Reader1();
-      var reader2 = seed.Reader2();
-      var dto = Mappings.ToReaderUpdateDto(reader1) with {
-         Lastname = null,
-         Email = reader2.EmailVo.Value,
-         AddressDto = null
-      };
-      
       var repository = new Mock<IReaderRepository>();
-      repository
-         .Setup(r => r.FindByIdAsync(reader1.Id, ct))
-         .ReturnsAsync(reader1);
-      repository
-         .Setup(r => r.FindByEmailAsync(It.IsAny<EmailVo>(), ct))
-         .ReturnsAsync(reader2);
-
       var unitOfWork = new Mock<IUnitOfWork>();
-      
-      var sut = new ReaderUcUpdate(
+
+      var sut = new ReaderUcDeactivate(
          repository: repository.Object,
+         loanReaderContract: Mock.Of<ILoanReaderContract>(),
          unitOfWork: unitOfWork.Object,
-         clock: new FakeClock(CreatedAt),
-         logger: Mock.Of<ILogger<ReaderUcUpdate>>()
+         clock: new FakeClock(UpdatedAt),
+         logger: Mock.Of<ILogger<ReaderUcDeactivate>>()
       );
-      
+
       // Act
-      var result = await sut.ExecuteAsync(reader1.Id, dto, ct);
+      var result = await sut.ExecuteAsync(
+         id: Guid.Empty,
+         ct: ct
+      );
 
       // Assert
       result.IsFailure.Should().BeTrue();
-      result.Error.Should().Be(ReaderErrors.EmailAlreadyInUse);
+      result.Error.Should().Be(ReaderErrors.InvalidId);
 
+      repository.Verify(
+         r => r.FindByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+         Times.Never
+      );
       unitOfWork.Verify(
-         u => u.SaveAllChangesAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+         u => u.SaveAllChangesAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
          Times.Never
       );
    }
-   #endregion
-   
-   #region ReaderUcDeactivate
-   private static readonly DateTime UpdatedAt =
-      new(2025, 01, 02, 00, 00, 00, DateTimeKind.Utc);
+
+   [Fact]
+   public async Task DeactivateAsync_with_current_loans_returns_conflict() {
+      // Arrange
+      var ct = TestContext.Current.CancellationToken;
+      var seed = new TestSeed();
+      var reader = seed.Reader1();
+
+      var repository = new Mock<IReaderRepository>();
+      repository
+         .Setup(r => r.FindByIdAsync(reader.Id, ct))
+         .ReturnsAsync(reader);
+
+      var loanReaderContract = new Mock<ILoanReaderContract>();
+      loanReaderContract
+         .Setup(c => c.ExistsForReaderAsync(reader.Id, ct))
+         .ReturnsAsync(true);
+
+      var unitOfWork = new Mock<IUnitOfWork>();
+
+      var sut = new ReaderUcDeactivate(
+         repository: repository.Object,
+         loanReaderContract: loanReaderContract.Object,
+         unitOfWork: unitOfWork.Object,
+         clock: new FakeClock(UpdatedAt),
+         logger: Mock.Of<ILogger<ReaderUcDeactivate>>()
+      );
+
+      // Act
+      var result = await sut.ExecuteAsync(
+         id: reader.Id,
+         ct: ct
+      );
+
+      // Assert
+      result.IsFailure.Should().BeTrue();
+      result.Error.Should().Be(
+         ReaderErrors.ReaderCannotBeDeactivatedWithLoans
+      );
+      reader.IsActive.Should().BeTrue();
+
+      unitOfWork.Verify(
+         u => u.SaveAllChangesAsync(
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()
+         ),
+         Times.Never
+      );
+   }
+
+   [Fact]
+   public async Task DeactivateAsync_already_deactivated_fails() {
+      // Arrange
+      var ct = TestContext.Current.CancellationToken;
+      var seed = new TestSeed();
+      var reader = seed.Reader1();
+      var deactivateResult = reader.Deactivate(UpdatedAt);
+      deactivateResult.IsSuccess.Should().BeTrue();
+
+      var repository = new Mock<IReaderRepository>();
+      repository
+         .Setup(r => r.FindByIdAsync(reader.Id, ct))
+         .ReturnsAsync(reader);
+
+      var unitOfWork = new Mock<IUnitOfWork>();
+
+      var sut = new ReaderUcDeactivate(
+         repository: repository.Object,
+         loanReaderContract: Mock.Of<ILoanReaderContract>(),
+         unitOfWork: unitOfWork.Object,
+         clock: new FakeClock(UpdatedAt),
+         logger: Mock.Of<ILogger<ReaderUcDeactivate>>()
+      );
+
+      // Act
+      var result = await sut.ExecuteAsync(
+         id: reader.Id,
+         ct: ct
+      );
+
+      // Assert
+      result.IsFailure.Should().BeTrue();
+      result.Error.Should().Be(ReaderErrors.IsAlreadyDeactivated);
+
+      unitOfWork.Verify(
+         u => u.SaveAllChangesAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+         Times.Never
+      );
+   }
+
    #endregion
 }

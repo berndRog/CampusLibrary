@@ -30,13 +30,14 @@ public static class CampusLibraryClientExtensions {
          );
 
       if(useAccessToken) {
-         // Part 8: the prepared handler forwards the current access token to the API.
+         // Part 6: the handler forwards the current access token for Reader /me calls.
+         // Part 7 hardens all API client calls systematically.
          campusLibraryApiClient.AddHttpMessageHandler<AccessTokenHandler>();
       }
 
       campusLibraryApiClient.AddHttpMessageHandler<OutgoingHttpLoggingHandler>();
 
-      // Prepared for Part 6/8 token flows. It is harmless while auth is disabled.
+      // Prepared for token flows. It is harmless while auth is disabled.
       services.AddHttpClient(
          name: Common.IdentityAccessServerClientName
       );

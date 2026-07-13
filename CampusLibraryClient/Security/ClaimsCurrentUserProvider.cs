@@ -18,34 +18,16 @@ public sealed class ClaimsCurrentUserProvider(
       if(principal.Identity?.IsAuthenticated != true)
          return CurrentUserInfo.Anonymous;
 
-      string accountType =
+      string role = NormalizeRole(
          FindFirstValue(
             principal: principal,
             claimTypes: [
-               "account_type",
-               "accountType",
                ClaimTypes.Role,
                "role",
                "roles"
             ]
-         ) ?? "authenticated";
-
-      Guid? readerId = null;
-      string? readerIdText =
-         FindFirstValue(
-            principal: principal,
-            claimTypes: [
-               "reader_id",
-               "readerId",
-               "ReaderId"
-            ]
-         );
-
-      if(Guid.TryParse(
-            input: readerIdText,
-            result: out Guid parsedReaderId
-         ))
-         readerId = parsedReaderId;
+         ) ?? "authenticated"
+      );
 
       string displayName =
          FindFirstValue(
@@ -54,7 +36,8 @@ public sealed class ClaimsCurrentUserProvider(
                "name",
                "preferred_username",
                ClaimTypes.Name,
-               ClaimTypes.Email
+               ClaimTypes.Email,
+               "email"
             ]
          ) ?? "Authenticated user";
 
@@ -63,18 +46,27 @@ public sealed class ClaimsCurrentUserProvider(
             principal: principal,
             claimTypes: [
                ClaimTypes.Email,
-               "email"
+               "email",
+               "preferred_username"
             ]
          );
 
       return new CurrentUserInfo(
          IsAuthenticated: true,
-         AccountType: accountType,
-         ReaderId: readerId,
+         AccountType: role,
+         ReaderId: null,
          DisplayName: displayName,
          Email: email
       );
    }
+
+   private static string NormalizeRole(
+      string value
+   ) => value.Trim().ToLowerInvariant() switch {
+      "reader" => CampusLibraryRoles.Reader,
+      "employee" => CampusLibraryRoles.Employee,
+      _ => value
+   };
 
    private static string? FindFirstValue(
       ClaimsPrincipal principal,
@@ -95,10 +87,12 @@ public sealed class ClaimsCurrentUserProvider(
 Didaktik
 --------
 
-ClaimsCurrentUserProvider ist die spätere Part-6-Quelle für die aktuelle
-Benutzeridentität.
+ClaimsCurrentUserProvider liest die echte OIDC-Identität aus dem
+ClaimsPrincipal des Blazor-SSR-Clients.
 
-Die Seiten fragen weiterhin nur ICurrentUserProvider ab. Dadurch kann Part 5
-mit einer Demo-Identität arbeiten und Part 6 dieselben Seiten mit echter
-OIDC-Authentifizierung verwenden.
+Die UI-Autorisierung basiert ausschließlich auf dem role-Claim. Der technische
+account_type-Claim ist dafür nicht erforderlich.
+
+Die fachliche ReaderId kommt nicht aus dem Token, sondern aus dem
+CampusLibrary-Provisioning über GET /readers/me.
 */

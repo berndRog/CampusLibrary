@@ -88,8 +88,8 @@ public sealed class RegisterCustomerModel : PageModel {
       user.AccountType = "customer";
       user.AdminRights = AdminRights.None;
       user.EmailConfirmed = true;
-      user.CreatedAt = DateTimeOffset.UtcNow;
-      user.UpdatedAt = DateTimeOffset.UtcNow;
+      user.CreatedAt = DateTime.UtcNow;
+      user.UpdatedAt = DateTime.UtcNow;
 
       await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
       await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);

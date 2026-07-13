@@ -1,11 +1,12 @@
 <Router AppAssembly="typeof(Program).Assembly">
    <Found Context="routeData">
-      @* Teil 5: normales Routing ohne aktive Autorisierungsprüfung in der UI. *@
+      @* Part 6: AuthorizeRouteView evaluates [Authorize] attributes on routable pages.
+         API client hardening and deeper API/use-case authorization continue in Part 7. *@
       @if(_authNEnabled) {
          <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
             <NotAuthorized>
                <p>Du bist nicht berechtigt, diese Seite aufzurufen.</p>
-               <p><a href="/identity/login?returnUrl=%2Fentry">Anmelden</a></p>
+               <p><a href="/identity/login?returnUrl=%2Fentry" data-enhance-nav="false">Anmelden</a></p>
             </NotAuthorized>
          </AuthorizeRouteView>
       }

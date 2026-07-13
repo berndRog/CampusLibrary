@@ -10,6 +10,5 @@ public sealed record LoanListItemDto(
    string? Subtitle,
    DateTime LoanDate,
    DateTime DueDate,
-   int Status,
    bool IsOverdue
 );

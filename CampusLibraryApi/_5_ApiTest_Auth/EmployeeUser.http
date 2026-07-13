@@ -1,0 +1,66 @@
+###
+@subject =  00000002-0000-0099-0000-000000000000
+@email = w.wagner@camplib.de
+@password = Geh1m_
+@mustChangePassword = false
+@accountType = employee
+@createdAt = 2025-01-01T00:00:00Z
+
+@firstname = Wilma
+@lastname = Wagner
+
+### IA-Server
+@baseUrl = https://localhost:8010/camplib/v1
+@authServer = https://localhost:7010
+@devClientId = dev-token-client
+@apiScope = campus_library_api
+
+###
+# @name 1) Create User
+# Create technical user on IA server
+POST {{authServer}}/dev/users
+Content-Type: application/json
+Accept: application/json
+
+{
+  "subject": "{{subject}}",
+  "email": "{{email}}",
+  "password": "{{password}}",
+  "confirmPassword": "{{password}}",
+  "mustChangePassword": {{mustChangePassword}},
+  "accountType": "{{accountType}}",
+  "adminRights": 0,
+  "createdAt": "{{createdAt}}"
+}
+
+> {%
+    client.test("IA-Server: Employee user created", function() {
+        client.assert(response.status === 201 || response.status === 409, "Expected HTTP 201 or 409");
+    });
+
+    client.log("Employee user created on IdentityAccessServer or already exists.");
+%}
+
+###
+# @name 2) GetToken
+# Get bearer token for the new employee
+POST {{authServer}}/connect/token
+Content-Type: application/x-www-form-urlencoded
+Accept: application/json
+
+grant_type=dev_password
+    &client_id={{devClientId}}
+    &email={{email}}
+    &password={{password}}
+    &scope={{apiScope}}
+
+> {%
+    client.test("Access token created", function() {
+        client.assert(response.status === 200, "Expected HTTP 200");
+        client.assert(!!response.body.access_token, "Missing access_token");
+    });
+
+    const token = response.body?.access_token;
+    client.global.set("accessTokenEmployee", token);
+    client.log("Access token for employee stored as accessTokenEmployee.");
+%}

@@ -162,7 +162,8 @@ public sealed class SeedHostedService(
             Permissions.ResponseTypes.Code,
 
             Permissions.Prefixes.Scope + Scopes.OpenId,
-            Permissions.Prefixes.Scope + Scopes.Profile
+            Permissions.Prefixes.Scope + Scopes.Profile,
+            Permissions.Prefixes.Scope + Scopes.Email
          },
 
          Requirements = {
@@ -200,7 +201,8 @@ public sealed class SeedHostedService(
             Permissions.ResponseTypes.Code,
 
             Permissions.Prefixes.Scope + Scopes.OpenId,
-            Permissions.Prefixes.Scope + Scopes.Profile
+            Permissions.Prefixes.Scope + Scopes.Profile,
+            Permissions.Prefixes.Scope + Scopes.Email
          }
       };
 
@@ -235,7 +237,8 @@ public sealed class SeedHostedService(
             Permissions.ResponseTypes.Code,
 
             Permissions.Prefixes.Scope + Scopes.OpenId,
-            Permissions.Prefixes.Scope + Scopes.Profile
+            Permissions.Prefixes.Scope + Scopes.Profile,
+            Permissions.Prefixes.Scope + Scopes.Email
          }
       };
 
@@ -270,7 +273,8 @@ public sealed class SeedHostedService(
             Permissions.ResponseTypes.Code,
 
             Permissions.Prefixes.Scope + Scopes.OpenId,
-            Permissions.Prefixes.Scope + Scopes.Profile
+            Permissions.Prefixes.Scope + Scopes.Profile,
+            Permissions.Prefixes.Scope + Scopes.Email
          }
       };
 
@@ -308,7 +312,8 @@ public sealed class SeedHostedService(
             Permissions.ResponseTypes.Code,
 
             Permissions.Prefixes.Scope + Scopes.OpenId,
-            Permissions.Prefixes.Scope + Scopes.Profile
+            Permissions.Prefixes.Scope + Scopes.Profile,
+            Permissions.Prefixes.Scope + Scopes.Email
          },
 
          Requirements = {
@@ -366,7 +371,8 @@ public sealed class SeedHostedService(
                Permissions.Endpoints.Token,
                Permissions.Prefixes.GrantType + DevGrantTypes.DevPassword,
                Permissions.Prefixes.Scope + Scopes.OpenId,
-               Permissions.Prefixes.Scope + Scopes.Profile
+               Permissions.Prefixes.Scope + Scopes.Profile,
+               Permissions.Prefixes.Scope + Scopes.Email
             }
          };
 

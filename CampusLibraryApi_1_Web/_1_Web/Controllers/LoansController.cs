@@ -6,6 +6,8 @@ using CampusLibraryApi._2_BuildingBlocks._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Loans._1_Ports.Inbound;
 using CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Loans._2_Application.Dtos;
+using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,17 +17,17 @@ namespace CampusLibraryApi._1_Web.Controllers;
 ///    HTTP API controller for loan resources.
 /// </summary>
 /// <remarks>
-///    Loans describe the borrowing lifecycle of concrete book items.
-///    A loan is not activated or deactivated like master data.
-///    Its lifecycle is represented by <c>LoanStatus</c>, for example
-///    Borrowed, Returned or Cancelled.
+///    Loans represent current borrowings of concrete book items.
+///    A stored loan means that the referenced book item is borrowed.
+///    Returning the item deletes the loan.
 /// </remarks>
 [ApiController]
 [ApiVersion("1.0")]
 [Route("camplib/v{version:apiVersion}")]
 public sealed class LoansController(
    ILoanReadModel loanReadModel,
-   ILoanUseCases loanUseCases
+   ILoanUseCases loanUseCases,
+   IReaderReadModel readerReadModel
 ) : ControllerBase {
 
    /// <summary>
@@ -45,6 +47,85 @@ public sealed class LoansController(
       CancellationToken ct
    ) {
       var result = await loanReadModel.FindAllBorrowedAsync(
+         ct: ct
+      );
+
+      return ToActionResult(
+         result: result
+      );
+   }
+
+   /// <summary>
+   ///    Returns all current loans of the authenticated Reader.
+   /// </summary>
+   /// <param name="ct">Cancellation token for the request.</param>
+   /// <returns>The current Reader's borrowed loans.</returns>
+   /// <response code="200">Returns the Reader's current loans.</response>
+   /// <response code="401">The request is not authenticated.</response>
+   /// <response code="403">The authenticated user is not a Reader.</response>
+   /// <response code="404">No provisioned Reader exists for the token subject.</response>
+   [Authorize(Roles = "Reader")]
+   [HttpGet("loans/me", Name = nameof(GetMyBorrowedLoansAsync))]
+   [Produces("application/json")]
+   [ProducesResponseType(typeof(IReadOnlyList<LoanListItemDto>), StatusCodes.Status200OK)]
+   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+   public async Task<ActionResult<IReadOnlyList<LoanListItemDto>>> GetMyBorrowedLoansAsync(
+      CancellationToken ct
+   ) {
+      var readerResult = await readerReadModel.FindMeAsync(
+         ct: ct
+      );
+
+      if(readerResult.IsFailure)
+         return ToProblemResult<IReadOnlyList<LoanListItemDto>>(
+            error: readerResult.Error
+         );
+
+      var result = await loanReadModel.FindBorrowedByReaderIdAsync(
+         readerId: readerResult.Value.Id,
+         ct: ct
+      );
+
+      return ToActionResult(
+         result: result
+      );
+   }
+
+   /// <summary>
+   ///    Returns one current loan of the authenticated Reader.
+   /// </summary>
+   /// <param name="id">The unique id of the loan.</param>
+   /// <param name="ct">Cancellation token for the request.</param>
+   /// <returns>The requested loan if it belongs to the current Reader.</returns>
+   /// <response code="200">Returns the requested Reader loan.</response>
+   /// <response code="401">The request is not authenticated.</response>
+   /// <response code="403">The authenticated user is not a Reader.</response>
+   /// <response code="404">The loan does not exist for the current Reader.</response>
+   [Authorize(Roles = "Reader")]
+   [HttpGet("loans/me/{id:guid}", Name = nameof(GetMyLoanByIdAsync))]
+   [Produces("application/json")]
+   [ProducesResponseType(typeof(LoanDetailDto), StatusCodes.Status200OK)]
+   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+   public async Task<ActionResult<LoanDetailDto>> GetMyLoanByIdAsync(
+      [FromRoute] Guid id,
+      CancellationToken ct
+   ) {
+      var readerResult = await readerReadModel.FindMeAsync(
+         ct: ct
+      );
+
+      if(readerResult.IsFailure)
+         return ToProblemResult<LoanDetailDto>(
+            error: readerResult.Error
+         );
+
+      var result = await loanReadModel.FindByIdForReaderAsync(
+         id: id,
+         readerId: readerResult.Value.Id,
          ct: ct
       );
 
@@ -84,6 +165,68 @@ public sealed class LoansController(
    }
 
    /// <summary>
+   ///    Borrows one concrete book item for the authenticated Reader.
+   /// </summary>
+   /// <param name="dto">The self-service borrow request containing the BookItem id.</param>
+   /// <param name="ct">Cancellation token for the request.</param>
+   /// <returns>The created loan.</returns>
+   /// <response code="201">The loan was created successfully.</response>
+   /// <response code="400">The request is invalid.</response>
+   /// <response code="401">The request is not authenticated.</response>
+   /// <response code="403">The authenticated user is not a Reader.</response>
+   /// <response code="404">The Reader or BookItem does not exist.</response>
+   /// <response code="409">The BookItem or Book is already borrowed.</response>
+   [Authorize(Roles = "Reader")]
+   [HttpPost("loans/me", Name = nameof(BorrowMyBookItemAsync))]
+   [Consumes("application/json")]
+   [Produces("application/json")]
+   [ProducesResponseType(typeof(LoanDto), StatusCodes.Status201Created)]
+   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+   public async Task<ActionResult<LoanDto>> BorrowMyBookItemAsync(
+      [FromBody] LoanBorrowMeDto dto,
+      CancellationToken ct
+   ) {
+      var readerResult = await readerReadModel.FindMeAsync(
+         ct: ct
+      );
+
+      if(readerResult.IsFailure)
+         return ToProblemResult<LoanDto>(
+            error: readerResult.Error
+         );
+
+      var result = await loanUseCases.BorrowAsync(
+         dto: new LoanCreateDto(
+            ReaderId: readerResult.Value.Id,
+            BookItemId: dto.BookItemId,
+            Id: dto.Id
+         ),
+         ct: ct
+      );
+
+      if(result.IsFailure)
+         return ToProblemResult<LoanDto>(
+            error: result.Error
+         );
+
+      var requestedApiVersion =
+         HttpContext.Features.Get<IApiVersioningFeature>()?.RequestedApiVersion;
+
+      return CreatedAtRoute(
+         routeName: nameof(GetMyLoanByIdAsync),
+         routeValues: new {
+            version = requestedApiVersion?.ToString() ?? "1",
+            id = result.Value.Id
+         },
+         value: result.Value
+      );
+   }
+
+   /// <summary>
    ///    Borrows one concrete book item for one reader.
    /// </summary>
    /// <param name="dto">
@@ -97,7 +240,8 @@ public sealed class LoansController(
    /// <response code="400">The borrow request is invalid.</response>
    /// <response code="404">The reader or book item does not exist.</response>
    /// <response code="409">
-   ///    The book item is not available for borrowing or is already borrowed.
+   ///    The book item is not available, is already borrowed, or the reader
+   ///    already has another copy of the same book on loan.
    /// </response>
    [HttpPost("loans", Name = nameof(BorrowBookItemAsync))]
    [Consumes("application/json")]
@@ -139,23 +283,74 @@ public sealed class LoansController(
    /// <param name="id">The unique id of the loan to return.</param>
    /// <param name="ct">Cancellation token for the request.</param>
    /// <returns>
-   ///    The updated loan after the return was registered.
+   ///    The data of the loan that was ended and deleted.
    /// </returns>
-   /// <response code="200">The loan was returned successfully.</response>
+   /// <response code="200">The loan was returned and deleted successfully.</response>
    /// <response code="400">The loan id is invalid.</response>
    /// <response code="404">No loan with the given id exists.</response>
-   /// <response code="409">The loan cannot be returned in its current state.</response>
    [HttpPatch("loans/{id:guid}/return-at-desk", Name = nameof(ReturnLoanAtDeskAsync))]
    [Produces("application/json")]
    [ProducesResponseType(typeof(LoanDto), StatusCodes.Status200OK)]
    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
    public async Task<ActionResult<LoanDto>> ReturnLoanAtDeskAsync(
       [FromRoute] Guid id,
       CancellationToken ct
    ) {
       var result = await loanUseCases.ReturnAtDeskAsync(
+         loanId: id,
+         ct: ct
+      );
+
+      return ToActionResult(
+         result: result
+      );
+   }
+
+   /// <summary>
+   ///    Renews one current loan of the authenticated Reader.
+   /// </summary>
+   /// <param name="id">The unique id of the loan.</param>
+   /// <param name="ct">Cancellation token for the request.</param>
+   /// <returns>The renewed loan.</returns>
+   /// <response code="200">The Reader's loan was renewed.</response>
+   /// <response code="401">The request is not authenticated.</response>
+   /// <response code="403">The authenticated user is not a Reader.</response>
+   /// <response code="404">The loan does not exist for the current Reader.</response>
+   /// <response code="409">The loan cannot be renewed.</response>
+   [Authorize(Roles = "Reader")]
+   [HttpPatch("loans/me/{id:guid}/renew", Name = nameof(RenewMyLoanAsync))]
+   [Produces("application/json")]
+   [ProducesResponseType(typeof(LoanDto), StatusCodes.Status200OK)]
+   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+   [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+   public async Task<ActionResult<LoanDto>> RenewMyLoanAsync(
+      [FromRoute] Guid id,
+      CancellationToken ct
+   ) {
+      var readerResult = await readerReadModel.FindMeAsync(
+         ct: ct
+      );
+
+      if(readerResult.IsFailure)
+         return ToProblemResult<LoanDto>(
+            error: readerResult.Error
+         );
+
+      var ownershipResult = await loanReadModel.FindByIdForReaderAsync(
+         id: id,
+         readerId: readerResult.Value.Id,
+         ct: ct
+      );
+
+      if(ownershipResult.IsFailure)
+         return ToProblemResult<LoanDto>(
+            error: ownershipResult.Error
+         );
+
+      var result = await loanUseCases.RenewAsync(
          loanId: id,
          ct: ct
       );
@@ -177,7 +372,7 @@ public sealed class LoansController(
    /// <response code="400">The loan id is invalid.</response>
    /// <response code="404">No loan with the given id exists.</response>
    /// <response code="409">
-   ///    The loan cannot be renewed because it is returned, overdue or has reached
+   ///    The loan cannot be renewed because it is overdue or has reached
    ///    the maximum number of renewals.
    /// </response>
    [HttpPatch("loans/{id:guid}/renew", Name = nameof(RenewLoanAsync))]
@@ -242,26 +437,35 @@ Antworten.
 
 Die lesenden Endpunkte verwenden ILoanReadModel:
 
-- GetBorrowedLoansAsync -> FindAllBorrowedAsync
-- GetLoanByIdAsync      -> FindByIdAsync
+- GetBorrowedLoansAsync   -> FindAllBorrowedAsync
+- GetMyBorrowedLoansAsync -> FindBorrowedByReaderIdAsync
+- GetLoanByIdAsync        -> FindByIdAsync
+- GetMyLoanByIdAsync      -> FindByIdForReaderAsync
 
 Die schreibenden Endpunkte verwenden ILoanUseCases:
 
+- BorrowMyBookItemAsync -> FindMeAsync + BorrowAsync
 - BorrowBookItemAsync   -> BorrowAsync
 - ReturnLoanAtDeskAsync -> ReturnAtDeskAsync
 - RenewLoanAsync        -> RenewAsync
+- RenewMyLoanAsync      -> ownership query + RenewAsync
 
-Loans besitzen kein IsActive-Flag. Der Zustand einer Ausleihe wird über
-LoanStatus modelliert. Eine aktuell offene Ausleihe hat den Status Borrowed.
+Loans besitzen kein IsActive-Flag. Eine aktuelle Ausleihe wird durch die
+Existenz eines Loan modelliert. Bei der Rückgabe wird der Loan gelöscht.
 
 Deshalb gibt es keine Route /loans/active. Die Collection-Route GET /loans
 liefert im aktuellen Entwicklungsstand die aktuell ausgeliehenen Loans.
 
-Reader und Book verwenden IsActive. BookItem und Loan verwenden Status.
+Reader und Book verwenden IsActive. BookItem verwendet einen Status; Loan nicht.
 
 Die XML-Dokumentationskommentare oberhalb der Actions werden von Swagger
 verwendet, wenn XML-Kommentare im Projekt aktiviert und in Swagger eingebunden
 sind.
+
+Die Self-Service-Routen /loans/me und /loans/me/{id} bestimmen den fachlichen
+Reader serverseitig über IReaderReadModel.FindMeAsync. Der Client übermittelt
+keine ReaderId und führt keine Demo-Identitätsprüfung durch. Dadurch kann ein
+Reader nur seine eigenen Ausleihen lesen und verlängern.
 */
 
 // using System.Runtime.InteropServices.JavaScript;
@@ -271,7 +475,6 @@ sind.
 // using CampusLibraryApi._3_Core.Loans._1_Ports.Inbound;
 // using CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
 // using CampusLibraryApi._3_Core.Loans._2_Application.Dtos;
-// using CampusLibraryApi._3_Core.Loans._3_Domain.Enums;
 // using Microsoft.AspNetCore.Http;
 // using Microsoft.AspNetCore.Mvc;
 //
@@ -293,7 +496,7 @@ sind.
 //    [ProducesResponseType(typeof(IReadOnlyList<LoanDto>), StatusCodes.Status200OK)]
 //    [ProducesResponseType(StatusCodes.Status400BadRequest)]
 //    public async Task<ActionResult<IReadOnlyList<LoanDto>>> GetAllLoansAsync(
-//       [FromQuery] LoanStatus? status,
+//       [FromQuery] int? status,
 //       [FromQuery] Guid? readerId,
 //       [FromQuery] Guid? bookItemId,
 //       CancellationToken ct

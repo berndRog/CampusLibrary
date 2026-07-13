@@ -1,29 +1,21 @@
 @page "/loans"
+@attribute [Authorize(Roles = CampusLibraryRoles.Employee)]
 @rendermode InteractiveServer
 @inherits BasePage
-@* Part 8: protect this page with [Authorize(Policy = CampusLibraryPolicies.CanManageLoans)]. *@
 
 @inject ILoanClient LoanClient
-@inject ICurrentUserProvider CurrentUserProvider
 
 <PageTitle>Ausleihen</PageTitle>
-
-<h1 class="h3 mb-3">Ausleihen</h1>
-
-<p class="text-muted">
-   Mitarbeiteransicht. Diese Seite zeigt die Perspektive der Bibliothekstheke
-   und listet alle aktuell ausgeliehenen Medien auf.
-</p>
 
 <button class="btn btn-outline-secondary mb-3" @onclick="LoadAsync">Neu laden</button>
 
 <ErrorAlert Error="Error" />
 
-@if(IsLoading || _currentUser is null) {
+@if(IsLoading) {
    <p class="text-muted">Ausleihen werden geladen...</p>
 }
-else if(!_currentUser.IsEmployee) {
-   <p>Diese Seite ist für Mitarbeitende vorgesehen.</p>
+else if(Error is not null) {
+   @* ErrorAlert above displays the API error. *@
 }
 else if(_loans.Count == 0) {
    <p>Keine aktiven Ausleihen gefunden.</p>
@@ -35,12 +27,11 @@ else {
             <tr>
                <th scope="col">Reader</th>
                <th scope="col">Titel</th>
-               <th scope="col">Inventarnummer</th>
                <th scope="col">Ausleihdatum</th>
                <th scope="col">Rückgabedatum</th>
-               <th scope="col">Status</th>
                <th scope="col">Überfällig</th>
                <th scope="col">Aktion</th>
+               <th scope="col">Inventarnummer</th>
             </tr>
          </thead>
          <tbody>
@@ -48,16 +39,15 @@ else {
                <tr>
                   <td>@loan.Firstname @loan.Lastname</td>
                   <td>@loan.Title</td>
-                  <td>@loan.BookItemId</td>
                   <td>@loan.LoanDate.ToString("yyyy-MM-dd")</td>
                   <td>@loan.DueDate.ToString("yyyy-MM-dd")</td>
-                  <td>@loan.Status</td>
                   <td>@(loan.IsOverdue ? "Ja" : "Nein")</td>
                   <td>
                      <a class="btn btn-outline-primary btn-sm" href="@($"/loans/{loan.Id}")">
                         Details
                      </a>
                   </td>
+                  <td>@loan.BookItemId</td>
                </tr>
             }
          </tbody>
@@ -69,10 +59,7 @@ else {
 
    private IReadOnlyList<LoanListItemDto> _loans = [];
 
-   private CurrentUserInfo? _currentUser;
-
    protected override async Task OnInitializedAsync() {
-      _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
       await LoadAsync();
    }
 
@@ -80,12 +67,15 @@ else {
       StartLoading();
       Error = null;
 
-      Result<IEnumerable<LoanListItemDto>> result = await LoanClient.GetBorrowedAsync();
+      Result<IEnumerable<LoanListItemDto>> result =
+         await LoanClient.GetBorrowedAsync();
 
       if(result.IsSuccess && result.Value is not null)
          _loans = result.Value.ToList();
-      else
+      else {
          Error = result.Error;
+         _loans = [];
+      }
 
       StopLoading();
    }

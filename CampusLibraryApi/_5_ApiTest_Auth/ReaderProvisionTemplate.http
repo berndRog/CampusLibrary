@@ -1,0 +1,150 @@
+###
+# Generic Reader Provision Template
+#
+# This template creates a technical user in the IdentityAccessServer,
+# gets an access token for the user, provisions the fachlicher Reader
+# in the CampusLibraryApi, and completes the Reader profile.
+#
+# Didaktik:
+# - The IdentityAccessServer owns the technical identity.
+# - CampusLibrary owns the fachlicher Reader.
+# - subject and initial email/username come from the token.
+# - firstname, lastname and address are fachliche profile data.
+
+### Gemeinsame Konfiguration
+@baseUrl = https://localhost:8010/camplib/v1
+@authServer = https://localhost:7010
+@devClientId = dev-token-client
+@apiScope = campus_library_api
+
+###
+# @name 1) Create User
+# Create technical user on IA server
+POST {{authServer}}/dev/users
+Content-Type: application/json
+Accept: application/json
+
+{
+  "subject": "{{subject}}",
+  "email": "{{email}}",
+  "password": "{{password}}",
+  "confirmPassword": "{{password}}",
+  "mustChangePassword": {{mustChangePassword}},
+  "accountType": "{{accountType}}",
+  "adminRights": 0,
+  "createdAt": "{{createdAt}}"
+}
+
+> {%
+    client.test("IA-Server: Reader user created", function() {
+        client.assert(response.status === 201 || response.status === 409, "Expected HTTP 201 or 409");
+    });
+
+    client.log("Reader user created on IdentityAccessServer or already exists.");
+%}
+
+###
+# @name 2) GetToken
+# Get bearer token for the new reader
+POST {{authServer}}/connect/token
+Content-Type: application/x-www-form-urlencoded
+Accept: application/json
+
+grant_type=dev_password
+    &client_id={{devClientId}}
+    &email={{email}}
+    &password={{password}}
+    &scope={{apiScope}}
+
+> {%
+    client.test("Access token created", function() {
+        client.assert(response.status === 200, "Expected HTTP 200");
+        client.assert(!!response.body.access_token, "Missing access_token");
+    });
+
+    const token = response.body?.access_token;
+    client.global.set("accessTokenReader", token);
+    client.log("Access token for reader stored as accessTokenReader.");
+%}
+
+###
+# @name 3) Provision Reader
+# Provision fachlicher Reader in CampusLibraryApi.
+# Subject and email/username are read from the access token by the API.
+POST {{baseUrl}}/readers/me/provision?id={{readerId}}
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenReader}}
+
+> {%
+    client.test("Reader provisioned", function() {
+        client.assert(response.status === 200 || response.status === 201, "Expected HTTP 200/201");
+    });
+
+    client.log("Reader provisioned in CampusLibraryApi.");
+%}
+
+###
+# @name 4) GetMeBeforeProfile
+# Read current reader before profile completion
+GET {{baseUrl}}/readers/me
+Accept: application/json
+Authorization: Bearer {{accessTokenReader}}
+
+> {%
+    client.test("Reader me loaded before profile completion", function() {
+        client.assert(response.status === 200, "Expected HTTP 200");
+    });
+
+    client.log("Reader me loaded before profile completion.");
+%}
+
+###
+# @name 5) CompleteProfile
+# Complete reader profile.
+# ReaderProfileDto:
+# - firstname
+# - lastname
+# - addressDto
+#
+# Email is intentionally not part of ReaderProfileDto.
+# The initial Reader.Email was set during provisioning from the IA username.
+PUT {{baseUrl}}/readers/me/profile
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer {{accessTokenReader}}
+
+{
+  "firstname": "{{firstname}}",
+  "lastname": "{{lastname}}",
+  "addressDto": {
+    "street": "{{street}}",
+    "postalCode": "{{postalCode}}",
+    "city": "{{city}}",
+    "country": {{country}}
+  }
+}
+
+> {%
+    client.test("Reader profile completed", function() {
+        client.assert(response.status === 200 || response.status === 204, "Expected HTTP 200/204");
+    });
+
+    client.log("Reader profile completed.");
+%}
+
+###
+# @name 6) GetMeAfterProfile
+# Read current reader after profile completion
+GET {{baseUrl}}/readers/me
+Accept: application/json
+Authorization: Bearer {{accessTokenReader}}
+
+> {%
+    client.test("Reader me loaded after profile completion", function() {
+        client.assert(response.status === 200, "Expected HTTP 200");
+        client.assert(response.body.isProfileCompleted === true, "Expected profile to be completed");
+    });
+
+    client.log("Reader me loaded after profile completion.");
+%}

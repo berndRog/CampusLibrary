@@ -1,0 +1,205 @@
+@page "/readers/profile"
+@attribute [Authorize(Roles = CampusLibraryRoles.Reader)]
+@rendermode InteractiveServer
+@inherits BasePage
+
+@inject IReaderClient ReaderClient
+@inject ICurrentUserProvider CurrentUserProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Reader-Profil abschließen</PageTitle>
+
+<h1>Reader-Profil abschließen</h1>
+
+<p class="text-muted">
+   Die technische Identität kommt aus dem IdentityAccessServer. Hier werden nur
+   die fachlichen Pflichtdaten für die CampusLibrary erfasst.
+</p>
+
+<ErrorAlert Error="Error" />
+
+@if(IsLoading || _currentUser is null) {
+   <p class="text-muted">Profil wird geladen...</p>
+}
+else if(!_currentUser.IsReader) {
+   <p>Diese Seite ist nur für angemeldete Leserinnen und Leser vorgesehen.</p>
+}
+else {
+   <div class="alert alert-info" role="alert">
+      Diese Seite gehört zum Provisioning-Flow. Nach erfolgreichem Speichern
+      wirst du zum Katalog weitergeleitet.
+   </div>
+
+   <div class="card shadow-sm mb-3">
+      <div class="card-body">
+         <h2 class="h5 card-title mb-3">Technische Identität</h2>
+
+         <dl class="row mb-0">
+            <dt class="col-sm-3">E-Mail / Username</dt>
+            <dd class="col-sm-9">@DisplayEmail</dd>
+
+            <dt class="col-sm-3">Reader Id</dt>
+            <dd class="col-sm-9">
+               @if(_reader is null) {
+                  <span class="text-muted">Noch nicht geladen</span>
+               }
+               else {
+                  <code>@_reader.Id</code>
+               }
+            </dd>
+
+            <dt class="col-sm-3">Profil vollständig</dt>
+            <dd class="col-sm-9">
+               @if(_reader?.IsProfileCompleted == true) {
+                  <span class="badge text-bg-success">Ja</span>
+               }
+               else {
+                  <span class="badge text-bg-warning">Nein</span>
+               }
+            </dd>
+         </dl>
+      </div>
+   </div>
+
+   <EditForm Model="_model" OnValidSubmit="SaveAsync">
+      <DataAnnotationsValidator />
+      <ValidationSummary />
+
+      <div class="card shadow-sm mb-3">
+         <div class="card-body">
+            <h2 class="h5 card-title mb-3">Fachliche Profildaten</h2>
+
+            <div class="row g-3">
+               <div class="col-md-6">
+                  <label class="form-label" for="firstname">Vorname</label>
+                  <InputText id="firstname" class="form-control" @bind-Value="_model.Firstname" />
+                  <ValidationMessage For="() => _model.Firstname" />
+               </div>
+
+               <div class="col-md-6">
+                  <label class="form-label" for="lastname">Nachname</label>
+                  <InputText id="lastname" class="form-control" @bind-Value="_model.Lastname" />
+                  <ValidationMessage For="() => _model.Lastname" />
+               </div>
+
+               <div class="col-md-6">
+                  <label class="form-label" for="street">Straße</label>
+                  <InputText id="street" class="form-control" @bind-Value="_model.Street" />
+                  <ValidationMessage For="() => _model.Street" />
+               </div>
+
+               <div class="col-md-3">
+                  <label class="form-label" for="postalCode">PLZ</label>
+                  <InputText id="postalCode" class="form-control" @bind-Value="_model.PostalCode" />
+                  <ValidationMessage For="() => _model.PostalCode" />
+               </div>
+
+               <div class="col-md-3">
+                  <label class="form-label" for="city">Ort</label>
+                  <InputText id="city" class="form-control" @bind-Value="_model.City" />
+                  <ValidationMessage For="() => _model.City" />
+               </div>
+
+               <div class="col-md-4">
+                  <label class="form-label" for="country">Land</label>
+                  <InputText id="country" class="form-control" @bind-Value="_model.Country" />
+                  <ValidationMessage For="() => _model.Country" />
+               </div>
+            </div>
+         </div>
+      </div>
+
+      <div class="d-flex gap-2">
+         <button class="btn btn-primary" type="submit" disabled="@IsLoading">
+            Profil speichern und zum Katalog
+         </button>
+         <button class="btn btn-outline-secondary" type="button" @onclick="Cancel">
+            Abbrechen
+         </button>
+      </div>
+   </EditForm>
+}
+
+@code {
+
+   private CurrentUserInfo? _currentUser;
+
+   private ReaderDto? _reader;
+
+   private ReaderProfileModel _model = new();
+
+   private string DisplayEmail =>
+      _reader?.Email ?? _currentUser?.Email ?? "unbekannt";
+
+   protected override async Task OnInitializedAsync() {
+      StartLoading();
+      Error = null;
+
+      _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
+
+      if(_currentUser.IsReader)
+         await LoadProfileAsync();
+
+      StopLoading();
+   }
+
+   private async Task LoadProfileAsync() {
+      // Provisioning is performed centrally by /entry after OIDC login.
+      // This page only completes the profile of the existing fachlicher Reader.
+      Result<ReaderDto> profileResult = await ReaderClient.GetMeAsync();
+
+      if(profileResult.IsSuccess && profileResult.Value is not null) {
+         _reader = profileResult.Value;
+         _model = ReaderProfileModel.FromReader(_reader);
+
+         if(_reader.IsProfileCompleted)
+            Navigation.NavigateTo(
+               uri: "/catalog/books",
+               replace: true
+            );
+      }
+      else {
+         Error = profileResult.Error;
+      }
+   }
+
+   private async Task SaveAsync() {
+      StartLoading();
+      Error = null;
+
+      Result<ReaderDto> result = await ReaderClient.UpdateMeProfileAsync(
+         dto: _model.ToDto()
+      );
+
+      if(result.IsSuccess && result.Value is not null) {
+         Navigation.NavigateTo(
+            uri: "/catalog/books",
+            replace: true
+         );
+      }
+      else {
+         Error = result.Error;
+      }
+
+      StopLoading();
+   }
+
+   private void Cancel() {
+      Navigation.NavigateTo("/catalog/books");
+   }
+}
+
+@* Didaktik:
+   Diese Seite ist nicht die normale Profilpflege, sondern der initiale
+   Profilabschluss nach dem technischen OIDC-Login.
+
+   Die Route /readers/profile wird nur aus dem Entry-/Provisioning-Flow heraus
+   verwendet. Nach erfolgreichem Speichern wird zum Katalog weitergeleitet.
+
+   Subject und Email werden beim initialen Profilabschluss nicht bearbeitet.
+   Subject kommt aus dem IdentityAccessServer. Reader.Email wurde beim
+   Provisioning initial aus dem Username übernommen und kann später auf
+   /readers/update fachlich geändert werden.
+
+   Vorname, Nachname und Adresse machen das Profil fachlich vollständig.
+*@

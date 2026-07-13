@@ -10,11 +10,7 @@ public sealed class LoanClient(
    IHttpClientFactory factory,
    JsonSerializerOptions json,
    ILogger<LoanClient> logger
-) : BaseApiClient<LoanClient>(
-   factory: factory,
-   json: json,
-   logger: logger
-), ILoanClient {
+) : BaseApiClient<LoanClient>(factory, json, logger), ILoanClient {
 
    private const string Base = "camplib/v1";
 
@@ -25,6 +21,18 @@ public sealed class LoanClient(
       SendAsync<IEnumerable<LoanListItemDto>>(
          send: () => _http.GetAsync(
             requestUri: $"{Base}/loans",
+            cancellationToken: ct
+         ),
+         ct: ct
+      );
+
+   // GET /camplib/v1/loans/me
+   public Task<Result<IEnumerable<LoanListItemDto>>> GetMyBorrowedAsync(
+      CancellationToken ct = default
+   ) =>
+      SendAsync<IEnumerable<LoanListItemDto>>(
+         send: () => _http.GetAsync(
+            requestUri: $"{Base}/loans/me",
             cancellationToken: ct
          ),
          ct: ct
@@ -43,6 +51,19 @@ public sealed class LoanClient(
          ct: ct
       );
 
+   // GET /camplib/v1/loans/me/{id}
+   public Task<Result<LoanDetailDto>> GetMyByIdAsync(
+      Guid id,
+      CancellationToken ct = default
+   ) =>
+      SendAsync<LoanDetailDto>(
+         send: () => _http.GetAsync(
+            requestUri: $"{Base}/loans/me/{id}",
+            cancellationToken: ct
+         ),
+         ct: ct
+      );
+
    // POST /camplib/v1/loans
    public Task<Result<LoanDto>> BorrowAsync(
       LoanCreateDto dto,
@@ -51,6 +72,21 @@ public sealed class LoanClient(
       SendAsync<LoanDto>(
          send: () => _http.PostAsJsonAsync(
             requestUri: $"{Base}/loans",
+            value: dto,
+            options: _json,
+            cancellationToken: ct
+         ),
+         ct: ct
+      );
+
+   // POST /camplib/v1/loans/me
+   public Task<Result<LoanDto>> BorrowMyAsync(
+      LoanBorrowMeDto dto,
+      CancellationToken ct = default
+   ) =>
+      SendAsync<LoanDto>(
+         send: () => _http.PostAsJsonAsync(
+            requestUri: $"{Base}/loans/me",
             value: dto,
             options: _json,
             cancellationToken: ct
@@ -80,6 +116,20 @@ public sealed class LoanClient(
       SendAsync<LoanDto>(
          send: () => _http.PatchAsync(
             requestUri: $"{Base}/loans/{id}/renew",
+            content: null,
+            cancellationToken: ct
+         ),
+         ct: ct
+      );
+
+   // PATCH /camplib/v1/loans/me/{id}/renew
+   public Task<Result<LoanDto>> RenewMyAsync(
+      Guid id,
+      CancellationToken ct = default
+   ) =>
+      SendAsync<LoanDto>(
+         send: () => _http.PatchAsync(
+            requestUri: $"{Base}/loans/me/{id}/renew",
             content: null,
             cancellationToken: ct
          ),
