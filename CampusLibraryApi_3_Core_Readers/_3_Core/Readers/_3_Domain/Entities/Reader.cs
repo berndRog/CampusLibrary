@@ -150,7 +150,7 @@ public sealed class Reader : AggregateRoot {
    }
 
    //--- domain methods --------------------------------------------------------
-   // Partially updates mutable reader profile data used by administrative flows.
+   // Partially updates mutable reader profile data in the later self-service flow.
    // Null means: keep the current value.
    // Firstname and Subject are intentionally not changed here.
    public Result UpdateProfile(

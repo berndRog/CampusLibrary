@@ -53,7 +53,7 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
       );
 
       var actualBookDto = await response.Content
-         .ReadFromJsonAsync<BookDetailDto>(
+         .ReadFromJsonAsync<BookDto>(
             options: _jsonOptions,
             cancellationToken: _ct
          );
@@ -162,7 +162,7 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
       );
 
       var actualBookDto = await response.Content
-         .ReadFromJsonAsync<BookDetailDto>(
+         .ReadFromJsonAsync<BookDto>(
             options: _jsonOptions,
             cancellationToken: _ct
          );
@@ -219,7 +219,7 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
       );
 
       var actualBookDtos = await response.Content
-         .ReadFromJsonAsync<List<BookListItemDto>>(
+         .ReadFromJsonAsync<List<BookDto>>(
             options: _jsonOptions,
             cancellationToken: _ct
          );
@@ -296,7 +296,7 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
       );
 
       var actualBookDtos = await response.Content
-         .ReadFromJsonAsync<List<BookListItemDto>>(
+         .ReadFromJsonAsync<List<BookDto>>(
             options: _jsonOptions,
             cancellationToken: _ct
          );
@@ -364,7 +364,7 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
       );
 
       var actualBookDtos = await response.Content
-         .ReadFromJsonAsync<List<BookListItemDto>>(
+         .ReadFromJsonAsync<List<BookDto>>(
             options: _jsonOptions,
             cancellationToken: _ct
          );
@@ -426,7 +426,7 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
       actualBookDto.Title.Should().Be(dto.Title);
       actualBookDto.Subtitle.Should().Be(dto.Subtitle);
       actualBookDto.Isbn.Should().Be(dto.Isbn);
-      actualBookDto.BookItemCount.Should().Be(0);
+      actualBookDto.TotalItems.Should().Be(0);
       actualBookDto.IsActive.Should().BeTrue();
    }
 
@@ -523,7 +523,7 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
       );
 
       var actualBookDtos = await response.Content
-         .ReadFromJsonAsync<List<BookListItemDto>>(
+         .ReadFromJsonAsync<List<BookDto>>(
             options: _jsonOptions,
             cancellationToken: _ct
          );
@@ -590,7 +590,7 @@ public sealed class BooksControllerE2eT : TestBaseEndToEnd {
       );
 
       var actualBookDtos = await response.Content
-         .ReadFromJsonAsync<List<BookListItemDto>>(
+         .ReadFromJsonAsync<List<BookDto>>(
             options: _jsonOptions,
             cancellationToken: _ct
          );

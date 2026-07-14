@@ -26,8 +26,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_2_IdentityAccessServer_Ope
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdentityAccessServer", "IdentityAccessServer\IdentityAccessServer.csproj", "{C039741C-E3A6-4186-AECF-C137F04E697D}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_4_Shared", "_4_Shared", "{FAD8CBC2-B8FE-4BBD-8867-D7D2265A48F6}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

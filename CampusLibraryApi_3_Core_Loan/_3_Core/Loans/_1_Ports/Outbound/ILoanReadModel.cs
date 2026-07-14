@@ -9,14 +9,14 @@ public interface ILoanReadModel {
 
    // Finds one current loan by its id.
    // Returns a detailed DTO enriched with reader and book item information.
-   Task<Result<LoanDetailDto>> FindByIdAsync(
+   Task<Result<LoanDto>> FindByIdAsync(
       Guid id,
       CancellationToken ct
    );
 
    // Finds one current loan only if it belongs to the given Reader.
    // This method is used by Reader self-service endpoints.
-   Task<Result<LoanDetailDto>> FindByIdForReaderAsync(
+   Task<Result<LoanDto>> FindByIdForReaderAsync(
       Guid id,
       Guid readerId,
       CancellationToken ct
@@ -24,13 +24,13 @@ public interface ILoanReadModel {
 
    // Returns all currently borrowed loans.
    // Every stored Loan represents an active borrowing process.
-   Task<Result<IReadOnlyList<LoanListItemDto>>> FindAllBorrowedAsync(
+   Task<Result<IReadOnlyList<LoanDto>>> FindAllBorrowedAsync(
       CancellationToken ct
    );
 
    // Returns all current loans of one Reader.
    // The filtering is performed in the API and not in the client.
-   Task<Result<IReadOnlyList<LoanListItemDto>>> FindBorrowedByReaderIdAsync(
+   Task<Result<IReadOnlyList<LoanDto>>> FindBorrowedByReaderIdAsync(
       Guid readerId,
       CancellationToken ct
    );

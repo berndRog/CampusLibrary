@@ -39,7 +39,7 @@ public sealed class EntryController(
       }
 
       if(IsReader(User)) {
-         Result<ReaderProvisionMeDto> provisionResult = 
+         Result<bool> provisionResult =
             await readerClient.ProvisionMeAsync(null, ct);
 
          if(provisionResult.IsFailure) {
@@ -47,8 +47,8 @@ public sealed class EntryController(
                "Reader provisioning failed after login: {Title} - {Detail}",
                provisionResult.Error?.Title, provisionResult.Error?.Detail);
 
-            // The profile page repeats the idempotent provisioning call and
-            // displays a possible API error to the user.
+            // The profile page displays the API error and allows the user
+            // to retry after the next login.
             return Redirect("/readers/profile");
          }
 

@@ -1,17 +1,19 @@
 @baseUrl = https://localhost:8010/camplib/v1
 @accessToken = paste-reader-access-token-here
+@readerId = 10000000-0000-0000-0000-000000000001
 
 ### Provision current reader from IdentityAccessServer token claims
-POST {{baseUrl}}/readers/me/provision
+### The optional id is retained for deterministic tests and examples.
+### Expected: 204 No Content
+POST {{baseUrl}}/readers/me/provision?id={{readerId}}
 Authorization: Bearer {{accessToken}}
-Accept: application/json
 
 ### Get current reader profile
 GET {{baseUrl}}/readers/me
 Authorization: Bearer {{accessToken}}
 Accept: application/json
 
-### Complete current reader profile
+### Complete the initial current reader profile
 PUT {{baseUrl}}/readers/me/profile
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
@@ -19,5 +21,28 @@ Accept: application/json
 
 {
   "firstname": "Alice",
-  "lastname": "Reader"
+  "lastname": "Reader",
+  "addressDto": {
+    "street": "Profilstraße 1",
+    "postalCode": "29556",
+    "city": "Suderburg",
+    "country": "DE"
+  }
+}
+
+### Change mutable current reader data after profile completion
+PUT {{baseUrl}}/readers/me/update
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "lastname": "Changed",
+  "email": "alice.changed@example.org",
+  "addressDto": {
+    "street": "Neue Straße 7",
+    "postalCode": "29556",
+    "city": "Suderburg",
+    "country": "DE"
+  }
 }

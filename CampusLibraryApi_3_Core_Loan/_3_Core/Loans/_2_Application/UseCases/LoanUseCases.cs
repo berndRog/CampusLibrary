@@ -2,10 +2,9 @@ using System.Runtime.CompilerServices;
 using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._3_Core.Loans._1_Ports.Inbound;
 using CampusLibraryApi._3_Core.Loans._2_Application.Dtos;
-using CampusLibraryApi._3_Core.Loans._2_Application.UseCases;
 
 [assembly: InternalsVisibleTo("CampusLibraryApiTest")]
-namespace CampusLibraryApi._3_Core.Catalog._2_Application.UseCases;
+namespace CampusLibraryApi._3_Core.Loans._2_Application.UseCases;
 
 internal sealed class LoanUseCases(
    LoanUcBorrow loanUcBorrow,
@@ -13,27 +12,18 @@ internal sealed class LoanUseCases(
    LoanUcReturnAtDesk loanUcReturnAtDesk
 ) : ILoanUseCases {
 
-   public async Task<Result<LoanDto>> BorrowAsync(
-      LoanCreateDto? dto,
+   public Task<Result<Guid>> BorrowAsync(
+      LoanCreateDto dto,
       CancellationToken ct = default
-   ) => await loanUcBorrow.ExecuteAsync(
-         loanCreateDto: dto,
-         ct: ct
-      );
-   
-   public async Task<Result<LoanDto>> RenewAsync(
+   ) => loanUcBorrow.ExecuteAsync(dto, ct);
+
+   public Task<Result<Guid>> RenewAsync(
       Guid loanId,
       CancellationToken ct = default
-   ) => await loanUcRenew.ExecuteAsync(
-         loanId: loanId,
-         ct: ct
-      );
-   
-   public async Task<Result<LoanDto>> ReturnAtDeskAsync(
+   ) => loanUcRenew.ExecuteAsync(loanId, ct);
+
+   public Task<Result> ReturnAtDeskAsync(
       Guid loanId,
       CancellationToken ct = default
-   ) => await loanUcReturnAtDesk.ExecuteAsync(
-         loanId: loanId,
-         ct: ct
-      );
+   ) => loanUcReturnAtDesk.ExecuteAsync(loanId, ct);
 }

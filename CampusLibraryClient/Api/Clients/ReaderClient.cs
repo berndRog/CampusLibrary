@@ -70,7 +70,7 @@ public sealed class ReaderClient(
 
    // POST /camplib/v1/readers/me/provision?id={optionalId}
    // Idempotently provisions the fachlicher Reader for the current technical user.
-   public Task<Result<ReaderProvisionMeDto>> ProvisionMeAsync(
+   public Task<Result<bool>> ProvisionMeAsync(
       string? id = null,
       CancellationToken ct = default
    ) {
@@ -78,7 +78,7 @@ public sealed class ReaderClient(
          ? $"{Base}/readers/me/provision"
          : $"{Base}/readers/me/provision?id={Uri.EscapeDataString(id)}";
 
-      return SendAsync<ReaderProvisionMeDto>(
+      return SendAsync<bool>(
          send: () => _http.PostAsync(
             requestUri: uri,
             content: null,
@@ -91,7 +91,7 @@ public sealed class ReaderClient(
    // PUT /camplib/v1/readers/me/profile
    // Completes the initial fachliche profile after provisioning.
    public Task<Result<ReaderDto>> UpdateMeProfileAsync(
-      ReaderProfileMeDto dto,
+      ReaderProfileDto dto,
       CancellationToken ct = default
    ) =>
       SendAsync<ReaderDto>(
@@ -105,10 +105,9 @@ public sealed class ReaderClient(
       );
 
    // PUT /camplib/v1/readers/me/update
-   // Performs the later self-service update.
-   // Firstname is intentionally not part of ReaderUpdateMeDto.
+   // Changes selected mutable fachliche Reader data.
    public Task<Result<ReaderDto>> UpdateMeAsync(
-      ReaderUpdateMeDto dto,
+      ReaderUpdateDto dto,
       CancellationToken ct = default
    ) =>
       SendAsync<ReaderDto>(

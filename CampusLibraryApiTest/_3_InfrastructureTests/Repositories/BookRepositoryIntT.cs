@@ -46,7 +46,6 @@ public sealed class BookRepositoryIntT : TestBaseIntegration {
       // Repository must load child entities needed by domain methods.
       actualBook.BookItems.Should().HaveCount(book1.BookItems.Count);
 
-//    actualBook.BookItems.Should().BeEquivalentTo(book1.BookItems.Select(bi => bi.InventoryNumber));
    }
 
    [Fact]

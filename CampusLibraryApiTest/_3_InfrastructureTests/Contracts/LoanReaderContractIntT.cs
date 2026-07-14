@@ -4,6 +4,7 @@ using CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
 using CampusLibraryApiTest.TestInfrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
+using CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
 namespace CampusLibraryApiTest._3_InfrastructureTests.Contracts;
 
 public sealed class LoanReaderContractIntT : TestBaseIntegration {

@@ -216,16 +216,14 @@ Accept: application/json
 }
 
 
-### Add duplicate inventory number
-### Seed already contains CL-BOOK-0001
-### Expected: 409 Conflict
+### Add BookItem with deterministic test id
+### Expected: 200 OK
 POST {{baseUrl}}/books/{{book1Id}}/items
 Content-Type: application/json
 Accept: application/json
 
 {
-  "inventoryNumber": "CL-BOOK-0001",
-  "id": null
+  "id": "be000099-0000-0000-0000-000000000000"
 }
 
 
@@ -291,15 +289,14 @@ Accept: application/json
 }
 
 
-### Add BookItem with missing inventory number
+### Add BookItem with invalid deterministic id
 ### Expected: 400 Bad Request
 POST {{baseUrl}}/books/{{book1Id}}/items
 Content-Type: application/json
 Accept: application/json
 
 {
-  "inventoryNumber": "",
-  "id": null
+  "id": "not-a-guid"
 }
 
 
@@ -310,7 +307,6 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "inventoryNumber": "CL-BOOK-9999",
   "id": null
 }
 

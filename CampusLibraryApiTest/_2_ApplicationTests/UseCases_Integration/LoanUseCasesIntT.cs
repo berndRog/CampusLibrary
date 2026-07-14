@@ -62,21 +62,13 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
       // Assert
       resultBorrow.IsSuccess.Should().BeTrue();
 
-      var createdLoanDto = resultBorrow.Value;
-
-      createdLoanDto.Id.Should().Be(Guid.Parse(seed.Loan1Id));
-      createdLoanDto.ReaderId.Should().Be(reader1.Id);
-      createdLoanDto.BookItemId.Should().Be(bookItem1.Id);
-      createdLoanDto.RenewalCount.Should().Be(0);
-
-      createdLoanDto.DueDate.Should().Be(
-         createdLoanDto.LoanDate.AddDays(LoanRules.StandardLoanDays)
-      );
+      var createdLoanId = resultBorrow.Value;
+      createdLoanId.Should().Be(Guid.Parse(seed.Loan1Id));
 
       unitOfWork.ClearChangeTracker();
 
       var resultFind = await readModel.FindByIdAsync(
-         id: createdLoanDto.Id,
+         id: createdLoanId,
          ct: ct
       );
 
@@ -84,7 +76,7 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
 
       var actualLoanDto = resultFind.Value;
 
-      actualLoanDto.Id.Should().Be(createdLoanDto.Id);
+      actualLoanDto.Id.Should().Be(createdLoanId);
       actualLoanDto.ReaderId.Should().Be(reader1.Id);
       actualLoanDto.BookItemId.Should().Be(bookItem1.Id);
    }
@@ -435,10 +427,6 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
       // Assert
       resultReturn.IsSuccess.Should().BeTrue();
 
-      var returnedLoanDto = resultReturn.Value;
-
-      returnedLoanDto.Id.Should().Be(loan1.Id);
-
       unitOfWork.ClearChangeTracker();
 
       var actualLoan = await loanRepository.FindByIdAsync(
@@ -530,13 +518,7 @@ public sealed class LoanUseCasesIntT : TestBaseIntegration {
       // Assert
       resultRenew.IsSuccess.Should().BeTrue();
 
-      var renewedLoanDto = resultRenew.Value;
-
-      renewedLoanDto.Id.Should().Be(loan1.Id);
-      renewedLoanDto.RenewalCount.Should().Be(1);
-      renewedLoanDto.DueDate.Should().Be(
-         oldDueDate.AddDays(LoanRules.StandardRenewalDays)
-      );
+      resultRenew.Value.Should().Be(loan1.Id);
 
       unitOfWork.ClearChangeTracker();
 

@@ -5,7 +5,6 @@ using CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
 using CampusLibraryApi._2_BuildingBlocks._2_Application.Utils;
 using CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Loans._2_Application.Dtos;
-using CampusLibraryApi._3_Core.Loans._2_Application.Mappings;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Policies;
@@ -24,45 +23,45 @@ internal sealed class LoanUcBorrow(
    ILogger<LoanUcBorrow> logger
 ) {
 
-   public async Task<Result<LoanDto>> ExecuteAsync(
+   public async Task<Result<Guid>> ExecuteAsync(
       LoanCreateDto? loanCreateDto,
       CancellationToken ct = default
    ) {
       if(loanCreateDto is null)
-         return Result<LoanDto>.Failure(LoanErrors.LoanCreateDtoRequired);
+         return Result<Guid>.Failure(LoanErrors.LoanCreateDtoRequired);
 
       var dto = loanCreateDto;
 
       // Resolve the optional external id into a domain id.
       var resultId = EntityId.Resolve(dto.Id, LoanErrors.InvalidLoanId);
       if(resultId.IsFailure)
-         return Result<LoanDto>.Failure(resultId.Error);
+         return Result<Guid>.Failure(resultId.Error);
 
       // Validate the referenced reader id.
       if(dto.ReaderId == Guid.Empty)
-         return Result<LoanDto>.Failure(LoanErrors.ReaderIdRequired);
+         return Result<Guid>.Failure(LoanErrors.ReaderIdRequired);
 
       // Validate the referenced book item id.
       if(dto.BookItemId == Guid.Empty)
-         return Result<LoanDto>.Failure(LoanErrors.BookItemIdRequired);
+         return Result<Guid>.Failure(LoanErrors.BookItemIdRequired);
 
       // Ask the Readers module whether this reader may borrow book items.
       // Loans does not access the Reader aggregate or the Readers table directly.
       var resultReader = await readerLoanContract
          .FindReaderForLoanAsync(dto.ReaderId, ct);
       if(resultReader.IsFailure)
-         return Result<LoanDto>.Failure(resultReader.Error);
+         return Result<Guid>.Failure(resultReader.Error);
 
       // Ask the Catalog module whether this concrete book item is loanable.
       // Loans does not access Book or BookItem entities directly.
       var resultBookItem = await bookItemLoanContract
          .FindBookItemForLoanAsync(dto.BookItemId, ct);
       if(resultBookItem.IsFailure)
-         return Result<LoanDto>.Failure(resultBookItem.Error);
+         return Result<Guid>.Failure(resultBookItem.Error);
       var bookItem = resultBookItem.Value;
 
       if(!bookItem.IsAvailableForLoan)
-         return Result<LoanDto>.Failure(LoanErrors.BookItemNotAvailable);
+         return Result<Guid>.Failure(LoanErrors.BookItemNotAvailable);
 
       // Check whether this concrete book item is already borrowed.
       // A BookItem may not have more than one open loan at the same time.
@@ -70,7 +69,7 @@ internal sealed class LoanUcBorrow(
          .FindBorrowedByBookItemIdAsync(dto.BookItemId, ct);
 
       if(borrowedLoan is not null)
-         return Result<LoanDto>.Failure(LoanErrors.BookItemAlreadyBorrowed);
+         return Result<Guid>.Failure(LoanErrors.BookItemAlreadyBorrowed);
 
       // A reader may borrow only one physical copy of the same book at a time.
       // Loan stores the concrete BookItemId, while Catalog owns the relation
@@ -84,10 +83,10 @@ internal sealed class LoanUcBorrow(
             .FindBookItemForLoanAsync(existingLoan.BookItemId, ct);
 
          if(existingBookItemResult.IsFailure)
-            return Result<LoanDto>.Failure(existingBookItemResult.Error);
+            return Result<Guid>.Failure(existingBookItemResult.Error);
 
          if(existingBookItemResult.Value.BookId == bookItem.BookId)
-            return Result<LoanDto>.Failure(
+            return Result<Guid>.Failure(
                LoanErrors.BookAlreadyBorrowedByReader
             );
       }
@@ -103,7 +102,7 @@ internal sealed class LoanUcBorrow(
       );
 
       if(loanPeriodResult.IsFailure)
-         return Result<LoanDto>.Failure(loanPeriodResult.Error);
+         return Result<Guid>.Failure(loanPeriodResult.Error);
 
       // Create the Loan aggregate.
       // The existence of the created Loan represents the borrowed state.
@@ -115,7 +114,7 @@ internal sealed class LoanUcBorrow(
       );
 
       if(resultLoan.IsFailure)
-         return Result<LoanDto>.Failure(resultLoan.Error);
+         return Result<Guid>.Failure(resultLoan.Error);
 
       var loan = resultLoan.Value;
 
@@ -136,9 +135,7 @@ internal sealed class LoanUcBorrow(
          rows
       );
 
-      return Result<LoanDto>.Success(
-         loan.ToLoanDto()
-      );
+      return Result<Guid>.Success(loan.Id);
    }
 }
 
@@ -180,6 +177,7 @@ des Loans-Moduls und wird hier aus LoanRules und LoanPeriodVo gebildet.
 Das Repository speichert Loan-Aggregates. Die Transaktion wird über
 IUnitOfWork abgeschlossen. Damit bleiben Repository und Speichern getrennt.
 
-Der Use Case gibt am Ende ein LoanDto zurück. Das Domain-Aggregate bleibt
-innerhalb des Anwendungskerns geschützt.
+Der Use Case gibt nur die Id des erzeugten Loan zurück. Der HTTP-Adapter
+lädt anschließend den gemeinsamen angereicherten LoanDto über das ReadModel.
+Das Domain-Aggregate bleibt innerhalb des Anwendungskerns geschützt.
 */

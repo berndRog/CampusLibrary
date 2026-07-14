@@ -34,11 +34,11 @@ internal sealed class ReaderUcUpdateMe(
 
    // Executes the self-service update workflow for the current reader.
    public async Task<Result<ReaderDto>> ExecuteAsync(
-      ReaderUpdateMeDto? meDto,
+      ReaderUpdateDto? meDto,
       CancellationToken ct
    ) {
       if (meDto is null)
-         return Result<ReaderDto>.Failure(ReaderErrors.ReaderUpdateMeDtoRequired);
+         return Result<ReaderDto>.Failure(ReaderErrors.ReaderUpdateDtoRequired);
 
       // 1) Validate the current identity and read the technical subject.
       // The role check is handled by the controller policy.
@@ -148,9 +148,9 @@ ReaderUcUpdateMe ändert nur fachlich veränderbare Self-Service-Daten:
 - fachliche Reader-Email
 - Adresse
 
-Der Vorname ist bewusst nicht Teil von ReaderUpdateMeDto und wird hier nicht
+Der Vorname ist bewusst nicht Teil von ReaderUpdateDto und wird hier nicht
 geändert. Auch der technische Username im IdentityAccessServer bleibt
-unverändert. Die Email in ReaderUpdateMeDto ist die fachliche Kontakt-Email des
+unverändert. Die Email in ReaderUpdateDto ist die fachliche Kontakt-Email des
 Readers in der CampusLibraryApi.
 
 Vor der Änderung werden neue Eingabewerte in Value Objects übersetzt. Dadurch

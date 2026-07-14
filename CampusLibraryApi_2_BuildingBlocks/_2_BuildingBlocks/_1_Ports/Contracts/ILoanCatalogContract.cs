@@ -1,6 +1,6 @@
-using CampusLibraryApi._2_BuildingBlocks._2_Application.Dtos;
+using CampusLibraryApi._2_BuildingBlocks._2_Application.Contracts;
 
-namespace CampusLibraryApi._2_BuildingBlocks._1_Ports;
+namespace CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
 
 // Contract provided by the Loans module for the Catalog module.
 // It exposes only whether current loans exist for catalog book items.

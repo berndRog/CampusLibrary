@@ -130,13 +130,14 @@ internal sealed class ReaderReadModelEf(
    private static readonly Expression<Func<Reader, ReaderDto>> ReaderToDto =
       reader => new ReaderDto(
          Id: reader.Id,
-         Firstname: reader.Firstname,
-         Lastname: reader.Lastname,
+         Firstname: reader.Firstname == string.Empty ? null : reader.Firstname,
+         Lastname: reader.Lastname == string.Empty ? null : reader.Lastname,
          Email: reader.EmailVo.Value,
          AddressDto: reader.AddressVo.ToAddressDto(),
          IsActive: reader.IsActive,
-         Subject: reader.Subject,
-         IsProfileCompleted: reader.Firstname != string.Empty && reader.Lastname != string.Empty
+         IsProfileCompleted: reader.Firstname != string.Empty &&
+                             reader.Lastname != string.Empty &&
+                             reader.AddressVo != null
       );
    
 }

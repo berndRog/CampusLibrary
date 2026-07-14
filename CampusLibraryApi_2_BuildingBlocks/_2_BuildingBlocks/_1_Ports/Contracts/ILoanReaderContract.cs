@@ -1,4 +1,4 @@
-namespace CampusLibraryApi._2_BuildingBlocks._1_Ports;
+namespace CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
 
 // Contract provided by the Loans module for the Readers module.
 // It exposes only whether current loans exist for one reader.

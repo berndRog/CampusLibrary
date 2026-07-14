@@ -30,4 +30,7 @@
     <Content Remove="AuthDetails.razor" />
   </ItemGroup>
   
+  <ItemGroup>
+  </ItemGroup>
+
 </Project>

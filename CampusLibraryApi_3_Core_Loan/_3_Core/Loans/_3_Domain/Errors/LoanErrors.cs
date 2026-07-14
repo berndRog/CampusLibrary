@@ -178,13 +178,6 @@ public static class LoanErrors {
          "Loan: LoanCreateDtoRequired",
          "A LoanCreateDto object must be provided."
       );
-
-   public static readonly DomainError LoanRenewDtoRequired =
-      new(
-         WebErrorStatus.BadRequest,
-         "Loan: LoanRenewDtoRequired",
-         "A LoanRenewDto object must be provided."
-      );
    
    
 

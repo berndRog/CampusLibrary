@@ -101,7 +101,7 @@ else {
    [Parameter]
    public Guid LoanId { get; set; }
 
-   private LoanDetailDto? _loan;
+   private LoanDto? _loan;
 
    private CurrentUserInfo? _currentUser;
 
@@ -123,7 +123,7 @@ else {
       StartLoading();
       Error = null;
 
-      Result<LoanDetailDto> result = _currentUser?.IsReader == true
+      Result<LoanDto> result = _currentUser?.IsReader == true
          ? await LoanClient.GetMyByIdAsync(
             id: LoanId
          )
@@ -168,7 +168,7 @@ else {
       StartLoading();
       Error = null;
 
-      Result<LoanDto> result = await LoanClient.ReturnAtDeskAsync(
+      Result<bool> result = await LoanClient.ReturnAtDeskAsync(
          id: _loan.Id
       );
 

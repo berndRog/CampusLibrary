@@ -1,5 +1,0 @@
-namespace CampusLibraryApi._3_Core.Loans._2_Application.Dtos;
-
-public sealed record LoanReturnDto(
-   Guid LoanId
-);

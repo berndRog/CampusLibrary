@@ -3,6 +3,7 @@ using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
 using Microsoft.EntityFrameworkCore;
 
+using CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
 [assembly: InternalsVisibleTo("CampusLibraryApiTest")]
 namespace CampusLibraryApi._4_Infrastructure.Persistence.Contracts;
 

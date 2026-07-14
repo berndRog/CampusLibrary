@@ -1,5 +1,5 @@
 using CampusLibraryApi._2_BuildingBlocks._2_Application.Contracts;
-namespace CampusLibraryApi._2_BuildingBlocks._1_Ports;
+namespace CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
 
 // Contract provided by the Catalog module for the Loans module.
 // It exposes only book item information that is relevant for lending books.

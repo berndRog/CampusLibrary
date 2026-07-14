@@ -9,6 +9,7 @@ using CampusLibraryApiTest.TestInfrastructure;
 using Microsoft.Extensions.Logging;
 using Moq;
 
+using CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
 namespace CampusLibraryApiTest._2_ApplicationTests.UseCases_Mock;
 
 public sealed class BookUseCasesMockT {
@@ -435,7 +436,7 @@ public sealed class BookUseCasesMockT {
 
       // Assert
       resultDeactivate.IsSuccess.Should().BeTrue();
-      resultDeactivate.Value.BookItemCount.Should().Be(0);
+      resultDeactivate.Value.TotalItems.Should().Be(0);
 
       book1.IsActive.Should().BeFalse();
       book1.BookItems.Should().BeEmpty();

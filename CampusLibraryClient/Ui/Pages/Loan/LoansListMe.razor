@@ -34,7 +34,7 @@ else {
             </tr>
          </thead>
          <tbody>
-            @foreach(LoanListItemDto loan in _loans) {
+            @foreach(LoanDto loan in _loans) {
                <tr>
                   <td>@loan.Title</td>
                   <td>@loan.LoanDate.ToString("yyyy-MM-dd")</td>
@@ -55,7 +55,7 @@ else {
 
 @code {
 
-   private IReadOnlyList<LoanListItemDto> _loans = [];
+   private IReadOnlyList<LoanDto> _loans = [];
 
    protected override async Task OnInitializedAsync() {
       await LoadAsync();
@@ -65,7 +65,7 @@ else {
       StartLoading();
       Error = null;
 
-      Result<IEnumerable<LoanListItemDto>> result =
+      Result<IEnumerable<LoanDto>> result =
          await LoanClient.GetMyBorrowedAsync();
 
       if(result.IsSuccess && result.Value is not null)

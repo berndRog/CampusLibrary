@@ -1,7 +1,6 @@
-namespace CampusLibraryApi._3_Core.Loans._2_Application.Dtos;
+namespace CampusLibraryClient.Api.Dtos;
 
-// API Response Dto
-public sealed record LoanDetailDto(
+public sealed record LoanDto(
    Guid Id,
 
    Guid ReaderId,
@@ -10,7 +9,6 @@ public sealed record LoanDetailDto(
    string Email,
 
    Guid BookItemId,
-
    Guid BookId,
    string AuthorsText,
    string Title,
@@ -25,4 +23,15 @@ public sealed record LoanDetailDto(
 
    bool IsOverdue,
    bool CanRenew
+);
+
+public sealed record LoanCreateDto(
+   Guid ReaderId,
+   Guid BookItemId,
+   string? Id = null
+);
+
+public sealed record LoanBorrowMeDto(
+   Guid BookItemId,
+   string? Id = null
 );

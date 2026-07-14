@@ -6,6 +6,7 @@ using CampusLibraryApi._3_Core.Catalog._2_Application.Mappings;
 using CampusLibraryApi._3_Core.Catalog._3_Domain.Errors;
 using Microsoft.Extensions.Logging;
 
+using CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
 namespace CampusLibraryApi._3_Core.Catalog._2_Application.UseCases;
 
 public sealed class BookUcDeactivate(

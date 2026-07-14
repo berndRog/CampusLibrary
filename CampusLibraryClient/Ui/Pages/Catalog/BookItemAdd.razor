@@ -128,7 +128,7 @@ else {
 
    private CurrentUserInfo? _currentUser;
 
-   private BookDetailDto? _book;
+   private BookDto? _book;
 
    private BookItemDto? _addedItem;
 
@@ -149,7 +149,7 @@ else {
       StartLoading();
       Error = null;
 
-      Result<BookDetailDto> result = await BookClient.GetByIdAsync(
+      Result<BookDto> result = await BookClient.GetByIdAsync(
          id: BookId,
          includeInactive: true
       );

@@ -57,14 +57,14 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
 
       resultFind.IsSuccess.Should().BeTrue();
 
-      var actualBookDetailDto = resultFind.Value;
+      var actualBookDto = resultFind.Value;
 
-      actualBookDetailDto.Id.Should().Be(createdBookDto.Id);
-      actualBookDetailDto.AuthorsText.Should().Be(createdBookDto.AuthorsText);
-      actualBookDetailDto.Title.Should().Be(createdBookDto.Title);
-      actualBookDetailDto.Subtitle.Should().Be(createdBookDto.Subtitle);
-      actualBookDetailDto.Isbn.Should().Be(createdBookDto.Isbn);
-      actualBookDetailDto.IsActive.Should().BeTrue();
+      actualBookDto.Id.Should().Be(createdBookDto.Id);
+      actualBookDto.AuthorsText.Should().Be(createdBookDto.AuthorsText);
+      actualBookDto.Title.Should().Be(createdBookDto.Title);
+      actualBookDto.Subtitle.Should().Be(createdBookDto.Subtitle);
+      actualBookDto.Isbn.Should().Be(createdBookDto.Isbn);
+      actualBookDto.IsActive.Should().BeTrue();
    }
 
    [Fact]
@@ -184,9 +184,9 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       );
       resultFind.IsSuccess.Should().BeTrue();
 
-      var actualBookDetailDto = resultFind.Value;
-      actualBookDetailDto.TotalItems.Should().Be(1);
-      actualBookDetailDto.AvailableItems.Should().Be(1);
+      var actualBookDto = resultFind.Value;
+      actualBookDto.TotalItems.Should().Be(1);
+      actualBookDto.AvailableItems.Should().Be(1);
    }
    
    [Fact]
@@ -248,7 +248,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       );
 
       resultDeactivate.IsSuccess.Should().BeTrue();
-      resultDeactivate.Value.BookItemCount.Should().Be(0);
+      resultDeactivate.Value.TotalItems.Should().Be(0);
 
       unitOfWork.ClearChangeTracker();
 
@@ -342,7 +342,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       );
 
       resultDeactivateAfterReturn.IsSuccess.Should().BeTrue();
-      resultDeactivateAfterReturn.Value.BookItemCount.Should().Be(0);
+      resultDeactivateAfterReturn.Value.TotalItems.Should().Be(0);
 
       unitOfWork.ClearChangeTracker();
 

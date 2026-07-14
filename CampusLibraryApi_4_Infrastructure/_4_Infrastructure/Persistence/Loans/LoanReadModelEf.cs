@@ -3,10 +3,10 @@ using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
 using CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
-using CampusLibraryApi._3_Core.Loans._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Policies;
+using CampusLibraryApi._3_Core.Loans._2_Application.Dtos;
 using Microsoft.EntityFrameworkCore;
 
 namespace CampusLibraryApi._4_Infrastructure.Persistence.Loans;
@@ -18,108 +18,130 @@ internal sealed class LoanReadModelEf(
    IClock clock
 ) : ILoanReadModel {
 
-   public async Task<Result<LoanDetailDto>> FindByIdAsync(
+   public async Task<Result<LoanDto>> FindByIdAsync(
       Guid id,
       CancellationToken ct
    ) {
       if(id == Guid.Empty)
-         return Result<LoanDetailDto>.Failure(LoanErrors.InvalidLoanId);
+         return Result<LoanDto>.Failure(LoanErrors.InvalidLoanId);
 
-      LoanProjectionDto? loan = await loanDbContext.Loans
+      var loan = await loanDbContext.Loans
          .AsNoTracking()
-         .Where(loan => loan.Id == id)
+         .Where(item => item.Id == id)
          .Select(LoanToProjectionDto)
          .FirstOrDefaultAsync(ct);
 
-      if(loan is null)
-         return Result<LoanDetailDto>.Failure(LoanErrors.LoanNotFound);
-
-      return await ToDetailDtoAsync(loan, ct);
+      return loan is null
+         ? Result<LoanDto>.Failure(LoanErrors.LoanNotFound)
+         : await ToLoanDtoAsync(loan, ct);
    }
 
-   public async Task<Result<LoanDetailDto>> FindByIdForReaderAsync(
+   public async Task<Result<LoanDto>> FindByIdForReaderAsync(
       Guid id,
       Guid readerId,
       CancellationToken ct
    ) {
       if(id == Guid.Empty)
-         return Result<LoanDetailDto>.Failure(LoanErrors.InvalidLoanId);
-
+         return Result<LoanDto>.Failure(LoanErrors.InvalidLoanId);
       if(readerId == Guid.Empty)
-         return Result<LoanDetailDto>.Failure(LoanErrors.InvalidReaderId);
+         return Result<LoanDto>.Failure(LoanErrors.InvalidReaderId);
 
-      LoanProjectionDto? loan = await loanDbContext.Loans
+      var loan = await loanDbContext.Loans
          .AsNoTracking()
-         .Where(loan => loan.Id == id && loan.ReaderId == readerId)
+         .Where(item => item.Id == id && item.ReaderId == readerId)
          .Select(LoanToProjectionDto)
          .FirstOrDefaultAsync(ct);
 
       // Do not disclose whether the loan exists for another Reader.
-      if(loan is null)
-         return Result<LoanDetailDto>.Failure(LoanErrors.LoanNotFound);
-
-      return await ToDetailDtoAsync(loan, ct);
+      return loan is null
+         ? Result<LoanDto>.Failure(LoanErrors.LoanNotFound)
+         : await ToLoanDtoAsync(loan, ct);
    }
 
-   public async Task<Result<IReadOnlyList<LoanListItemDto>>> FindAllBorrowedAsync(
+   public async Task<Result<IReadOnlyList<LoanDto>>> FindAllBorrowedAsync(
       CancellationToken ct
-   ) {
-      // Only current loans are stored. Therefore every row represents a
-      // borrowed book item and no status filter is required.
-      List<LoanProjectionDto> loans = await loanDbContext.Loans
-         .AsNoTracking()
-         .OrderBy(loan => loan.LoanPeriodVo.DueDate)
-         .ThenBy(loan => loan.LoanPeriodVo.LoanDate)
-         .ThenBy(loan => loan.Id)
-         .Select(LoanToProjectionDto)
-         .ToListAsync(ct);
+   ) => await SelectAsync(
+      query: loanDbContext.Loans,
+      ct: ct
+   );
 
-      List<LoanListItemDto> dtos = [];
-      foreach(var loan in loans) {
-         var resultDto = await ToListItemDtoAsync(loan, ct);
-         if(resultDto.IsFailure)
-            return Result<IReadOnlyList<LoanListItemDto>>.Failure(resultDto.Error);
-
-         dtos.Add(resultDto.Value);
-      }
-
-      return Result<IReadOnlyList<LoanListItemDto>>.Success(dtos);
-   }
-
-   public async Task<Result<IReadOnlyList<LoanListItemDto>>> FindBorrowedByReaderIdAsync(
+   public async Task<Result<IReadOnlyList<LoanDto>>> FindBorrowedByReaderIdAsync(
       Guid readerId,
       CancellationToken ct
    ) {
       if(readerId == Guid.Empty)
-         return Result<IReadOnlyList<LoanListItemDto>>.Failure(
-            LoanErrors.InvalidReaderId
-         );
+         return Result<IReadOnlyList<LoanDto>>.Failure(LoanErrors.InvalidReaderId);
 
-      List<LoanProjectionDto> loans = await loanDbContext.Loans
+      return await SelectAsync(
+         query: loanDbContext.Loans.Where(item => item.ReaderId == readerId),
+         ct: ct
+      );
+   }
+
+   private async Task<Result<IReadOnlyList<LoanDto>>> SelectAsync(
+      IQueryable<Loan> query,
+      CancellationToken ct
+   ) {
+      var loans = await query
          .AsNoTracking()
-         .Where(loan => loan.ReaderId == readerId)
-         .OrderBy(loan => loan.LoanPeriodVo.DueDate)
-         .ThenBy(loan => loan.LoanPeriodVo.LoanDate)
-         .ThenBy(loan => loan.Id)
+         .OrderBy(item => item.LoanPeriodVo.DueDate)
+         .ThenBy(item => item.LoanPeriodVo.LoanDate)
+         .ThenBy(item => item.Id)
          .Select(LoanToProjectionDto)
          .ToListAsync(ct);
 
-      List<LoanListItemDto> dtos = [];
-      foreach(LoanProjectionDto loan in loans) {
-         Result<LoanListItemDto> resultDto = await ToListItemDtoAsync(
-            loan: loan,
-            ct: ct
-         );
-
-         if(resultDto.IsFailure)
-            return Result<IReadOnlyList<LoanListItemDto>>.Failure(
-               resultDto.Error
-            );
-
-         dtos.Add(resultDto.Value);
+      List<LoanDto> dtos = [];
+      foreach(var loan in loans) {
+         var result = await ToLoanDtoAsync(loan, ct);
+         if(result.IsFailure)
+            return Result<IReadOnlyList<LoanDto>>.Failure(result.Error);
+         dtos.Add(result.Value);
       }
 
-      return Result<IReadOnlyList<LoanListItemDto>>.Success(dtos);
+      return Result<IReadOnlyList<LoanDto>>.Success(dtos);
+   }
+
+   private async Task<Result<LoanDto>> ToLoanDtoAsync(
+      LoanProjectionDto loan,
+      CancellationToken ct
+   ) {
+      var readerResult = await readerLoanContract
+         .FindReaderForExistingLoanAsync(loan.ReaderId, ct);
+      if(readerResult.IsFailure)
+         return Result<LoanDto>.Failure(readerResult.Error);
+
+      var bookItemResult = await bookItemLoanContract
+         .FindBookItemForLoanAsync(loan.BookItemId, ct);
+      if(bookItemResult.IsFailure)
+         return Result<LoanDto>.Failure(bookItemResult.Error);
+
+      var reader = readerResult.Value;
+      var bookItem = bookItemResult.Value;
+      var utcNow = clock.UtcNow;
+      var isOverdue = loan.DueDate < utcNow;
+
+      return Result<LoanDto>.Success(
+         new LoanDto(
+            Id: loan.Id,
+            ReaderId: loan.ReaderId,
+            Firstname: reader.Firstname,
+            Lastname: reader.Lastname,
+            Email: reader.Email,
+            BookItemId: loan.BookItemId,
+            BookId: bookItem.BookId,
+            AuthorsText: bookItem.AuthorsText,
+            Title: bookItem.Title,
+            Subtitle: bookItem.Subtitle,
+            Isbn: bookItem.Isbn,
+            BookIsActive: bookItem.BookIsActive,
+            IsAvailableForLoan: bookItem.IsAvailableForLoan,
+            LoanDate: loan.LoanDate,
+            DueDate: loan.DueDate,
+            RenewalCount: loan.RenewalCount,
+            IsOverdue: isOverdue,
+            CanRenew: !isOverdue && loan.RenewalCount < LoanRules.MaxRenewals
+         )
+      );
    }
 
    private static readonly Expression<Func<Loan, LoanProjectionDto>> LoanToProjectionDto =
@@ -131,120 +153,6 @@ internal sealed class LoanReadModelEf(
          loan.LoanPeriodVo.DueDate,
          loan.RenewalCount
       );
-
-   private async Task<Result<LoanDetailDto>> ToDetailDtoAsync(
-      LoanProjectionDto loan,
-      CancellationToken ct
-   ) {
-      var readerResult = await readerLoanContract
-         .FindReaderForExistingLoanAsync(loan.ReaderId, ct);
-      if(readerResult.IsFailure)
-         return Result<LoanDetailDto>.Failure(readerResult.Error);
-
-      var resultBookItem = await bookItemLoanContract
-         .FindBookItemForLoanAsync(loan.BookItemId, ct);
-      if(resultBookItem.IsFailure)
-         return Result<LoanDetailDto>.Failure(resultBookItem.Error);
-
-      var reader = readerResult.Value;
-      var bookItem = resultBookItem.Value;
-
-      return Result<LoanDetailDto>.Success(
-         new LoanDetailDto(
-            Id: loan.Id,
-
-            ReaderId: loan.ReaderId,
-            Firstname: reader.Firstname,
-            Lastname: reader.Lastname,
-            Email: reader.Email,
-
-            BookItemId: loan.BookItemId,
-            BookId: bookItem.BookId,
-
-            Title: bookItem.Title,
-            Subtitle: bookItem.Subtitle,
-            AuthorsText: bookItem.AuthorsText,
-            Isbn: bookItem.Isbn,
-
-            BookIsActive: bookItem.BookIsActive,
-            IsAvailableForLoan: bookItem.IsAvailableForLoan,
-
-            LoanDate: loan.LoanDate,
-            DueDate: loan.DueDate,
-            RenewalCount: loan.RenewalCount,
-
-            IsOverdue: IsOverdue(
-               loan: loan,
-               utcNow: clock.UtcNow
-            ),
-            CanRenew: CanRenew(
-               loan: loan,
-               utcNow: clock.UtcNow
-            )
-         )
-      );
-   }
-
-   private async Task<Result<LoanListItemDto>> ToListItemDtoAsync(
-      LoanProjectionDto loan,
-      CancellationToken ct
-   ) {
-      var readerResult = await readerLoanContract.FindReaderForExistingLoanAsync(
-         readerId: loan.ReaderId,
-         ct: ct
-      );
-
-      if(readerResult.IsFailure)
-         return Result<LoanListItemDto>.Failure(readerResult.Error);
-
-      var bookItemResult = await bookItemLoanContract.FindBookItemForLoanAsync(
-         id: loan.BookItemId,
-         ct: ct
-      );
-
-      if(bookItemResult.IsFailure)
-         return Result<LoanListItemDto>.Failure(bookItemResult.Error);
-
-      var reader = readerResult.Value;
-      var bookItem = bookItemResult.Value;
-
-      return Result<LoanListItemDto>.Success(
-         new LoanListItemDto(
-            Id: loan.Id,
-
-            ReaderId: loan.ReaderId,
-            Firstname: reader.Firstname,
-            Lastname: reader.Lastname,
-
-            BookItemId: loan.BookItemId,
-
-            Title: bookItem.Title,
-            Subtitle: bookItem.Subtitle,
-
-            LoanDate: loan.LoanDate,
-            DueDate: loan.DueDate,
-
-            IsOverdue: IsOverdue(
-               loan: loan,
-               utcNow: clock.UtcNow
-            )
-         )
-      );
-   }
-
-   private static bool IsOverdue(
-      LoanProjectionDto loan,
-      DateTime utcNow
-   ) => loan.DueDate < utcNow;
-
-   private static bool CanRenew(
-      LoanProjectionDto loan,
-      DateTime utcNow
-   ) => !IsOverdue(
-         loan: loan,
-         utcNow: utcNow
-      ) &&
-      loan.RenewalCount < LoanRules.MaxRenewals;
 
    private sealed record LoanProjectionDto(
       Guid Id,

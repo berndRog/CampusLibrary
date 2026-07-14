@@ -72,7 +72,7 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
          because: body
       );
 
-      var loans = await response.Content.ReadFromJsonAsync<List<LoanListItemDto>>(
+      var loans = await response.Content.ReadFromJsonAsync<List<LoanDto>>(
          _ct
       );
 
@@ -309,7 +309,7 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
       response.StatusCode.Should().Be(HttpStatusCode.OK);
 
       var actualLoanDto = await response.Content
-         .ReadFromJsonAsync<LoanDetailDto>(
+         .ReadFromJsonAsync<LoanDto>(
             _ct
          );
 
@@ -395,7 +395,7 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
       response.StatusCode.Should().Be(HttpStatusCode.OK);
 
       var actualLoanDtos = await response.Content
-         .ReadFromJsonAsync<List<LoanListItemDto>>(
+         .ReadFromJsonAsync<List<LoanDto>>(
             _ct
          );
 
@@ -721,15 +721,7 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
       );
 
       // Assert
-      response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-      var actualLoanDto = await response.Content
-         .ReadFromJsonAsync<LoanDto>(
-            _ct
-         );
-
-      actualLoanDto.Should().NotBeNull();
-      actualLoanDto!.Id.Should().Be(loanId);
+      response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
       await Factory.WithScopeAsync(async sp => {
          var loanRepository = sp.GetRequiredService<ILoanRepository>();

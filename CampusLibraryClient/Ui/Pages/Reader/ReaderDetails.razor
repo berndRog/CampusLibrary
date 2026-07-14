@@ -71,7 +71,7 @@ else {
                      </tr>
                   </thead>
                   <tbody>
-                     @foreach(LoanListItemDto loan in _currentLoans) {
+                     @foreach(LoanDto loan in _currentLoans) {
                         <tr>
                            <td>@Display(loan.Title)</td>
                            <td>@loan.DueDate.ToLocalTime().ToString("dd.MM.yyyy")</td>
@@ -133,7 +133,7 @@ else {
 
    private ReaderDto? _reader;
 
-   private IReadOnlyList<LoanListItemDto> _currentLoans = [];
+   private IReadOnlyList<LoanDto> _currentLoans = [];
 
    private bool _confirmDeactivate;
 
@@ -186,7 +186,7 @@ else {
       if(_reader is null)
          return;
 
-      Result<IEnumerable<LoanListItemDto>> result =
+      Result<IEnumerable<LoanDto>> result =
          await LoanClient.GetBorrowedAsync();
 
       if(result.IsFailure || result.Value is null) {
