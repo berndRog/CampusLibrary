@@ -26,6 +26,7 @@ public sealed class ReaderProvisionProfileUseCasesIntT : TestBaseIntegration {
       var ct = TestContext.Current.CancellationToken;
       var useCases = scope.ServiceProvider.GetRequiredService<IReaderUseCases>();
       var readModel = scope.ServiceProvider.GetRequiredService<IReaderReadModel>();
+      var identityGateway = scope.ServiceProvider.GetRequiredService<IIdentityGateway>();
 
       var provision = await useCases.ProvisionMeAsync(ReaderId, ct);
       provision.IsSuccess.Should().BeTrue();
@@ -35,7 +36,7 @@ public sealed class ReaderProvisionProfileUseCasesIntT : TestBaseIntegration {
       incomplete.IsSuccess.Should().BeTrue();
       incomplete.Value.Firstname.Should().BeNull();
       incomplete.Value.Lastname.Should().BeNull();
-      incomplete.Value.Email.Should().Be("reader.one@example.org");
+      incomplete.Value.Email.Should().Be(identityGateway.Username);
       incomplete.Value.AddressDto.Should().BeNull();
       incomplete.Value.IsProfileCompleted.Should().BeFalse();
 
@@ -56,7 +57,7 @@ public sealed class ReaderProvisionProfileUseCasesIntT : TestBaseIntegration {
       profile.IsSuccess.Should().BeTrue();
       profile.Value.Firstname.Should().Be("Alice");
       profile.Value.Lastname.Should().Be("Reader");
-      profile.Value.Email.Should().Be("reader.one@example.org");
+      profile.Value.Email.Should().Be(identityGateway.Username);
       profile.Value.IsProfileCompleted.Should().BeTrue();
 
       var update = await useCases.UpdateMeAsync(

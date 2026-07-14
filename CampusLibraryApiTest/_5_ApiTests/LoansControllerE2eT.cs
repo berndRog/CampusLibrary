@@ -761,6 +761,8 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
       DateTime oldDueDate = default;
 
       await Factory.WithScopeAsync(async sp => {
+         var readerRepository = sp.GetRequiredService<IReaderRepository>();
+         var bookRepository = sp.GetRequiredService<IBookRepository>();
          var loanRepository = sp.GetRequiredService<ILoanRepository>();
          var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
          var seed = sp.GetRequiredService<TestSeed>();
@@ -769,12 +771,17 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
          loanId = loan.Id;
          oldDueDate = loan.DueDate;
 
+         // Renew returns a complete LoanDto. The post-command read model enriches
+         // the Loan through the Readers and Catalog module contracts, so the
+         // referenced Reader and BookItem must exist in this E2E arrangement.
+         readerRepository.Add(seed.Reader1());
+         bookRepository.AddRange(seed.Books);
          loanRepository.Add(
             loan: loan
          );
 
          await unitOfWork.SaveAllChangesAsync(
-            "Loan inserted",
+            "Reader, books and loan inserted",
             _ct
          );
 
