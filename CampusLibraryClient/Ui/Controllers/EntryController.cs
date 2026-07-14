@@ -39,33 +39,25 @@ public sealed class EntryController(
       }
 
       if(IsReader(User)) {
-         Result<ReaderProvisionMeDto> provisionResult =
-            await readerClient.ProvisionMeAsync(
-               ct: ct
-            );
+         Result<ReaderProvisionMeDto> provisionResult = 
+            await readerClient.ProvisionMeAsync(null, ct);
 
          if(provisionResult.IsFailure) {
             logger.LogWarning(
                "Reader provisioning failed after login: {Title} - {Detail}",
-               provisionResult.Error?.Title,
-               provisionResult.Error?.Detail
-            );
+               provisionResult.Error?.Title, provisionResult.Error?.Detail);
 
             // The profile page repeats the idempotent provisioning call and
             // displays a possible API error to the user.
             return Redirect("/readers/profile");
          }
 
-         Result<ReaderDto> meResult = await readerClient.GetMeAsync(
-            ct: ct
-         );
+         Result<ReaderDto> meResult = await readerClient.GetMeAsync(ct);
 
          if(meResult.IsFailure) {
             logger.LogWarning(
                "Reader profile lookup failed after provisioning: {Title} - {Detail}",
-               meResult.Error?.Title,
-               meResult.Error?.Detail
-            );
+               meResult.Error?.Title, meResult.Error?.Detail);
 
             return Redirect("/readers/profile");
          }
@@ -95,31 +87,23 @@ public sealed class EntryController(
 
    private static bool IsReader(
       ClaimsPrincipal user
-   ) => HasRole(
-      user: user,
-      role: CampusLibraryRoles.Reader
-   );
+   ) => HasRole(user: user, role: CampusLibraryRoles.Reader);
 
    private static bool IsEmployee(
       ClaimsPrincipal user
-   ) => HasRole(
-      user: user,
-      role: CampusLibraryRoles.Employee
-   );
+   ) => HasRole(user: user, role: CampusLibraryRoles.Employee);
 
    private static bool HasRole(
       ClaimsPrincipal user,
       string role
-   ) =>
-      user.IsInRole(role) ||
-      user.Claims.Any(claim =>
-         IsRoleClaim(claim.Type) &&
-         string.Equals(
-            a: claim.Value,
-            b: role,
-            comparisonType: StringComparison.OrdinalIgnoreCase
-         )
-      );
+   ) => user.IsInRole(role) || user.Claims.Any(claim =>
+      IsRoleClaim(claim.Type) &&
+      string.Equals(
+         a: claim.Value,
+         b: role,
+         comparisonType: StringComparison.OrdinalIgnoreCase
+      )
+   );
 
    private static string? FindFirstValue(
       ClaimsPrincipal user,
@@ -137,10 +121,7 @@ public sealed class EntryController(
 
    private static bool IsRoleClaim(
       string claimType
-   ) =>
-      claimType == ClaimTypes.Role ||
-      claimType == "role" ||
-      claimType == "roles";
+   ) => claimType == ClaimTypes.Role || claimType == "role" || claimType == "roles";
 }
 
 /*
