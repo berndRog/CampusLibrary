@@ -114,18 +114,13 @@ public sealed class BooksController(
       [FromRoute] Guid bookId,
       CancellationToken ct = default
    ) {
-      var result = await bookReadModel.FindDeactivationInfoAsync(
-         id: bookId,
-         ct: ct
-      );
+      var result = await bookReadModel.FindDeactivationInfoAsync(bookId, ct);
 
       if(result.IsSuccess)
          return Ok(result.Value);
 
       var problem = DomainProblemDetailsFactory.FromDomainError(
-         result.Error,
-         HttpContext
-      );
+         result.Error, HttpContext);
 
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),
@@ -162,11 +157,7 @@ public sealed class BooksController(
       CancellationToken ct = default
    ) {
       var result = await bookReadModel.SearchAsync(
-         searchField: searchField,
-         searchText: searchText,
-         includeInactive: includeInactive,
-         ct: ct
-      );
+         searchField, searchText, includeInactive, ct);
       
       if (result.IsSuccess)
          return Ok(result.Value);

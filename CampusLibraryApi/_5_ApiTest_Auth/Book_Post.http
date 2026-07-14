@@ -124,7 +124,8 @@ Authorization: Bearer {{accessTokenEmployee}}
 
 > {%
     client.test("Book 1 posted", function() {
-        client.assert(response.status === 200 || response.status === 204, "Expected HTTP 200/204");
+        client.assert(response.status === 201,
+            `Expected HTTP 201, got ${response.status}`);
     });
 
     client.log("Book 1 posted");
@@ -147,7 +148,8 @@ Authorization: Bearer {{accessTokenEmployee}}
 
 > {%
     client.test("Book 2 posted", function() {
-        client.assert(response.status === 200 || response.status === 204, "Expected HTTP 200/204");
+        client.assert(response.status === 201,
+            `Expected HTTP 201, got ${response.status}`);
     });
 
     client.log("Book 2 posted");
@@ -170,7 +172,8 @@ Authorization: Bearer {{accessTokenEmployee}}
 
 > {%
     client.test("Book 3 posted", function() {
-        client.assert(response.status === 200 || response.status === 204, "Expected HTTP 200/204");
+        client.assert(response.status === 201,
+            `Expected HTTP 201, got ${response.status}`);
     });
 
     client.log("Book 3 posted");
@@ -192,7 +195,8 @@ Authorization: Bearer {{accessTokenEmployee}}
 
 > {%
     client.test("Book 4 posted", function() {
-        client.assert(response.status === 200 || response.status === 204, "Expected HTTP 200/204");
+        client.assert(response.status === 201,
+            `Expected HTTP 201, got ${response.status}`);
     });
 
     client.log("Book 4 posted");
@@ -214,7 +218,8 @@ Authorization: Bearer {{accessTokenEmployee}}
 
 > {%
     client.test("Book 5 posted", function() {
-        client.assert(response.status === 200 || response.status === 204, "Expected HTTP 200/204");
+        client.assert(response.status === 201,
+            `Expected HTTP 201, got ${response.status}`);
     });
 
     client.log("Book 5vposted");
@@ -236,7 +241,8 @@ Authorization: Bearer {{accessTokenEmployee}}
 
 > {%
     client.test("Book 6 posted", function() {
-        client.assert(response.status === 200 || response.status === 204, "Expected HTTP 200/204");
+        client.assert(response.status === 201,
+            `Expected HTTP 201, got ${response.status}`);
     });
 
     client.log("Book 6 posted");
@@ -258,7 +264,8 @@ Authorization: Bearer {{accessTokenEmployee}}
 
 > {%
     client.test("Book 7 posted", function() {
-        client.assert(response.status === 200 || response.status === 204, "Expected HTTP 200/204");
+        client.assert(response.status === 201,
+            `Expected HTTP 201, got ${response.status}`);
     });
 
     client.log("Book 7 posted");
@@ -280,335 +287,9 @@ Authorization: Bearer {{accessTokenEmployee}}
 
 > {%
     client.test("Book 8 posted", function() {
-        client.assert(response.status === 200 || response.status === 204, "Expected HTTP 200/204");
+        client.assert(response.status === 201,
+            `Expected HTTP 201, got ${response.status}`);
     });
 
     client.log("Book 8 posted");
 %}
-
-### 2. Add BookItems ===========================================================
-
-### Add BookItems to Clean Code: 4 copies
-
-POST {{baseUrl}}/books/{{book1Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem1Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book1Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem2Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book1Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem3Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book1Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem4Id}}"
-}
-
-
-### Add BookItems to Domain-Driven Design: 3 copies
-
-POST {{baseUrl}}/books/{{book2Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem5Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book2Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem6Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book2Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem7Id}}"
-}
-
-
-### Add BookItems to Refactoring: 5 copies
-
-POST {{baseUrl}}/books/{{book3Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem8Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book3Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem9Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book3Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem10Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book3Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem11Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book3Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem12Id}}"
-}
-
-
-### Add BookItems to Design Patterns: 4 copies
-
-POST {{baseUrl}}/books/{{book4Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem13Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book4Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem14Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book4Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem15Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book4Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem16Id}}"
-}
-
-
-### Add BookItems to C# in Depth: 3 copies
-
-POST {{baseUrl}}/books/{{book5Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem17Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book5Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem18Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book5Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem19Id}}"
-}
-
-
-### Add BookItems to C# 13 and .NET 9: 4 copies
-
-POST {{baseUrl}}/books/{{book6Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem20Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book6Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem21Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book6Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem22Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book6Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem23Id}}"
-}
-
-
-### Add BookItems to Patterns of Enterprise Application Architecture: 5 copies
-
-POST {{baseUrl}}/books/{{book7Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem24Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book7Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem25Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book7Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem26Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book7Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem27Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book7Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem28Id}}"
-}
-
-
-### Add BookItems to The Pragmatic Programmer: 3 copies
-
-POST {{baseUrl}}/books/{{book8Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem29Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book8Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem30Id}}"
-}
-
-###
-POST {{baseUrl}}/books/{{book8Id}}/items
-Content-Type: application/json
-Accept: application/json
-Authorization: Bearer {{accessTokenEmployee}}
-
-{
-  "id": "{{bookItem31Id}}"
-}

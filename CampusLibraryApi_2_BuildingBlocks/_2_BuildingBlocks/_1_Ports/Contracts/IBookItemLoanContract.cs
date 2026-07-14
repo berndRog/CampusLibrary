@@ -1,4 +1,4 @@
-using CampusLibraryApi._2_BuildingBlocks._2_Application.Contracts;
+using CampusLibraryApi._2_BuildingBlocks._2_Application.Dtos;
 namespace CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
 
 // Contract provided by the Catalog module for the Loans module.

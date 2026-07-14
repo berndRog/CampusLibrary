@@ -1,5 +1,4 @@
-using CampusLibraryApi._2_BuildingBlocks._2_Application.Contracts;
-
+using CampusLibraryApi._2_BuildingBlocks._2_Application.Dtos;
 namespace CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
 
 // Contract used by the Loans module to ask for loan-relevant reader data.

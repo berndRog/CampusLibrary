@@ -1,4 +1,4 @@
-namespace CampusLibraryApi._2_BuildingBlocks._2_Application.Contracts;
+namespace CampusLibraryApi._2_BuildingBlocks._2_Application.Dtos;
 
 // Catalog data published by Catalog for the Loans bounded context.
 public sealed record BookItemLoanInfoDto(

@@ -1,4 +1,4 @@
-namespace CampusLibraryApi._2_BuildingBlocks._2_Application.Contracts;
+namespace CampusLibraryApi._2_BuildingBlocks._2_Application.Dtos;
 
 // Reader data published by Readers for the Loans bounded context.
 public sealed record ReaderLoanInfoDto(

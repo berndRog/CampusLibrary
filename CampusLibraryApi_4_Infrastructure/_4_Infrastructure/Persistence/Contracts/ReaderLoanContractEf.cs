@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
-using CampusLibraryApi._2_BuildingBlocks._2_Application.Contracts;
+using CampusLibraryApi._2_BuildingBlocks._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Readers._2_Application.Mappings;
