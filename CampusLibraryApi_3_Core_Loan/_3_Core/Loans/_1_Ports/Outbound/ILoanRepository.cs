@@ -12,15 +12,14 @@ public interface ILoanRepository {
       CancellationToken ct
    );
 
-   // Finds the currently borrowed loan for one concrete book item.
-   // This is needed to prevent lending the same physical copy twice.
+   // Finds the current loan for one concrete book item.
+   // Because only current loans are stored, no status filter is required.
    Task<Loan?> FindBorrowedByBookItemIdAsync(
       Guid bookItemId,
       CancellationToken ct
    );
 
-   // Finds all currently borrowed loans for one reader.
-   // This can be used for domain checks such as maximum borrowed loans.
+   // Finds all current loans for one reader.
    Task<IReadOnlyList<Loan>> FindBorrowedByReaderIdAsync(
       Guid readerId,
       CancellationToken ct
@@ -35,6 +34,11 @@ public interface ILoanRepository {
    void AddRange(
       IEnumerable<Loan> loans
    );
+
+   // Removes a loan after the book item was returned at the service desk.
+   void Remove(
+      Loan loan
+   );
 }
 
 /*
@@ -44,21 +48,10 @@ Lernziele und Didaktik
 Dieses Repository ist ein Outbound-Port des Loans-Moduls.
 
 Ein Repository arbeitet mit Aggregates. Es wird von schreibenden Use Cases
-verwendet, wenn ein Loan geladen, geprüft oder neu gespeichert werden muss.
+verwendet, wenn ein Loan geladen, geprüft, gespeichert oder gelöscht werden
+muss.
 
-Das Repository gibt Loan-Aggregates zurück, keine DTOs. Dadurch bleibt der
-Unterschied zwischen Domänenmodell und API-/ReadModel-Daten sichtbar.
-
-Loans besitzen kein IsActive-Flag. Der fachliche Zustand einer Ausleihe wird
-über LoanStatus modelliert.
-
-Deshalb heißen die Suchmethoden nicht FindActive..., sondern FindBorrowed...:
-
-- FindBorrowedByBookItemIdAsync sucht die offene Ausleihe eines konkreten
-  physischen Exemplars.
-- FindBorrowedByReaderIdAsync sucht alle offenen Ausleihen eines Readers.
-
-Ein BookItem beschreibt ein konkretes physisches Exemplar. Dieses Exemplar
-darf nicht gleichzeitig mehrfach ausgeliehen sein. Diese fachliche Regel wird
-im Borrow-Use-Case geprüft.
+Nur aktuell bestehende Ausleihen werden gespeichert. Daher bedeutet ein
+gefundener Loan immer, dass das BookItem ausgeliehen ist. Bei der Rückgabe
+wird der Loan über Remove aus der Persistenz entfernt.
 */

@@ -16,4 +16,9 @@
     <ProjectReference Include="..\CampusLibraryApi_2_BuildingBlocks\CampusLibraryApi_2_BuildingBlocks.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="_3_Core\Readers\_2_Application\Dtos\AddressDto.cs" />
+    <Compile Remove="_3_Core\Readers\_2_Application\Dtos\ReaderCreateDto.cs" />
+  </ItemGroup>
+
 </Project>

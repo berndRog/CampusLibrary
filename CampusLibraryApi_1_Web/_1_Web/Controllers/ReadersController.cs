@@ -80,6 +80,7 @@ public sealed class ReaderController(
    [HttpGet("readers/{id:guid}", Name = nameof(GetReaderByIdAsync))]
    [Produces("application/json")]
    [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
@@ -100,6 +101,7 @@ public sealed class ReaderController(
       var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
 
       return result.Error.Status switch {
+         WebErrorStatus.BadRequest => BadRequest(problem),
          WebErrorStatus.Unauthorized => Unauthorized(problem),
          WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
          WebErrorStatus.NotFound => NotFound(problem),
@@ -150,7 +152,7 @@ public sealed class ReaderController(
          _ => BadRequest(problem)
       };
    }
-
+   
    /// <summary>
    ///    Creates a new reader.
    /// </summary>
@@ -262,10 +264,7 @@ public sealed class ReaderController(
       [FromRoute] Guid id,
       CancellationToken ct
    ) {
-      var result = await readerUseCases.DeactivateAsync(
-         id: id,
-         ct: ct
-      );
+      var result = await readerUseCases.DeactivateAsync(id, ct);
 
       if(result.IsSuccess)
          return NoContent();
@@ -285,6 +284,8 @@ public sealed class ReaderController(
       };
    }
 }
+
+
 
 /*
 Didaktik

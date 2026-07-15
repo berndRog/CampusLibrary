@@ -22,15 +22,22 @@ internal sealed class ReaderLoanContractEf(
       Guid readerId,
       CancellationToken ct
    ) {
-      var result = await FindReaderAsync(readerId: readerId, ct: ct);
+      var result = await FindReaderAsync(
+         readerId: readerId,
+         ct: ct
+      );
 
       if(result.IsFailure)
          return result;
 
-      ReaderLoanInfoDto readerLoanInfoDto = result.Value;
-      if(!readerLoanInfoDto.IsActive)
-         return Result<ReaderLoanInfoDto>.Failure(CommonErrors.ReaderIsDeactivated);
+      ReaderLoanInfoDto reader = result.Value;
+
+      if(!reader.IsActive)
+         return Result<ReaderLoanInfoDto>.Failure(
+            CommonErrors.ReaderIsDeactivated
+         );
       
+
       return result;
    }
 

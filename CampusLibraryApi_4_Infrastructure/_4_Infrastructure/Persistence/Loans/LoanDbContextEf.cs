@@ -18,4 +18,7 @@ internal sealed class LoadDbContextEf(
 
    public void AddRange(IEnumerable<Loan> loans)
       => db.Set<Loan>().AddRange(loans);
+
+   public void Remove(Loan loan)
+      => db.Set<Loan>().Remove(loan);
 }

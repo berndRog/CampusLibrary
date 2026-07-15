@@ -83,34 +83,6 @@ public static class LoanErrors {
          "The due date must be after the loan date."
       );
 
-   public static readonly DomainError InvalidReturnedAt =
-      new(
-         WebErrorStatus.BadRequest,
-         "Loan: Invalid Returned At",
-         "ReturnedAt must be a non-default UTC timestamp."
-      );
-
-   public static readonly DomainError ReturnedAtMustNotBeBeforeLoanDate =
-      new(
-         WebErrorStatus.BadRequest,
-         "Loan: Returned At Before Loan Date",
-         "ReturnedAt must not be before the loan date."
-      );
-
-   public static readonly DomainError LoanNotBorrowed =
-      new(
-         WebErrorStatus.Conflict,
-         "Loan: Not Borrowed",
-         "The loan status must be borrowed."
-      );
-
-   public static readonly DomainError LoanAlreadyReturned =
-      new(
-         WebErrorStatus.Conflict,
-         "Loan: Loan Already Returned",
-         "The loan has already been returned."
-      );
-
    public static readonly DomainError LoanDoesNotBelongToReader =
       new(
          WebErrorStatus.BadRequest,
@@ -190,6 +162,13 @@ public static class LoanErrors {
          "The book item is already borrowed."
       );
 
+   public static readonly DomainError BookAlreadyBorrowedByReader =
+      new(
+         WebErrorStatus.Conflict,
+         "Loan: Book Already Borrowed By Reader",
+         "The reader has already borrowed another book item of this book."
+      );
+
 
    // Loan DTOs
    // ------------------------------------------------------------------------
@@ -198,20 +177,6 @@ public static class LoanErrors {
          WebErrorStatus.BadRequest,
          "Loan: LoanCreateDtoRequired",
          "A LoanCreateDto object must be provided."
-      );
-
-   public static readonly DomainError LoanReturnDtoRequired =
-      new(
-         WebErrorStatus.BadRequest,
-         "Loan: LoanReturnDtoRequired",
-         "A LoanReturnDto object must be provided."
-      );
-
-   public static readonly DomainError LoanRenewDtoRequired =
-      new(
-         WebErrorStatus.BadRequest,
-         "Loan: LoanRenewDtoRequired",
-         "A LoanRenewDto object must be provided."
       );
    
    

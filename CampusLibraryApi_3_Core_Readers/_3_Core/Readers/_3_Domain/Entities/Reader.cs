@@ -13,8 +13,8 @@ public sealed class Reader : AggregateRoot {
    //--- properties ------------------------------------------------------------
    // inherited from Entity + Aggregate root base class
    // public Guid Id { get; private set; } 
-   // public DateTimeOffset CreatedAt { get; private set; }
-   // public DateTimeOffset UpdatedAt { get; private set; }
+   // public DateTime CreatedAt { get; private set; }
+   // public DateTime UpdatedAt { get; private set; }
 
    // Reader profile data.
    public string Firstname { get; private set; } = string.Empty;

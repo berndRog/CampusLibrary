@@ -2,8 +2,6 @@ using System.Runtime.CompilerServices;
 using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
-using CampusLibraryApi._3_Core.Loans._2_Application.Dtos;
-using CampusLibraryApi._3_Core.Loans._2_Application.Mappings;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Policies;
 using Microsoft.Extensions.Logging;
@@ -17,55 +15,28 @@ internal sealed class LoanUcRenew(
    IClock clock,
    ILogger<LoanUcRenew> logger
 ) {
-
-   public async Task<Result<LoanDto>> ExecuteAsync(
+   public async Task<Result<Guid>> ExecuteAsync(
       Guid loanId,
       CancellationToken ct = default
    ) {
-      if (loanId == Guid.Empty)
-         return Result<LoanDto>.Failure(LoanErrors.LoanIdRequired);
+      if(loanId == Guid.Empty)
+         return Result<Guid>.Failure(LoanErrors.LoanIdRequired);
 
-      // Load the Loan aggregate for a command operation.
-      // The repository returns a tracked aggregate.
-      var loan = await loanRepository.FindByIdAsync(
-         id: loanId,
-         ct: ct
-      );
-
-      if (loan is null)
-         return Result<LoanDto>.Failure(LoanErrors.LoanNotFound);
-
-      var utcNow = clock.UtcNow;
-
-      // The renewal duration is a domain rule.
-      // The client does not provide the new due date.
-      var newDueDate = loan.DueDate.AddDays(
-         LoanRules.StandardRenewalDays
-      );
+      var loan = await loanRepository.FindByIdAsync(loanId, ct);
+      if(loan is null)
+         return Result<Guid>.Failure(LoanErrors.LoanNotFound);
 
       var resultRenewed = loan.Renew(
-         utcNow: utcNow,
-         newDueDate: newDueDate
+         utcNow: clock.UtcNow,
+         newDueDate: loan.DueDate.AddDays(LoanRules.StandardRenewalDays)
       );
+      if(resultRenewed.IsFailure)
+         return Result<Guid>.Failure(resultRenewed.Error);
 
-      if (resultRenewed.IsFailure)
-         return Result<LoanDto>.Failure(resultRenewed.Error);
+      var rows = await unitOfWork.SaveAllChangesAsync("LoanUcRenew", ct);
+      logger.LogDebug("LoanUcRenew {LoanId} done, rows {Rows}", loan.Id, rows);
 
-      // Save all changes to database.
-      var rows = await unitOfWork.SaveAllChangesAsync(
-         "LoanUcRenew",
-         ct
-      );
-
-      logger.LogDebug(
-         "LoanUcRenew {LoanId} done, rows {Rows}",
-         loan.Id,
-         rows
-      );
-
-      return Result<LoanDto>.Success(
-         loan.ToLoanDto()
-      );
+      return Result<Guid>.Success(loan.Id);
    }
 }
 

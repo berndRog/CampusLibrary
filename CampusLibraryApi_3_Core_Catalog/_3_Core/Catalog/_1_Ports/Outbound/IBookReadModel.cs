@@ -1,72 +1,34 @@
 using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._3_Core.Catalog._2_Application.Dtos;
+using CampusLibraryApi._3_Core.Catalog._2_Application.Enums;
 
 namespace CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 
-// Read model port for catalog book queries.
-//
-// This interface belongs to the query side of the Catalog module.
-// It returns DTOs optimized for reading, searching and displaying books.
-// It does not expose Book aggregates to controllers or clients.
+// Query-side port for Book resources. List, search and detail operations use
+// the same public BookDto so the API contract remains small and predictable.
 public interface IBookReadModel {
 
-   // Finds one book by its technical id.
-   //
-   // By default, only active books are returned.
-   // If includeInactive is true, inactive books are included as well.
-   //
-   // Returns a detail DTO including book metadata, author text,
-   // book items, item counts and lifecycle information.
-   //
-   // BookItemStatus is not an active/inactive flag. It represents the
-   // fachlicher Zustand of a physical copy, for example Available, Lost
-   // or Damaged.
-   //
-   // If the id is empty or no matching book exists for the given id,
-   // a failure result is returned.
-   Task<Result<BookDetailDto>> FindByIdAsync(
+   Task<Result<BookDto>> FindByIdAsync(
       Guid id,
       bool includeInactive = false,
       CancellationToken ct = default
    );
 
-   // Selects books.
-   //
-   // By default, only active books are returned.
-   // If includeInactive is true, inactive books are included as well.
-   //
-   // Returns list item DTOs optimized for overview screens.
-   // The result includes title, subtitle, ISBN, author text and
-   // the number of total and available book items.
-   //
-   // Available book items are determined by BookItemStatus.Available.
-   // Other item statuses such as Unavailable, Lost or Damaged are still
-   // part of the book's inventory, but they are not counted as available.
-   Task<Result<IReadOnlyList<BookListItemDto>>> SelectAllAsync(
+   Task<Result<BookDeactivationInfoDto>> FindDeactivationInfoAsync(
+      Guid id,
+      CancellationToken ct = default
+   );
+
+   Task<Result<IReadOnlyList<BookDto>>> SelectAllAsync(
       bool includeInactive = false,
       CancellationToken ct = default
    );
 
-   // Searches books by one selected search field.
-   //
-   // By default, only active books are searched.
-   // If includeInactive is true, inactive books are included in the search.
-   //
-   // Supported search fields are defined by BookSearchDto / BookSearchField,
-   // for example:
-   //
-   // - Title
-   // - AuthorLastName
-   // - Isbn
-   //
-   // AuthorLastName does not search an Author entity. In the simplified
-   // Catalog model, authors are stored as a comma-separated text on Book.
-   // The concrete read model implementation interprets this text for
-   // author searches.
-   //
-   // If the search text is empty, an empty list is returned.
-   Task<Result<IReadOnlyList<BookListItemDto>>> SearchAsync(
-      BookSearchDto search,
+   // The two HTTP query values are passed directly. A separate DTO would only
+   // repeat the route/query parameters without adding a fachliche meaning.
+   Task<Result<IReadOnlyList<BookDto>>> SearchAsync(
+      BookSearchField searchField,
+      string searchText,
       bool includeInactive = false,
       CancellationToken ct = default
    );

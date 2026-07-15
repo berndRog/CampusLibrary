@@ -133,20 +133,27 @@ public sealed class Book : AggregateRoot {
       return Result<BookItem>.Success(bookItem);
    }
    
-   // Deactivate the Book
+   // Deactivates the Book and removes all physical copies from the aggregate.
+   // The application use case must first verify that no current Loan exists
+   // for any of these BookItems.
    public Result Deactivate(
-       DateTime updatedAt
-    ) {
-       if (!IsActive)
-          return Result.Success();
+      DateTime updatedAt
+   ) {
+      // A repeated request is idempotent only when the book is already in the
+      // complete target state. Older database versions may contain an inactive
+      // Book that still owns BookItems. Calling Deactivate again then completes
+      // the cleanup after all current loans have been returned.
+      if(!IsActive && _bookItems.Count == 0)
+         return Result.Success();
 
-       IsActive = false;
-       
-       var resultUpdated = Touch(updatedAt);
-       if (resultUpdated.IsFailure)
-          return Result.Failure(resultUpdated.Error);
+      var resultUpdated = Touch(updatedAt);
+      if(resultUpdated.IsFailure)
+         return Result.Failure(resultUpdated.Error);
 
-       return Result.Success();
+      _bookItems.Clear();
+      IsActive = false;
+
+      return Result.Success();
    }
    
    private static string NormalizeAuthorsText(

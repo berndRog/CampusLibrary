@@ -33,6 +33,8 @@ public static class DiInfrastructureModule {
       // Adapters
       services.AddScoped<IReaderLoanContract, ReaderLoanContractEf>();
       services.AddScoped<IBookItemLoanContract, BookItemLoanContractEf>();
+      services.AddScoped<ILoanCatalogContract, LoanCatalogContractEf>();
+      services.AddScoped<ILoanReaderContract, LoanReaderContractEf>();
       
       // Repositories
       services.AddScoped<IReaderRepository, ReaderRepositoryEf>();

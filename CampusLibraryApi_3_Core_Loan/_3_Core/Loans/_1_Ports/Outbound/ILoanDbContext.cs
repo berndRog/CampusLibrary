@@ -14,6 +14,9 @@ public interface ILoanDbContext {
 
    // Adds multiple loan aggregates to the persistence context.
    void AddRange(IEnumerable<Loan> loans);
+
+   // Removes one current loan from the persistence context.
+   void Remove(Loan loan);
 }
 
 /*
