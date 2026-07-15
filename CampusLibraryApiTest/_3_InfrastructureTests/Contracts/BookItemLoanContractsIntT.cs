@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
+using CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
 using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Catalog._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Errors;

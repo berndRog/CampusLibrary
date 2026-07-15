@@ -1,5 +1,4 @@
-using CampusLibraryApi._2_BuildingBlocks._2_Application.Contracts;
-
+using CampusLibraryApi._2_BuildingBlocks._2_Application.Dtos;
 namespace CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
 
 // Contract used by the Loans module to ask for loan-relevant reader data.
@@ -9,6 +8,13 @@ public interface IReaderLoanContract {
    // Finds an active reader for a loan operation.
    // Returns failure if the reader does not exist or is not active.
    Task<Result<ReaderLoanInfoDto>> FindReaderForLoanAsync(
+      Guid readerId,
+      CancellationToken ct
+   );
+
+   // Finds reader data for displaying an already existing loan.
+   // Existing loans remain readable even if the Reader was deactivated later.
+   Task<Result<ReaderLoanInfoDto>> FindReaderForExistingLoanAsync(
       Guid readerId,
       CancellationToken ct
    );

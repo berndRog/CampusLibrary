@@ -1,4 +1,4 @@
-using CampusLibraryApi._2_BuildingBlocks._2_Application.Contracts;
+using CampusLibraryApi._2_BuildingBlocks._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;

@@ -1,11 +1,12 @@
 using System.Runtime.CompilerServices;
 using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
-using CampusLibraryApi._2_BuildingBlocks._2_Application.Contracts;
 using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Catalog._3_Domain.Enums;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Errors;
 using Microsoft.EntityFrameworkCore;
+using CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
+using CampusLibraryApi._2_BuildingBlocks._2_Application.Dtos;
 [assembly: InternalsVisibleTo("CampusLibraryApiTest")]
 namespace CampusLibraryApi._4_Infrastructure.Persistence.Contracts;
 

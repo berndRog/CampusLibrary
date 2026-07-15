@@ -18,16 +18,16 @@
     <PackageReference Include="Asp.Versioning.Mvc" Version="10.0.0"/>
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="10.0.0"/>
     <!-- Swagger -->
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7"/>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
     <!-- Entity Framework Core -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9"/>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
     <!-- SQLite provider for EF Core -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.9"/>
-    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="[3.50.3]" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.10" />
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
   </ItemGroup>
 
   <!-- Link shared logging files from solution-level Shared/Logging. -->
