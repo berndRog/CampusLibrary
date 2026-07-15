@@ -3,7 +3,6 @@ using CampusLibraryApi;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._4_Infrastructure.Persistence.Database;
 using CampusLibraryApiTest.TestInfrastructure;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -26,11 +25,14 @@ public sealed class TestBaseFactory : WebApplicationFactory<Program> {
    private string _dbPath = string.Empty;
    private DbConnection? _dbConnection;
 
-   public string TestSubject { get; set; } = "11111111-a224-492b-bb8f-b4bac23d7c88";
-   public string TestUsername { get; set; } = "j.doe@mail.local";
+   public string TestSubject { get; set; } = "99000000-0000-0000-0000-000000000000";
+   public string TestUsername { get; set; } = "r.reader@library.local";
    public DateTime TestCreatedAt { get; set; } =
       new(2025, 01, 01, 00, 00, 00, DateTimeKind.Utc);
    public int TestAdminRights { get; set; }
+   public bool TestIsAuthenticated { get; set; } = true;
+   public bool TestIsReader { get; set; } = true;
+   public bool TestIsEmployee { get; set; } = false;
 
    public TestBaseFactory(
       DbMode dbMode,
@@ -110,29 +112,22 @@ public sealed class TestBaseFactory : WebApplicationFactory<Program> {
          // Seed helpers used by controller/end-to-end tests
          services.AddScoped<TestSeed>();
 
-         // services.RemoveAll(typeof(IIdentityGateway));
-         // services.AddScoped<IIdentityGateway>(_ => new FakeIdentityGateway {
-         //       Subject = TestSubject, 
-         //       Username = TestUsername, 
-         //       CreatedAt =  TestCreatedAt, 
-         //       AdminRights =  TestAdminRights
-         //    });
-
-         // ---- Fake auth for tests ----
-         // Register test auth scheme (do NOT try to register "Bearer")
-         services.AddAuthentication()
-            .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(
-               TestAuthHandler.SchemeName, _ => { });
-
-         // Force defaults LAST (this is the important bit for [Authorize])
-         services.PostConfigureAll<AuthenticationOptions>(o => {
-            o.DefaultScheme = TestAuthHandler.SchemeName;
-            o.DefaultAuthenticateScheme = TestAuthHandler.SchemeName;
-            o.DefaultChallengeScheme = TestAuthHandler.SchemeName;
+         // Replace the production DevIdentityGateway with a configurable
+         // test adapter. It simulates the same IIdentityGateway contract
+         // without requiring a client, bearer token or IA server.
+         services.RemoveAll<IIdentityGateway>();
+         services.AddScoped<IIdentityGateway>(_ => new FakeIdentityGateway {
+            Subject = TestSubject,
+            Username = TestUsername,
+            CreatedAt = TestCreatedAt,
+            AdminRights = TestAdminRights,
+            IsAuthenticated = TestIsAuthenticated,
+            IsReader = TestIsReader,
+            IsEmployee = TestIsEmployee
          });
 
-         // Important: ensures authorization sees an authenticated user
-         services.AddAuthorization();
+         // Part 5 has no authentication middleware. Identity is supplied
+         // exclusively through the configurable IIdentityGateway test adapter.
       });
    }
 

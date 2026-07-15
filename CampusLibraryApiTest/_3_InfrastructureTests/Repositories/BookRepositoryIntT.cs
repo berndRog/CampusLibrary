@@ -46,7 +46,6 @@ public sealed class BookRepositoryIntT : TestBaseIntegration {
       // Repository must load child entities needed by domain methods.
       actualBook.BookItems.Should().HaveCount(book1.BookItems.Count);
 
-//    actualBook.BookItems.Should().BeEquivalentTo(book1.BookItems.Select(bi => bi.InventoryNumber));
    }
 
    [Fact]
@@ -105,7 +104,7 @@ public sealed class BookRepositoryIntT : TestBaseIntegration {
       // Assert
       exists.Should().BeFalse();
    }
-   
+
    [Fact]
    public async Task AddRange_persists_multiple_books_with_items() {
       using var scope = Root.CreateDefaultScope();
@@ -206,6 +205,7 @@ public sealed class BookRepositoryIntT : TestBaseIntegration {
       // Assert
       actualBook.Should().NotBeNull();
       actualBook!.IsActive.Should().BeFalse();
+      actualBook.BookItems.Should().BeEmpty();
       actualBook.UpdatedAt.Should().Be(updatedAt);
    }
 }

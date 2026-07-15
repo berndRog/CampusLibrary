@@ -2,10 +2,10 @@ using System.Runtime.CompilerServices;
 using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
 using CampusLibraryApi._2_BuildingBlocks._2_Application.Dtos;
-using CampusLibraryApi._3_Core.Loans._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Readers._2_Application.Mappings;
 using Microsoft.EntityFrameworkCore;
+using CampusLibraryApi._2_BuildingBlocks._3_Domain.Errors;
 
 [assembly: InternalsVisibleTo("CampusLibraryApiTest")]
 namespace CampusLibraryApi._4_Infrastructure.Persistence.Contracts;
@@ -17,7 +17,7 @@ internal sealed class ReaderLoanContractEf(
 ) : IReaderLoanContract {
 
    // Finds loan-relevant information for creating a new loan.
-   // The Reader must exist, be active and have a completed profile.
+   // The Reader must exist and be active.
    public async Task<Result<ReaderLoanInfoDto>> FindReaderForLoanAsync(
       Guid readerId,
       CancellationToken ct
@@ -36,7 +36,7 @@ internal sealed class ReaderLoanContractEf(
          return Result<ReaderLoanInfoDto>.Failure(
             CommonErrors.ReaderIsDeactivated
          );
-      
+
 
       return result;
    }
@@ -95,8 +95,8 @@ Reader-Entity zugreifen. Es fragt stattdessen diesen Contract.
 Der Contract unterscheidet zwei fachlich verschiedene Anwendungsfälle:
 
 1. Neue Ausleihe
-   FindReaderForLoanAsync verlangt einen aktiven Reader mit vollständigem
-   Profil. Ein deaktivierter Reader darf nichts Neues ausleihen.
+   FindReaderForLoanAsync verlangt einen aktiven Reader. Ein deaktivierter
+   Reader darf nichts Neues ausleihen.
 
 2. Bestehende Ausleihe lesen
    FindReaderForExistingLoanAsync liefert auch einen inzwischen deaktivierten

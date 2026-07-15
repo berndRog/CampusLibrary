@@ -50,8 +50,7 @@ Der Use Case lädt ein Loan-Aggregate über das Repository. Die fachliche
 Änderung erfolgt über die Domain-Methode Renew.
 
 Die Domäne prüft die Regeln:
-- Die Ausleihe muss aktiv sein.
-- Eine zurückgegebene Ausleihe darf nicht verlängert werden.
+- Der Loan muss noch vorhanden sein.
 - Eine überfällige Ausleihe darf nicht verlängert werden.
 - Die maximale Anzahl von Verlängerungen darf nicht überschritten werden.
 

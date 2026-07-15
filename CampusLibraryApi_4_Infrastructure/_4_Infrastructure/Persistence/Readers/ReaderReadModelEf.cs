@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
 using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
-using CampusLibraryApi._3_Core.Loans._3_Domain.Errors;
+using CampusLibraryApi._2_BuildingBlocks._2_Application.Identity;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Readers._2_Application.Mappings;
@@ -9,6 +9,7 @@ using CampusLibraryApi._3_Core.Readers._3_Domain.Entities;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
+using CampusLibraryApi._2_BuildingBlocks._3_Domain.Errors;
 namespace CampusLibraryApi._4_Infrastructure.Persistence.Readers;
 
 // EF Core implementation of the reader read model.
@@ -18,13 +19,10 @@ internal sealed class ReaderReadModelEf(
    IIdentityGateway identityGateway,
    IReaderDbContext readerDbContext
 ) : IReaderReadModel {
-   
+
    public async Task<Result<ReaderDto>> FindMeAsync(CancellationToken ct) {
-      
-      if (!identityGateway.IsReader)
-         return Result<ReaderDto>.Failure(CommonErrors.AccessNotAllowed);
-      
-      // subject from Gateway
+
+      // Validate the configured technical identity and obtain its stable subject.
       var resultSubject = IdentitySubject.Check(identityGateway);
       if (resultSubject.IsFailure)
          return Result<ReaderDto>.Failure(resultSubject.Error);
@@ -36,12 +34,12 @@ internal sealed class ReaderReadModelEf(
          .Where(c => c.Subject == subject)    // filter by subject
          .Select(ReaderToDto)                 // project to ReaderDto (map)
          .SingleOrDefaultAsync(ct);
-      
+
       return readerDto is null
-         ? Result<ReaderDto>.Failure(CommonErrors.NotProvisioned)   
+         ? Result<ReaderDto>.Failure(CommonErrors.NotProvisioned)
          : Result<ReaderDto>.Success(readerDto);
    }
-   
+
    // Finds a reader by technical identifier.
    // By default, inactive readers are filtered out.
    public async Task<Result<ReaderDto>> FindByIdAsync(
@@ -93,7 +91,7 @@ internal sealed class ReaderReadModelEf(
       if(resultEmailVo.IsFailure)
          return Result<ReaderDto>.Failure(resultEmailVo.Error);
       var emailVo = resultEmailVo.Value;
-         
+
       ReaderDto? dto = await readerDbContext.Readers
          .AsNoTracking()
          .Where(reader => reader.EmailVo == emailVo )
@@ -123,7 +121,7 @@ internal sealed class ReaderReadModelEf(
 
       return Result<IReadOnlyList<ReaderDto>>.Success(readers);
    }
-   
+
    // DTO projection used by EF Core.
    // Because this is an expression, EF Core can translate the projection
    // into SQL instead of loading full aggregates and mapping them in memory.
@@ -137,7 +135,7 @@ internal sealed class ReaderReadModelEf(
          IsActive: reader.IsActive,
          Subject: reader.Subject
       );
-   
+
 }
 
 /*

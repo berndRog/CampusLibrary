@@ -47,6 +47,6 @@ und lesenden Projektionen sichtbar.
 Wichtig ist außerdem: Der Client liefert bei BorrowAsync keine Leihdauer.
 Die Leihdauer ist eine fachliche Regel des Loans-Moduls.
 
-Loans besitzen kein IsActive-Flag. Der fachliche Zustand wird über
-LoanStatus modelliert. Eine offene Ausleihe hat den Status Borrowed.
+Loans besitzen kein IsActive-Flag und keinen Rückgabestatus. Ein vorhandener
+Loan ist eine aktuelle Ausleihe; ReturnAtDeskAsync löscht ihn.
 */

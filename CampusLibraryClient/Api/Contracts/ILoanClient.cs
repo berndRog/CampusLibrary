@@ -5,11 +5,24 @@ namespace CampusLibraryClient.Api.Contracts;
 
 public interface ILoanClient {
 
-   Task<Result<IEnumerable<LoanListItemDto>>> GetBorrowedAsync(
+   // Administrative list of all current loans.
+   Task<Result<IEnumerable<LoanDto>>> GetBorrowedAsync(
       CancellationToken ct = default
    );
 
-   Task<Result<LoanDetailDto>> GetByIdAsync(
+   // Reader self-service list. The API derives the Reader from its configured DevIdentity subject.
+   Task<Result<IEnumerable<LoanDto>>> GetMyBorrowedAsync(
+      CancellationToken ct = default
+   );
+
+   // Administrative loan details.
+   Task<Result<LoanDto>> GetByIdAsync(
+      Guid id,
+      CancellationToken ct = default
+   );
+
+   // Reader self-service loan details.
+   Task<Result<LoanDto>> GetMyByIdAsync(
       Guid id,
       CancellationToken ct = default
    );
@@ -19,12 +32,25 @@ public interface ILoanClient {
       CancellationToken ct = default
    );
 
-   Task<Result<LoanDto>> ReturnAtDeskAsync(
+   // Reader self-service borrow. The API derives the ReaderId from its configured DevIdentity subject.
+   Task<Result<LoanDto>> BorrowMyAsync(
+      LoanBorrowMeDto dto,
+      CancellationToken ct = default
+   );
+
+   Task<Result<bool>> ReturnAtDeskAsync(
       Guid id,
       CancellationToken ct = default
    );
 
+   // Administrative renewal endpoint.
    Task<Result<LoanDto>> RenewAsync(
+      Guid id,
+      CancellationToken ct = default
+   );
+
+   // Reader self-service renewal endpoint.
+   Task<Result<LoanDto>> RenewMyAsync(
       Guid id,
       CancellationToken ct = default
    );

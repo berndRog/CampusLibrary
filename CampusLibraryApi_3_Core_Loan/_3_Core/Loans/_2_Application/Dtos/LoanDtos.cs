@@ -33,7 +33,7 @@ public sealed record LoanCreateDto(
    string? Id = null
 );
 
-// ReaderId is resolved server-side from the authenticated token subject.
+// ReaderId is resolved server-side through IIdentityGateway.
 // Id remains optional to support deterministic tests.
 public sealed record LoanBorrowMeDto(
    Guid BookItemId,
