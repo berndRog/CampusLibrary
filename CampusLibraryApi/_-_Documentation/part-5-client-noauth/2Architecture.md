@@ -1,348 +1,593 @@
-# Architecture: CampusLibrary Part 5 — Client without active Auth
+# Architecture: CampusLibrary Part 5 — Client without real AuthN
 
-This document describes the architecture of Part 5 of the `CampusLibrary` project.
-
-Part 5 adds a Blazor SSR client to the modular CampusLibrary API. The API still consists of the Readers, Catalog and Loans modules from Part 4. The client consumes the API through HTTP and does not reference the API core projects.
+This document describes the current architecture of branch `part-5/client-noauth`.
 
 German version: [2Architecture-ger.md](2Architecture-ger.md)
 
 ## Architectural goal
 
-Part 5 makes the following concepts visible:
+Part 5 should already be as close as practical to the business structure of Part 6, without requiring real authentication through the IdentityAccessServer.
+
+The central separation is:
 
 ```text
-backend API is consumed by a real web client
-frontend and backend remain separated
-API clients encapsulate HTTP access
-DTOs model the transport boundary
-Result<T> and ErrorAlert encapsulate error handling
-Bootstrap provides the UI layout
-DevIdentity simulates UI perspectives without real AuthN/AuthZ
+business use of identity stays the same
+the technical identity source is different
 ```
+
+```text
+Part 5:
+appsettings -> DevIdentityGateway -> IIdentityGateway
+
+Part 6:
+access token -> claims/HttpContext adapter -> IIdentityGateway
+```
+
+This allows subject-based use cases and `/me` endpoints to be developed and tested in Part 5.
 
 ## Solution view
 
 ```text
 CampusLibraryApi
-├─ CampusLibraryApi_1_Web
-├─ CampusLibraryApi_2_BuildingBlocks
-├─ CampusLibraryApi_3_Core_Readers
-├─ CampusLibraryApi_3_Core_Catalog
-├─ CampusLibraryApi_3_Core_Loan
-├─ CampusLibraryApi_4_Infrastructure
-└─ CampusLibraryApiTest
+  Composition Root, configuration, hosting
+
+CampusLibraryApi_1_Web
+  controllers
+  ProblemDetails mapping
+  API-side DevIdentity options and adapter
+
+CampusLibraryApi_2_BuildingBlocks
+  Result / Result<T>
+  DomainError and shared errors
+  IIdentityGateway
+  IClock and IUnitOfWork
+  true BC-to-BC contracts and their small DTOs
+
+CampusLibraryApi_3_Core_Readers
+  Reader aggregate
+  Reader use cases
+  Reader read-model ports
+  Reader HTTP DTOs
+
+CampusLibraryApi_3_Core_Catalog
+  Book and BookItem
+  Catalog use cases
+  Catalog read-model ports
+  Catalog HTTP DTOs
+
+CampusLibraryApi_3_Core_Loan
+  Loan aggregate
+  Loan use cases
+  Loan read-model ports
+  Loan HTTP DTOs
+
+CampusLibraryApi_4_Infrastructure
+  EF Core
+  repositories
+  read models
+  cross-module contract adapters
 
 CampusLibraryClient
+  Blazor SSR
+  UI perspective through DevCurrentUserProvider
+  own HTTP clients and transport DTOs
+
+IdentityAccessServer
+  prepared, not actively involved in Part 5
 ```
 
-The client is intentionally a separate project.
+## Dependency rule
+
+Dependencies point inward:
 
 ```text
-CampusLibraryClient -> HTTP -> CampusLibraryApi
-CampusLibraryClient -/-> Core_Readers
-CampusLibraryClient -/-> Core_Catalog
-CampusLibraryClient -/-> Core_Loan
+Composition Root
+   ↓
+Web / Infrastructure
+   ↓
+Core modules / BuildingBlocks
+```
+
+Core code does not know:
+
+```text
+HttpContext
+ClaimsPrincipal
+JWT libraries
+IConfiguration
+Blazor
+EF Core implementations
+```
+
+The client does not know:
+
+```text
+API core projects
+domain aggregates
+EF Core entities
+repository implementations
+```
+
+## Composition Root and Web module
+
+`CampusLibraryApi` is the executable project and may reference `CampusLibraryApi_1_Web`.
+
+The Web module must not reference the Composition Root. Therefore the technical options classes live next to the adapter in the Web project:
+
+```text
+CampusLibraryApi_1_Web/_1_Web/Security
+├─ DevIdentityOptions.cs
+├─ DevIdentityGateway.cs
+└─ DevIdentityExtension.cs
+```
+
+Configuration values remain in the executable project:
+
+```text
+CampusLibraryApi/appsettings.json
+```
+
+Registration is initiated by the Composition Root through a Web extension:
+
+```text
+builder.Services.AddDevIdentityGateway(builder.Configuration)
+```
+
+This avoids a cyclic project dependency.
+
+## API-side DevIdentity
+
+The API simulates a technical identity from its own configuration.
+
+```text
+appsettings.json
+   ↓ bind
+DevIdentityOptions
+   ↓ read
+DevIdentityGateway
+   ↓ implements
+IIdentityGateway
+```
+
+The adapter exposes:
+
+```text
+Subject
+Username
+CreatedAt
+AdminRights
+IsAuthenticated
+IsReader
+IsEmployee
+```
+
+The API does not accept a `ReaderId` from the client for Reader self-service:
+
+```text
+Subject
+   ↓
+ReaderRepository.FindBySubjectAsync(...)
+   ↓
+business Reader
+```
+
+## IIdentityGateway as a stable port
+
+`IIdentityGateway` lives in BuildingBlocks because use cases need technical identity information but must not know how it was obtained.
+
+```csharp
+public interface IIdentityGateway {
+   string Subject { get; }
+   string Username { get; }
+   DateTime CreatedAt { get; }
+   int AdminRights { get; }
+   bool IsAuthenticated { get; }
+   bool IsReader { get; }
+   bool IsEmployee { get; }
+}
+```
+
+`AdminRights` remains for compatibility with the later IA-server token. CampusLibrary does not evaluate this bitmask. Part 5 sets it to `0`.
+
+## IdentitySubject
+
+Shared application logic validates identity through:
+
+```text
+IdentitySubject.Check(IIdentityGateway)
+```
+
+Checks:
+
+```text
+1. IsAuthenticated must be true.
+2. IsReader must be true.
+3. Subject must be present.
+4. Subject must be no longer than 200 characters.
+5. Username must be present.
+6. CreatedAt must not be default.
+7. Subject is returned as an opaque value.
+```
+
+The class does not interpret the subject. A subject may be a GUID, another identifier, or for example `reader-099`.
+
+## Why subject instead of email?
+
+Technical association must not depend on a mutable email address.
+
+```text
+Subject:
+- stable
+- opaque
+- identity anchor
+
+Email:
+- initially the username
+- may be changed as business data
+- unsuitable as permanent association
+```
+
+After a Reader update, different values may therefore exist:
+
+```text
+IIdentityGateway.Username = r.reader@library.local
+Reader.Email              = e.meier@gmx.de
+```
+
+Association remains stable through `Subject`.
+
+## API and client configuration
+
+Client and API each have their own `DevIdentity` section.
+
+```text
+client appsettings -> DevCurrentUserProvider
+API appsettings    -> DevIdentityGateway
+```
+
+There is no automatic synchronization and no HTTP transfer.
+
+For combined scenarios, these values must align:
+
+```text
+ActiveProfile
+API profile Subject and Reader.Subject in the database
+```
+
+Using the same profile shape in both configurations reduces errors. The adapters read different subsets:
+
+```text
+Client reads:
+IsAuthenticated, AccountType, ReaderId, DisplayName, Email
+
+API reads:
+IsAuthenticated, Subject, AccountType, Email, CreatedAt, AdminRights
 ```
 
 ## Client architecture
 
 ```text
-CampusLibraryClient
-├─ Api
-│  ├─ Clients        concrete HTTP clients
-│  ├─ Contracts      client interfaces
-│  ├─ Dtos           transport models
-│  ├─ Errors         ApiError
-│  └─ Auth           prepared token infrastructure
-├─ Core              Result<T>, FeatureFlags, Common
-├─ Extensions        DI registration
-├─ Security          CurrentUserProvider, roles, policies
-├─ Shared            shared helper types
-└─ Ui
-   ├─ Components     layout, navigation, ErrorAlert
-   ├─ Controllers    prepared Auth controllers
-   ├─ Models         UI form models
-   └─ Pages          Razor pages/components
+Razor page / component
+        ↓
+IReaderClient / IBookClient / ILoanClient
+        ↓
+ReaderClient / BookClient / LoanClient
+        ↓
+BaseApiClient
+        ↓
+HttpClient
+        ↓
+CampusLibraryApi
 ```
 
-## Dependency rule
-
-The client knows the API only through HTTP.
-
-```text
-UI Page
-  -> IBookClient / IReaderClient / ILoanClient
-    -> BookClient / ReaderClient / LoanClient
-      -> HttpClient
-        -> CampusLibraryApi
-```
-
-Business rules remain in the API. The client only checks UI-near concerns, such as whether a button should be shown or whether local input is complete.
-
-## Render model
-
-Interactive pages use:
-
-```razor
-@rendermode InteractiveServer
-```
-
-This allows buttons, forms and loading states in Razor components without introducing a separate JavaScript frontend for Part 5.
-
-## API client layer
-
-The three functional client adapters are:
-
-```text
-ReaderClient
-BookClient
-LoanClient
-```
-
-All use the named HttpClient:
-
-```text
-Common.CampusLibraryApiClientName
-```
-
-The base URL comes from:
-
-```json
-{
-  "CampusLibraryApi": {
-    "BaseUrl": "https://localhost:8010/"
-  }
-}
-```
-
-## DTOs as transport boundary
-
-The client defines its own DTOs matching the HTTP API. These DTOs are not domain objects.
-
-Important current DTO decisions:
-
-```text
-BookItemDto contains Id, BookId and Status.
-BookItemDto no longer contains InventoryNumber.
-BookItemAddDto only contains an optional Id.
-LoanListItemDto contains BookItemId but no InventoryNumber.
-LoanDetailDto contains reader email and BookItemId but no InventoryNumber.
-```
-
-The UI may label `BookItemId` as `Inventory number`. The code remains based on `BookItemId`.
+The client API layer converts HTTP responses to `Result<T>` and handles `ProblemDetails` centrally.
 
 ## CurrentUserProvider
 
-Part 5 separates the current user perspective through an interface:
-
-```text
-ICurrentUserProvider
-```
+The UI depends only on `ICurrentUserProvider`.
 
 Implementations:
 
 ```text
-DevCurrentUserProvider       active Part 5 simulation
-ClaimsCurrentUserProvider    prepared for real AuthN
-AnonymousCurrentUserProvider fallback/no-user case
+DevCurrentUserProvider       Part 5
+ClaimsCurrentUserProvider    prepared for Part 6
+AnonymousCurrentUserProvider fallback
 ```
 
-`DevCurrentUserProvider` reads the active profile from `appsettings.json`.
-
-Examples:
+The client selects the implementation through feature flags:
 
 ```text
-ReaderRita      AccountType=reader, ReaderId set
-EmployeeAdmin   AccountType=employee, ReaderId=null
+AuthNEnabled
+DevIdentityEnabled
+ApiAccessTokenEnabled
+AuthZEnabled
 ```
 
-This information only controls the UI perspective. It does not replace real authorization.
-
-## UI perspectives
-
-### Reader
-
-Readers can:
+Part 5 configuration:
 
 ```text
-view catalog
-search books
-borrow a book if an item is actually available
-view own loans
-open loan details
+AuthNEnabled          = false
+DevIdentityEnabled    = true
+ApiAccessTokenEnabled = false
+AuthZEnabled          = false
 ```
 
-### Employee
+## No identity transfer from the client
 
-Employees can:
+Part 5 intentionally uses none of the following:
 
 ```text
-view readers list
-view catalog including inactive books
-create book
-add item to active book
-deactivate active book
-view loans
-open loan details
-renew loan
-return loan
+Authorization: Bearer ...
+X-Dev-Subject
+X-Dev-Username
+X-Dev-Account-Type
 ```
 
-## Why reader creation is not in the client
+The client controls only its UI perspective. The API determines its technical identity independently from its own configuration.
 
-Creating a reader is intentionally not implemented as an employee function in Part 5.
+This also allows direct `.http` tests without the client and without the IdentityAccessServer.
 
-The target business architecture for later parts is:
+## DTOs as transport boundary
+
+Public HTTP DTOs belong to their modules:
 
 ```text
-technical user in IdentityAccessServer
-  -> subject and email
-  -> reader provisioning in CampusLibraryApi
-  -> reader completes first name and last name
+Readers/_2_Application/Dtos/ReaderDtos.cs
+Catalog/_2_Application/Dtos/CatalogDtos.cs
+Loans/_2_Application/Dtos/LoanDtos.cs
 ```
 
-A Part 5 form `Create reader` would teach the wrong flow. Therefore readers remain seed/test data in Part 5.
+The client owns structurally matching copies:
+
+```text
+CampusLibraryClient/Api/Dtos
+```
+
+There is no shared `CampusLibrary.Contracts` project. This avoids coupling every module and the client to one central DTO package.
+
+## BC-to-BC contracts
+
+Only business communication between modules lives in BuildingBlocks.
+
+```text
+Catalog -> Loans:
+IBookItemLoanContract
+BookItemLoanInfoDto
+
+Loans -> Catalog:
+ILoanCatalogContract
+CurrentBookItemLoanInfoDto
+
+Readers -> Loans:
+IReaderLoanContract
+ReaderLoanInfoDto
+
+Loans -> Readers:
+ILoanReaderContract
+```
+
+A module receives only the information it actually needs. It never accesses another module's tables or aggregates directly.
+
+## Reader architecture
+
+Query side:
+
+```text
+IReaderReadModel
+- SelectAllAsync
+- FindByIdAsync
+- FindByEmailAsync
+- FindMeAsync for internal self-service resolution
+```
+
+Command side:
+
+```text
+IReaderUseCases
+- CreateAsync
+- UpdateMeAsync
+- DeactivateAsync
+```
+
+The self-service update flow is:
+
+```text
+PUT /readers/me/update
+        ↓
+ReaderController
+        ↓
+IReaderUseCases.UpdateMeAsync
+        ↓
+ReaderUcUpdateMe
+        ↓
+IdentitySubject.Check
+        ↓
+load Reader by Subject
+        ↓
+validate optional values
+        ↓
+Reader.UpdateProfile
+        ↓
+IUnitOfWork.SaveAllChangesAsync
+```
+
+The client sends no ReaderId. Therefore it cannot choose which Reader is updated.
 
 ## Catalog architecture
 
-The catalog uses:
+`Book` is the aggregate for bibliographic data and its items.
 
 ```text
-BooksList.razor        list, search, perspective-dependent actions
-BookCreate.razor       create book
-BookItemAdd.razor      add book item
-BookDeactivate.razor   deactivate book
-BorrowBook.razor       borrow book from reader perspective
+Book
+├─ bibliographic data
+├─ IsActive
+└─ BookItems
 ```
 
-The catalog table is structured as:
+`BookItem` has a Guid identity and a status:
 
 ```text
-Action | Title | Authors | ISBN | Items | Status
+Available
+Unavailable
+Lost
+Damaged
 ```
 
-The action comes first so it is not cut off on narrow windows. Title and subtitle are shown together in one column because the subtitle qualifies the title.
+`InventoryNumber` is no longer part of the current DTO or UI contract.
 
-## Item identity
-
-The separate inventory number has been removed.
+List and detail projections were unified in `BookDto`. Old types such as these are gone:
 
 ```text
-BookItem.Id is unique.
+BookListItemDto
+BookDetailDto
+BookSearchDto
 ```
 
-The UI still labels this id as inventory number:
+## Deactivating a book
+
+Before deactivation, Catalog asks Loans through `ILoanCatalogContract` whether current Loans exist for BookItems.
 
 ```text
-BookItemId -> Inventory number in the UI
+Catalog
+   ↓ ILoanCatalogContract
+Loans
 ```
 
-This avoids a duplicate identity and keeps the model simpler.
-
-## Borrow architecture
-
-`BorrowBook.razor` loads:
+The deactivation view receives a small projection containing:
 
 ```text
-BookDetailDto with BookItems
-currently borrowed loans
+BookItemId
+ReaderEmail
+DueDate
 ```
 
-From this, the UI calculates which items are actually available:
+Catalog receives no Loan entities and no direct access to the Loans table.
+
+## Loan architecture
+
+In the current model a Loan represents an active borrowing process.
 
 ```text
-BookItem.Status == Available
-and
-BookItem.Id is not part of the currently borrowed BookItemIds
+Loan exists   = currently borrowed
+Loan deleted  = returned
 ```
 
-The borrow request sends:
+Consequences:
 
 ```text
-ReaderId from CurrentUserProvider
-BookItemId of the selected inventory number
+no Loan.Status
+no Loan.ReturnedAt
+no historical returned Loan in the current aggregate
 ```
 
-## Loan details
+`LoanDto` is unified for list and detail views. Old types such as `LoanListItemDto` and `LoanDetailDto` are gone.
 
-Overview pages lead to the detail page:
+## Administrative and self-service Loans
+
+Administrative flows use explicit Reader or Loan IDs:
 
 ```text
-/loans/{loanId}
+GET   /loans
+GET   /loans/{id}
+POST  /loans
+PATCH /loans/{id}/renew
+PATCH /loans/{id}/return-at-desk
 ```
 
-Renew and return belong in the detail view. This keeps the overview simpler and makes the business decision visible before the action.
+Reader self-service uses the technical identity:
+
+```text
+GET   /loans/me
+GET   /loans/me/{id}
+POST  /loans/me
+PATCH /loans/me/{id}/renew
+```
+
+For `POST /loans/me`, `LoanBorrowMeDto` contains only:
+
+```text
+BookItemId
+optional Id for deterministic tests
+```
+
+ReaderId is resolved server-side from the subject.
+
+## Error architecture
+
+Domain and application code return `Result` or `Result<T>` with a `DomainError`.
+
+The Web layer creates `ProblemDetails` and explicitly chooses the status code:
+
+```text
+WebErrorStatus.BadRequest   -> 400
+WebErrorStatus.Unauthorized -> 401
+WebErrorStatus.Forbidden    -> 403
+WebErrorStatus.NotFound     -> 404
+WebErrorStatus.Conflict     -> 409
+```
+
+`DomainProblemDetailsFactory` creates only the ProblemDetails data. The controller remains responsible for the concrete HTTP response.
 
 ## Auth preparation without activation
 
-Part 5 contains prepared classes, but does not activate them:
+The client already contains prepared components:
 
 ```text
+ClaimsCurrentUserProvider
 AccessTokenHandler
-AuthenticationExtensions
-AuthorizationExtensions
 IdentityController
 EntryController
-ClaimsCurrentUserProvider
+ConfigureAuthN
+ConfigureAuthZ
 ```
 
-Feature flags:
+They remain inactive in Part 5 through feature flags.
 
-```json
-{
-  "Features": {
-    "AuthNEnabled": false,
-    "DevIdentityEnabled": true,
-    "ApiAccessTokenEnabled": false,
-    "AuthZEnabled": false
-  }
-}
-```
+The IdentityAccessServer may remain in the solution, but it is not required for a Part 5 run.
 
-Meaning:
+## Transition to Part 6
+
+Part 6 primarily replaces the adapter:
 
 ```text
-AuthNEnabled=false          -> no real login/logout flow
-DevIdentityEnabled=true     -> simulated UI perspective
-ApiAccessTokenEnabled=false -> no access token forwarding
-AuthZEnabled=false          -> no real policy authorization
+Part 5: DevIdentityGateway
+Part 6: IdentityGateway from Claims/HttpContext
 ```
 
-## Planned Auth architecture
-
-Later target architecture:
+The following remain unchanged:
 
 ```text
-Part 6: client signs users in at IdentityAccessServer.
-Part 7: CampusLibraryApi validates bearer tokens.
-Part 8: client sends access token to protected API endpoints.
+IIdentityGateway
+IdentitySubject
+ReaderUcUpdateMe
+Loan /me use cases
+subject-based Reader resolution
+module boundaries
+DTO ownership
 ```
 
-Reader provisioning later:
+Part 6 activates:
 
 ```text
-POST /camplib/v1/readers/me/provision
-Authorization: Bearer <access_token>
-
-API reads subject and email from the token.
-```
-
-Profile update later:
-
-```text
-POST /camplib/v1/readers/me/profile
-Authorization: Bearer <access_token>
-
-Body contains only first name and last name.
+OIDC
+cookie authentication in the SSR client
+access token
+Bearer-token handler
+JWT validation
+claim-based role and subject evaluation
 ```
 
 ## Didactic core
 
-Part 5 should show:
+Part 5 demonstrates all of the following:
 
 ```text
-A modular API backend can be consumed by a real web client.
-The client remains technically separated from the domain core.
-UI perspectives can be simulated for teaching without introducing real security too early.
-Reader provisioning belongs to the later AuthN/AuthZ part.
+- Client and API remain separate applications.
+- UI perspective is not the same as API security.
+- A technical identity can be simulated behind a port.
+- Subject is more stable than a mutable email address.
+- /me endpoints avoid business IDs chosen by the client.
+- Cross-module communication uses small contracts.
+- HTTP DTOs remain owned by their modules.
+- Part 6 can replace the identity source without rewriting business logic.
 ```

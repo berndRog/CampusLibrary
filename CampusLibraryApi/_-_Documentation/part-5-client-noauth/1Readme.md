@@ -1,4 +1,4 @@
-# CampusLibrary — Part 5: Client without active Auth
+# CampusLibrary — Part 5: Client without real AuthN
 
 Teaching project for a modular, DDD-oriented ASP.NET Core Web API and a Blazor SSR client.
 
@@ -6,30 +6,38 @@ German version: [1Readme-ger.md](1Readme-ger.md)
 
 ## Current status
 
-Part 5 adds a real web client to the modular CampusLibrary API from Part 4.
-
-Part 5 contains:
+Part 5 already contains large parts of the business structure used in Part 6. The main difference is the source of the technical identity:
 
 ```text
-Readers
-Catalog
-Loans
-CampusLibraryClient
+Part 5: API-owned DevIdentity from appsettings.json
+Part 6: validated claims from an IdentityAccessServer access token
 ```
 
-The API modules remain the owners of the business rules. The client does not reference the API core projects. It consumes the API through HTTP clients and DTOs.
+In Part 5 the client sends neither a Bearer token nor custom identity headers to the API. Self-service endpoints under `/me` can still be used because the API simulates the current technical user itself.
 
-Known verification state after the BookItem identity change:
+Verified state from July 15, 2026:
 
 ```text
+dotnet clean
+Build succeeded
+
 dotnet build
 Build succeeded
 
 dotnet test
-196 total, 0 failed, 0 skipped
+212 total, 212 succeeded, 0 failed, 0 skipped
 ```
 
-Important: The automated tests currently mainly verify the API. Pure client layout and navigation changes are verified through `dotnet build` and manual browser tests.
+The manual `Loan_Me.http` workflow was also completed successfully:
+
+```text
+GET   /loans/me                    -> 200
+POST  /loans/me                    -> 201
+GET   /loans/me/{id}               -> 200
+PATCH /loans/me/{id}/renew         -> 200
+PATCH /loans/{id}/return-at-desk   -> 204
+GET   /loans/me/{id} after return  -> 404
+```
 
 ## Branch
 
@@ -37,102 +45,249 @@ Important: The automated tests currently mainly verify the API. Pure client layo
 part-5/client-noauth
 ```
 
+The branch is published on GitHub and tracks:
+
+```text
+origin/part-5/client-noauth
+```
+
 ## Goal of Part 5
 
-Part 5 shows how an existing modular API is consumed by a Blazor SSR client.
-
-Real authentication and real API authorization are not part of Part 5.
+Part 5 demonstrates how a modular CampusLibrary API is consumed by a Blazor SSR client and how self-service endpoints can already be prepared without a real IdentityAccessServer.
 
 Active in Part 5:
 
 ```text
 Blazor SSR client
 HTTP access to CampusLibraryApi
+module-specific API clients
+unified transport DTOs
+Readers, Catalog and Loans modules
+reader/employee perspective in the client
+API-side technical DevIdentity
+subject-based Reader association
+Reader self-service update through /readers/me/update
+Loan self-service through /loans/me
+administrative Reader, Catalog and Loan endpoints
+ProblemDetails-based error handling
 Bootstrap-based layout
-readers list
-catalog search
-borrow book from the reader perspective
-create books from the employee perspective
-add book items to active books
-deactivate books
-show loans
-show loan details
-renew and return loans
-central error display
-DevIdentity as simulated UI perspective
+prepared but disabled AuthN/AuthZ infrastructure
 ```
 
 Inactive in Part 5:
 
 ```text
 real registration
-real login
+real login against IdentityAccessServer
 real logout session against IdentityAccessServer
-access token forwarding to the API
-protected API calls
+access-token forwarding to the API
+JWT Bearer authentication in the API
 policy-based API authorization
-reader provisioning from a token
-reader creation in the UI
+Reader provisioning from an access token
+protected API endpoints
 ```
-
-## Why no reader creation in Part 5?
-
-A reader should later not simply be created through an employee form in the client. The correct business flow starts with a technical user in the IdentityAccessServer.
-
-Planned flow for later parts:
-
-```text
-1. A reader registers in the IdentityAccessServer.
-2. Email is initially the username.
-3. IdentityAccessServer creates a technical user with a subject.
-4. CampusLibraryApi provisions a business Reader from that identity.
-5. The reader completes business profile data such as first name and last name.
-```
-
-For this reason, `Create reader` is intentionally not exposed in the Part 5 UI. Readers come from seed and test data in Part 5.
 
 ## Project structure
 
 ```text
-CampusLibraryApi
-CampusLibraryApi_1_Web
-CampusLibraryApi_2_BuildingBlocks
-CampusLibraryApi_3_Core_Readers
-CampusLibraryApi_3_Core_Catalog
-CampusLibraryApi_3_Core_Loan
-CampusLibraryApi_4_Infrastructure
-CampusLibraryApiTest
-CampusLibraryClient
+CampusLibraryApi                 executable API project / Composition Root
+CampusLibraryApi_1_Web           controllers, ProblemDetails, DevIdentity adapter
+CampusLibraryApi_2_BuildingBlocks shared ports, Result, errors, BC contracts
+CampusLibraryApi_3_Core_Readers  Reader domain and application use cases
+CampusLibraryApi_3_Core_Catalog  Catalog domain and application use cases
+CampusLibraryApi_3_Core_Loan     Loan domain and application use cases
+CampusLibraryApi_4_Infrastructure EF Core, repositories, read models, contract adapters
+CampusLibraryApiTest             automated API tests
+CampusLibraryClient              Blazor SSR client
+IdentityAccessServer             prepared, not actively used in Part 5
+Shared                           shared technical helpers
 ```
+
+## Central architectural rule
+
+The business API modules remain the owners of their public HTTP DTOs:
+
+```text
+Readers  -> ReaderDtos.cs
+Catalog  -> CatalogDtos.cs
+Loans    -> LoanDtos.cs
+```
+
+The client references no API core project. It owns transport types with the same JSON shape:
+
+```text
+CampusLibraryClient/Api/Dtos/ReaderDtos.cs
+CampusLibraryClient/Api/Dtos/CatalogDtos.cs
+CampusLibraryClient/Api/Dtos/LoanDtos.cs
+```
+
+Only true cross-module contracts live in BuildingBlocks:
+
+```text
+_1_Ports/Contracts
+_2_Application/Dtos
+```
+
+Examples:
+
+```text
+IBookItemLoanContract
+ILoanCatalogContract
+ILoanReaderContract
+IReaderLoanContract
+BookItemLoanInfoDto
+CurrentBookItemLoanInfoDto
+ReaderLoanInfoDto
+```
+
+## Two separate DevIdentity uses
+
+Part 5 has a DevIdentity in the client and a DevIdentity in the API. Both read their own `appsettings.json`; no identity data is transferred between the applications.
+
+### Client
+
+The client uses `DevCurrentUserProvider` for:
+
+```text
+visible navigation
+reader/employee perspective
+DisplayName
+ReaderId for UI purposes
+email display
+```
+
+### API
+
+The API uses `DevIdentityGateway` as the `IIdentityGateway` implementation for:
+
+```text
+IsAuthenticated
+Subject
+AccountType -> IsReader / IsEmployee
+Email -> Username
+CreatedAt
+AdminRights = 0
+```
+
+Both applications should use the same `ActiveProfile` when they are tested together.
+
+## Example configuration
+
+Using the same profile shape in both applications avoids unnecessary drift. Fields not required by one adapter are ignored there.
+
+```json
+{
+  "Features": {
+    "AuthNEnabled": false,
+    "DevIdentityEnabled": true,
+    "ApiAccessTokenEnabled": false,
+    "AuthZEnabled": false
+  },
+  "DevIdentity": {
+    "ActiveProfile": "ReaderRita",
+    "Profiles": {
+      "ReaderRita": {
+        "IsAuthenticated": true,
+        "Subject": "reader-099",
+        "AccountType": "reader",
+        "ReaderId": "00000099-0000-0000-0000-000000000000",
+        "DisplayName": "Rita Reader",
+        "Email": "r.reader@library.local",
+        "CreatedAt": "2025-01-01T00:00:00Z",
+        "AdminRights": 0
+      },
+      "EmployeeAdmin": {
+        "IsAuthenticated": true,
+        "Subject": "employee-admin",
+        "AccountType": "employee",
+        "ReaderId": null,
+        "DisplayName": "Admin",
+        "Email": "admin@mail.local",
+        "CreatedAt": "2025-01-01T00:00:00Z",
+        "AdminRights": 0
+      }
+    }
+  }
+}
+```
+
+Important:
+
+```text
+DevIdentity.Subject must exactly match Reader.Subject in the database.
+```
+
+For Rita in the manual test state:
+
+```text
+Subject  = reader-099
+ReaderId = 00000099-0000-0000-0000-000000000000
+```
+
+Subject and ReaderId are different identifiers.
+
+The email address may be changed later. Therefore a Reader is resolved by the stable subject, not by email.
+
+## API-side technical identity
+
+The Part 5 data flow is:
+
+```text
+CampusLibraryApi/appsettings.json
+        ↓
+DevIdentityOptions
+        ↓
+DevIdentityGateway
+        ↓
+IIdentityGateway
+        ↓
+IdentitySubject.Check(...)
+        ↓
+load Reader by Subject
+        ↓
+/readers/me/update and /loans/me
+```
+
+`IdentitySubject.Check(...)` verifies:
+
+```text
+the user is simulated as authenticated
+the user is a Reader
+Subject is present
+Subject is no longer than 200 characters
+Username is present
+CreatedAt is valid
+```
+
+`AdminRights` remains in the port for Part 6 compatibility. CampusLibrary does not evaluate it as a business permission, and Part 5 sets it to `0`.
 
 ## CampusLibraryClient
 
-The client is a Blazor Server-Side Rendering application.
+The client is a Blazor SSR application with interactive server components.
 
 Important concepts:
 
 ```text
-Razor components
-Interactive Server Render Mode for interactive pages
+Razor Components
+Interactive Server Render Mode
 module-specific API clients
-DTOs for API transport
-Result<T> for client-side success/failure handling
-ProblemDetails-based error display
-Bootstrap utilities instead of custom layout CSS
-DevIdentity for reader/employee perspective
-prepared but inactive AuthN/AuthZ infrastructure
+Result<T> for success/failure handling
+ProblemDetails-based error messages
+Bootstrap utilities
+ICurrentUserProvider as UI abstraction
+prepared AccessTokenHandler, inactive in Part 5
 ```
 
-Main client folders:
+Important folders:
 
 ```text
 CampusLibraryClient
 ├─ Api
+│  ├─ Auth
 │  ├─ Clients
 │  ├─ Contracts
 │  ├─ Dtos
-│  ├─ Errors
-│  └─ Auth
+│  └─ Errors
 ├─ Core
 ├─ Extensions
 ├─ Security
@@ -148,79 +303,23 @@ CampusLibraryClient
 
 ```text
 /                                      home page
-/readers                                readers list
-/catalog/books                          catalog
-/catalog/books/create                   create book
-/catalog/books/{bookId}/items/add       add book item
-/catalog/books/{bookId}/deactivate      deactivate book
-/catalog/books/{bookId}/borrow          borrow book
-/loans                                  loans from employee perspective
-/loans/{loanId}                         loan details
-/my/loans                               loans of the current reader
-/logout                                 demo logout page
-/access-denied                          prepared error page
-/error                                  technical error page
+/readers                               Reader list for employees
+/catalog/books                         catalog
+/catalog/books/create                  create book
+/catalog/books/{bookId}/items/add      add item
+/catalog/books/{bookId}/deactivate     deactivate book
+/catalog/books/{bookId}/borrow         borrow book
+/loans                                 current loans for employees
+/loans/{loanId}                        loan details
+/my/loans                              current Reader's loans
+/logout                                demo/prepared logout page
+/access-denied                         prepared error page
+/error                                 technical error page
 ```
 
-## DevIdentity in Part 5
-
-Part 5 does not use real authentication. To let the UI distinguish between reader and employee perspectives, the client uses DevIdentity.
-
-Example:
-
-```json
-{
-  "Features": {
-    "AuthNEnabled": false,
-    "DevIdentityEnabled": true,
-    "ApiAccessTokenEnabled": false,
-    "AuthZEnabled": false
-  },
-  "DevIdentity": {
-    "ActiveProfile": "EmployeeAdmin",
-    "Profiles": {
-      "ReaderRita": {
-        "IsAuthenticated": true,
-        "AccountType": "reader",
-        "ReaderId": "00000099-0000-0000-0000-000000000000",
-        "DisplayName": "Rita Reader",
-        "Email": "r.reader@library.local"
-      },
-      "EmployeeAdmin": {
-        "IsAuthenticated": true,
-        "AccountType": "employee",
-        "ReaderId": null,
-        "DisplayName": "Admin",
-        "Email": "admin@mail.local"
-      }
-    }
-  }
-}
-```
-
-DevIdentity is not security. It is only a teaching aid for the UI.
-
-## Navigation and layout
-
-The client uses a horizontal Bootstrap menu. The active menu item is highlighted through Bootstrap nav links.
-
-The menu depends on the simulated perspective:
-
-```text
-Reader:
-Home | Catalog | Loans | Logout
-
-Employee:
-Home | Catalog | Readers | Loans | Logout
-```
-
-The home page contains a normal heading and current messages. The layout uses Bootstrap classes such as `container-fluid`, `px-4`, `navbar`, `nav-pills`, `table`, `card`, `row`, `col-*`, `badge` and `btn`.
-
-Custom CSS remains limited to Blazor-specific validation and error display.
+The API already exposes `PUT /readers/me/update`; a complete Reader profile edit page is not yet visible in this client part.
 
 ## API clients per module
-
-The client uses one API client abstraction per functional area:
 
 ```text
 IReaderClient -> ReaderClient
@@ -228,21 +327,7 @@ IBookClient   -> BookClient
 ILoanClient   -> LoanClient
 ```
 
-These clients call the existing CampusLibraryApi routes:
-
-```text
-/camplib/v1/readers
-/camplib/v1/books
-/camplib/v1/loans
-```
-
-The API clients are registered through:
-
-```text
-AddCampusLibraryClients(...)
-```
-
-The base URL is configured in `appsettings.json`:
+The client BaseUrl is configured as:
 
 ```json
 {
@@ -252,121 +337,206 @@ The base URL is configured in `appsettings.json`:
 }
 ```
 
+Part 5 calls the API without a Bearer token.
+
 ## Readers
 
-The Readers page displays readers returned by the API.
-
-Currently displayed:
+The Readers area provides:
 
 ```text
-Name
-Email
-Status
+Reader list
+Reader by id
+Reader by email
+administrative Reader creation
+self-service update of the current Reader
+soft delete / deactivation
 ```
 
-`Subject` is not displayed in the UI. It is a technical identity and belongs to the later AuthN/AuthZ topic.
+The old update endpoint with an explicit ReaderId was replaced:
 
-Readers are not created in the Part 5 UI. This is an intentional teaching decision because the later correct flow uses IdentityAccessServer, subject and provisioning.
+```text
+old: PUT /readers/{id}
+new: PUT /readers/me/update
+```
+
+Client method:
+
+```text
+UpdateMeAsync(ReaderUpdateDto dto)
+```
+
+`ReaderUpdateDto` contains optional values:
+
+```text
+Lastname
+Email
+AddressDto
+```
+
+`null` means: leave the current value unchanged.
 
 ## Catalog
 
-The catalog is visible for readers and employees.
-
-The catalog table uses this business structure:
+Catalog uses one unified `BookDto` for list and detail views:
 
 ```text
-Action | Title | Authors | ISBN | Items | Status
+Id
+AuthorsText
+Title
+Subtitle
+Isbn
+BookItems
+TotalItems
+AvailableItems
+IsActive
 ```
 
-The `Title` column contains title and subtitle together. The subtitle qualifies the title and is therefore not shown as a distant separate column.
-
-The `Items` column shows:
+`BookItemDto` contains:
 
 ```text
-borrowed / total
+Id
+BookId
+Status
 ```
 
-Employee catalog functions:
+An additional `InventoryNumber` is no longer part of the current transport contract. The BookItem identity is its `Guid Id`.
+
+BookItem status values:
 
 ```text
-create book
-add item to active book
-deactivate active book
-show active and inactive books
-```
-
-Reader catalog functions:
-
-```text
-search books
-borrow a book if at least one item is actually available
-```
-
-## BookItem and inventory number
-
-The API no longer has a separate `InventoryNumber` property.
-
-Technically:
-
-```text
-BookItem.Id uniquely identifies an item.
-```
-
-The UI still displays this id using the business label `Inventory number`.
-
-Therefore:
-
-```text
-technical:  BookItemId
-business/UI: Inventory number
+1 = Available
+2 = Unavailable
+3 = Lost
+4 = Damaged
 ```
 
 ## Loans
 
-The loan pages show loans and details.
+Loans uses one unified `LoanDto` for list and detail views.
 
-Important pages:
+A stored Loan always represents a currently existing borrowing process. Therefore the current Loan contract has no `Status` or `ReturnedAt` fields.
+
+Return semantics:
 
 ```text
-/loans          employee perspective: borrowed loans
-/my/loans       reader perspective: own loans
-/loans/{id}     loan details
+PATCH /loans/{id}/return-at-desk
+        ↓
+Loan is deleted
+        ↓
+a later GET returns 404
 ```
 
-Renew and return are executed in the detail view, not directly in the overview. The detail view shows book data, reader data and loan data.
+Reader self-service:
 
-`BookIsActive` and `IsAvailableForLoan` may still exist in the DTO, but they are not central business information in the regular loan detail page. Existing loans should not be made confusing by technical availability flags.
+```text
+GET   /loans/me
+GET   /loans/me/{id}
+POST  /loans/me
+PATCH /loans/me/{id}/renew
+```
+
+Administrative endpoints:
+
+```text
+GET   /loans
+GET   /loans/{id}
+POST  /loans
+PATCH /loans/{id}/renew
+PATCH /loans/{id}/return-at-desk
+```
+
+For `/loans/me`, the client sends no ReaderId. The API resolves the Reader through `IIdentityGateway.Subject`.
 
 ## Error handling
 
-API errors are handled centrally.
+Use cases and read models return `Result` or `Result<T>`.
 
-Important types and components:
+Controllers explicitly map `DomainError.Status` to HTTP responses:
 
 ```text
-BaseApiClient<TClient>
-ApiError
-Result<T>
-ErrorAlert.razor
+BadRequest   -> 400
+Unauthorized -> 401
+Forbidden    -> 403
+NotFound     -> 404
+Conflict     -> 409
 ```
 
-The API returns errors as `ProblemDetails`. The client maps them to `ApiError` and displays them through `ErrorAlert`.
+Errors are returned as `ProblemDetails`. The client handles them centrally in `BaseApiClient`.
 
-## Planned continuation
+## Manual HTTP tests without client or IA server
 
-```text
-Part 6: client AuthN with login/logout against IdentityAccessServer
-Part 7: AuthN/AuthZ in CampusLibraryApi, reader provisioning through token
-Part 8: protected API access from the client using an access token
+Only the running API is required for `/me` tests:
+
+```bash
+dotnet run --project CampusLibraryApi
 ```
 
-Planned reader flow:
+No headers are required:
+
+```http
+GET https://localhost:8010/camplib/v1/loans/me
+Accept: application/json
+```
+
+Preconditions:
 
 ```text
-POST /camplib/v1/readers/me/provision
-- API reads subject and email from the access token.
-- No subject in the body.
+DevIdentity:ActiveProfile = ReaderRita
+ReaderRita.Subject matches Reader.Subject in the database
+required Reader, Book and BookItem test data exist
+```
 
-POST /camplib/v1/readers/me/profile
-- Client only sends business profile data such as first name and last name.
+## Running the projects
+
+API:
+
+```bash
+dotnet run --project CampusLibraryApi
+```
+
+Client:
+
+```bash
+dotnet run --project CampusLibraryClient
+```
+
+Verification:
+
+```bash
+dotnet clean
+dotnet build
+dotnet test
+```
+
+## Continuation in Part 6
+
+Part 6 replaces the technical identity source:
+
+```text
+DevIdentityGateway
+        ↓ replaced by
+claim-/HttpContext-based IIdentityGateway
+```
+
+The following can remain unchanged:
+
+```text
+IIdentityGateway
+IdentitySubject.Check(...)
+subject-based Reader association
+ReaderUcUpdateMe
+/me endpoints
+business use cases
+DTO boundaries
+```
+
+Part 6 adds:
+
+```text
+OIDC login in the client
+cookie session in the SSR client
+access token
+Bearer-token forwarding
+JWT validation in the API
+real claims instead of appsettings values
 ```
