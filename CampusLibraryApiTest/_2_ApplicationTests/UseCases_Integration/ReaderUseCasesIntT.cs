@@ -87,10 +87,10 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
 
    #endregion
 
-   #region ReadUcUpdate
+   #region ReaderUcUpdateMe
 
    [Fact]
-   public async Task UpdateAsync_ok_persists_changes_to_database() {
+   public async Task UpdateMeAsync_ok_persists_changes_to_database() {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var useCases = scope.ServiceProvider.GetRequiredService<IReaderUseCases>();
@@ -99,78 +99,65 @@ public sealed class ReaderUseCasesIntT : TestBaseIntegration {
       var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
 
-      // Arrange
-      var reader = seed.Reader1();
+      // The default FakeIdentityGateway represents Rita Reader.
+      var reader = seed.RitaReader();
 
       repository.Add(reader);
-      await unitOfWork.SaveAllChangesAsync("Reader1 inserted", ct);
+      await unitOfWork.SaveAllChangesAsync("RitaReader inserted", ct);
       unitOfWork.ClearChangeTracker();
 
-      var addressDto = seed.Address4Vo.ToAddressDto();
-
       var dto = new ReaderUpdateDto(
-         Lastname: "Meier",
-         Email: "e.meier@gmx.de",
-         AddressDto: addressDto
+         Lastname: "Reader-Meier",
+         Email: "rita.meier@gmx.de",
+         AddressDto: seed.Address4Vo.ToAddressDto()
       );
 
-      // Act
-      var resultUpdate = await useCases.UpdateAsync(
-         id: reader.Id,
+      var resultUpdate = await useCases.UpdateMeAsync(
          dto: dto,
          ct: ct
       );
 
       resultUpdate.IsSuccess.Should().BeTrue();
-      var updatedReader1Dto = resultUpdate.Value;
+      var updatedReaderDto = resultUpdate.Value;
 
       unitOfWork.ClearChangeTracker();
 
-      // Assert
       var resultFind = await readModel.FindByIdAsync(
          id: reader.Id,
          ct: ct
       );
 
       resultFind.IsSuccess.Should().BeTrue();
-      var actualReader1Dto = resultFind.Value;
-      actualReader1Dto.Should().BeEquivalentTo(updatedReader1Dto);
+      resultFind.Value.Should().BeEquivalentTo(updatedReaderDto);
    }
 
    [Fact]
-   public async Task UpdateAsync_duplicate_email_fails_and_keeps_existing_data() {
+   public async Task UpdateMeAsync_duplicate_email_fails_and_keeps_existing_data() {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
       var useCases = scope.ServiceProvider.GetRequiredService<IReaderUseCases>();
       var repository = scope.ServiceProvider.GetRequiredService<IReaderRepository>();
-      var readModel = scope.ServiceProvider.GetRequiredService<IReaderReadModel>();
       var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
 
-      // Arrange
-      var reader1 = seed.Reader1();
-      var reader2 = seed.Reader2();
+      var currentReader = seed.RitaReader();
+      var otherReader = seed.Reader2();
 
-      repository.AddRange([reader1, reader2]);
-      await unitOfWork.SaveAllChangesAsync("Reader1 and Reader2 inserted", ct);
+      repository.AddRange([currentReader, otherReader]);
+      await unitOfWork.SaveAllChangesAsync("RitaReader and Reader2 inserted", ct);
       unitOfWork.ClearChangeTracker();
 
       var dto = new ReaderUpdateDto(
-         Lastname: "Meier",
-         Email: reader2.EmailVo.Value,
-         AddressDto: reader1.AddressVo.ToAddressDto()
+         Lastname: "Reader-Meier",
+         Email: otherReader.EmailVo.Value,
+         AddressDto: currentReader.AddressVo.ToAddressDto()
       );
 
-      // Act
-      var resultUpdate = await useCases.UpdateAsync(
-         id: reader1.Id,
+      var resultUpdate = await useCases.UpdateMeAsync(
          dto: dto,
          ct: ct
       );
 
-      unitOfWork.ClearChangeTracker();
-
-      // Assert
       resultUpdate.IsFailure.Should().BeTrue();
       resultUpdate.Error.Should().Be(ReaderErrors.EmailAlreadyInUse);
    }

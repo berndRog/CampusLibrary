@@ -44,7 +44,8 @@ public sealed class AccessTokenHandler(
             );
          }
 
-         // Attach the current access token.
+         // The OIDC middleware stores the access token in the authenticated
+         // application ticket because SaveTokens is enabled.
          string? token = await httpCtx.GetTokenAsync("access_token");
 
          if(!string.IsNullOrWhiteSpace(token)) {
@@ -53,18 +54,26 @@ public sealed class AccessTokenHandler(
                parameter: token
             );
 
-            logger.LogDebug("Bearer token present - attaching to outgoing API request.");
+            logger.LogDebug(
+               "Bearer token attached to outgoing API request {Method} {Endpoint}.",
+               request.Method,
+               request.RequestUri?.PathAndQuery
+            );
          }
          else {
-            AppDiagnosticsLogger.LogTokenAttached(
-               logger: logger,
-               hasToken: false,
-               pathAndQuery: request.RequestUri?.PathAndQuery
+            logger.LogWarning(
+               "No access token was found in the application cookie for outgoing API request {Method} {Endpoint}.",
+               request.Method,
+               request.RequestUri?.PathAndQuery
             );
          }
       }
       else {
-         logger.LogDebug("AccessTokenHandler: no HttpContext available for this call.");
+         logger.LogWarning(
+            "No HttpContext is available for outgoing API request {Method} {Endpoint}; no Bearer token can be attached.",
+            request.Method,
+            request.RequestUri?.PathAndQuery
+         );
       }
 
       HttpResponseMessage response = await base.SendAsync(

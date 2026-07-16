@@ -61,7 +61,7 @@ public static class DiTestModules {
       // Reader UseCases
       services.AddScoped<IReaderUseCases, ReaderUseCases>();
       services.AddScoped<ReaderUcCreate>();
-      services.AddScoped<ReaderUcUpdate>();
+      services.AddScoped<ReaderUcUpdateMe>();
       services.AddScoped<ReaderUcDeactivate>();
 
       services.AddScoped<BookUcCreate>();

@@ -11,7 +11,7 @@ public static class DiReaderModule {
    ) {
       services.AddScoped<IReaderUseCases, ReaderUseCases>();
       services.AddScoped<ReaderUcCreate>();
-      services.AddScoped<ReaderUcUpdate>();
+      services.AddScoped<ReaderUcUpdateMe>();
       services.AddScoped<ReaderUcDeactivate>();
 
       return services;

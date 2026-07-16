@@ -75,15 +75,15 @@ public sealed class ReaderClient(
          ct: ct
       );
 
-   // PUT /camplib/v1/readers/{id}
-   public Task<Result<ReaderDto>> UpdateAsync(
-      Guid id,
+   // PUT /camplib/v1/readers/me/update
+   // The API resolves the current Reader through IIdentityGateway.Subject.
+   public Task<Result<ReaderDto>> UpdateMeAsync(
       ReaderUpdateDto dto,
       CancellationToken ct = default
    ) =>
       SendAsync<ReaderDto>(
          send: () => _http.PutAsJsonAsync(
-            requestUri: $"{Base}/readers/{id}",
+            requestUri: $"{Base}/readers/me/update",
             value: dto,
             options: _json,
             cancellationToken: ct
