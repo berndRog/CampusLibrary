@@ -56,6 +56,8 @@ public sealed class BookUcDeactivate(
       if(resultDeactivated.IsFailure)
          return Result<BookDto>.Failure(resultDeactivated.Error);
 
+      // No repository.Update(book) is needed.
+      // The aggregate was loaded by EF Core and is already tracked.
       var rows = await unitOfWork.SaveAllChangesAsync(
          "BookUcDeactivate",
          ct

@@ -1,5 +1,6 @@
 using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
+using CampusLibraryApi._2_BuildingBlocks._2_Application.Identity;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Readers._2_Application.Mappings;

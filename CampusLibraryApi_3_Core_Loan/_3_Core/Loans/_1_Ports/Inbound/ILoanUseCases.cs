@@ -23,3 +23,30 @@ public interface ILoanUseCases {
       CancellationToken ct
    );
 }
+
+/*
+Lernziele und Didaktik
+----------------------
+
+Dieses Interface ist der Inbound-Port des Loans-Moduls.
+
+Ein Inbound-Port beschreibt, welche fachlichen Anwendungsfälle ein Modul
+nach außen anbietet. Der Controller kennt nur dieses Interface und nicht die
+konkrete Implementierung der Use Cases.
+
+Die Methoden sind bewusst als Commands formuliert:
+
+- BorrowAsync legt eine neue Ausleihe an.
+- RenewAsync verlängert eine aktuell ausgeliehene Ausleihe.
+- ReturnAtDeskAsync registriert die Rückgabe eines ausgeliehenen Exemplars.
+
+Leseoperationen stehen hier nicht. Sie gehören in diesem Projekt konsequent
+in ein ReadModel. Dadurch bleibt die Trennung zwischen schreibenden Use Cases
+und lesenden Projektionen sichtbar.
+
+Wichtig ist außerdem: Der Client liefert bei BorrowAsync keine Leihdauer.
+Die Leihdauer ist eine fachliche Regel des Loans-Moduls.
+
+Loans besitzen kein IsActive-Flag. Der fachliche Zustand wird über
+LoanStatus modelliert. Eine offene Ausleihe hat den Status Borrowed.
+*/

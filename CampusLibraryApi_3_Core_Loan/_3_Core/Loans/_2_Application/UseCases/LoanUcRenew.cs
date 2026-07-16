@@ -39,3 +39,28 @@ internal sealed class LoanUcRenew(
       return Result<Guid>.Success(loan.Id);
    }
 }
+
+/*
+Lernziele und Didaktik
+----------------------
+
+Dieser Use Case beschreibt die Verlängerung einer aktiven Ausleihe.
+
+Der Use Case lädt ein Loan-Aggregate über das Repository. Die fachliche
+Änderung erfolgt über die Domain-Methode Renew.
+
+Die Domäne prüft die Regeln:
+- Die Ausleihe muss aktiv sein.
+- Eine zurückgegebene Ausleihe darf nicht verlängert werden.
+- Eine überfällige Ausleihe darf nicht verlängert werden.
+- Die maximale Anzahl von Verlängerungen darf nicht überschritten werden.
+
+Der Client liefert kein neues Rückgabedatum. Die Verlängerungsdauer ist eine
+fachliche Regel des Loans-Moduls und steht in LoanRules.StandardRenewalDays.
+
+Dadurch bleibt die Fachlogik im Anwendungskern und nicht im Controller oder
+im DTO.
+
+Gespeichert wird erst am Ende über IUnitOfWork. Das Repository lädt das
+Aggregate, die Transaktion wird durch UnitOfWork abgeschlossen.
+*/

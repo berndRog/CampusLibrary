@@ -1,6 +1,6 @@
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Errors;
-namespace CampusLibraryApi._2_BuildingBlocks;
+namespace CampusLibraryApi._2_BuildingBlocks._2_Application.Identity;
 
 public static class IdentitySubject {
    public static Result<string> Check(IIdentityGateway identityGateway) {
