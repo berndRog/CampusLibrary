@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
+using CampusLibraryApi._2_BuildingBlocks._2_Application.Identity;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
@@ -130,13 +131,14 @@ internal sealed class ReaderReadModelEf(
    private static readonly Expression<Func<Reader, ReaderDto>> ReaderToDto =
       reader => new ReaderDto(
          Id: reader.Id,
-         Firstname: reader.Firstname,
-         Lastname: reader.Lastname,
+         Firstname: reader.Firstname == string.Empty ? null : reader.Firstname,
+         Lastname: reader.Lastname == string.Empty ? null : reader.Lastname,
          Email: reader.EmailVo.Value,
          AddressDto: reader.AddressVo.ToAddressDto(),
          IsActive: reader.IsActive,
-         Subject: reader.Subject,
-         IsProfileCompleted: reader.Firstname != string.Empty && reader.Lastname != string.Empty
+         IsProfileCompleted: reader.Firstname != string.Empty &&
+                             reader.Lastname != string.Empty &&
+                             reader.AddressVo != null
       );
    
 }

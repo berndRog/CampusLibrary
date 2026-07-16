@@ -198,13 +198,8 @@ Zum Book-Aggregate gehören aktuell:
 BookItem ist kein eigenes Aggregate Root. Ein Exemplar gehört fachlich immer
 zu genau einem Book. Deshalb wird es über AddBookItem am Book angelegt.
 Dadurch kann Book Regeln innerhalb seines Aggregates schützen, zum Beispiel
-dass eine InventoryNumber nicht doppelt in derselben Book-Instanz vorkommt.
-
-Die bibliotheksweite Eindeutigkeit einer InventoryNumber kann Book allein
-nicht prüfen, weil dafür alle Bücher beziehungsweise alle BookItems bekannt
-sein müssen. Diese Prüfung gehört deshalb in den Use Case oder in ein
-Repository und wird zusätzlich durch einen Unique Index in der Datenbank
-abgesichert.
+dass BookItems nur über das zugehörige Book erzeugt werden. Die Id des
+BookItems dient zugleich als eindeutige Exemplarnummer.
 
 Die Beziehung zwischen Book und Author ist eine m:n-Beziehung. Da die
 Zuordnung aktuell keine eigene fachliche Bedeutung und keine eigenen

@@ -127,7 +127,7 @@ else {
 
    private const int AvailableBookItemStatus = 1;
 
-   private BookDetailDto? _book;
+   private BookDto? _book;
 
    private ReaderDto? _readerProfile;
 
@@ -152,7 +152,7 @@ else {
          return;
       }
 
-      Result<BookDetailDto> result = await BookClient.GetByIdAsync(
+      Result<BookDto> result = await BookClient.GetByIdAsync(
          id: BookId
       );
 
@@ -181,7 +181,7 @@ else {
       if(_book is null)
          return;
 
-      Result<IEnumerable<LoanListItemDto>> loanResult = await LoanClient.GetBorrowedAsync();
+      Result<IEnumerable<LoanDto>> loanResult = await LoanClient.GetBorrowedAsync();
 
       if(loanResult.IsFailure || loanResult.Value is null) {
          Error = loanResult.Error;
@@ -190,7 +190,7 @@ else {
          return;
       }
 
-      IReadOnlyList<LoanListItemDto> borrowedLoans =
+      IReadOnlyList<LoanDto> borrowedLoans =
          loanResult.Value.ToList();
 
       HashSet<Guid> borrowedBookItemIds = borrowedLoans
@@ -200,7 +200,7 @@ else {
       IReadOnlyList<BookItemDto> bookItems = _book.BookItems ?? [];
 
       if(_readerProfile is not null) {
-         Result<IEnumerable<LoanListItemDto>> myLoansResult =
+         Result<IEnumerable<LoanDto>> myLoansResult =
             await LoanClient.GetMyBorrowedAsync();
 
          if(myLoansResult.IsFailure || myLoansResult.Value is null) {

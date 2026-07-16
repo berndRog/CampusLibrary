@@ -151,7 +151,7 @@ public sealed class ReadersControllerE2eT : TestBaseEndToEnd {
    public async Task UpdateAsync_endpoint_removed_returns_method_not_allowed() {
       // Arrange
       Guid readerId = default;
-      ReaderUpdateMeDto updateMeDto = default!;
+      ReaderProfileDto updateMeDto = default!;
 
       await Factory.WithScopeAsync(async sp => {
          var repository = sp.GetRequiredService<IReaderRepository>();
@@ -162,7 +162,7 @@ public sealed class ReadersControllerE2eT : TestBaseEndToEnd {
          var reader2 = seed.Reader2();
 
          readerId = reader1.Id;
-         updateMeDto = Mappings.ToReaderUpdateDto(reader2);
+         updateMeDto = Mappings.ToReaderProfileDto(reader2);
 
          repository.Add(reader1);
          await unitOfWork.SaveAllChangesAsync("Reader1 inserted", _ct);

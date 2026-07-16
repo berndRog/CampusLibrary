@@ -228,27 +228,6 @@ public static class CatalogErrors {
          "The book item was not found."
       );
 
-   public static readonly DomainError BookItemInventoryNumberIsRequired =
-      new(
-         WebErrorStatus.BadRequest,
-         "BookItem: InventoryNumberRequired",
-         "An inventory number must be provided."
-      );
-
-   public static readonly DomainError InvalidInventoryNumber =
-      new(
-         WebErrorStatus.BadRequest,
-         "BookItem: InvalidInventoryNumber",
-         "The inventory number is too short or too long (2–40 characters)."
-      );
-
-   public static readonly DomainError BookItemAlreadyExists =
-      new(
-         WebErrorStatus.Conflict,
-         "BookItem: AlreadyExists",
-         "A book item with this inventory number already exists."
-      );
-
    public static readonly DomainError InvalidBookItemStatus =
       new(
          WebErrorStatus.BadRequest,

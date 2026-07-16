@@ -82,6 +82,7 @@ public sealed class ReaderController(
    [HttpGet("readers/{id:guid}", Name = nameof(GetReaderByIdAsync))]
    [Produces("application/json")]
    [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
@@ -102,6 +103,7 @@ public sealed class ReaderController(
       var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
 
       return result.Error.Status switch {
+         WebErrorStatus.BadRequest => BadRequest(problem),
          WebErrorStatus.Unauthorized => Unauthorized(problem),
          WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
          WebErrorStatus.NotFound => NotFound(problem),
@@ -163,6 +165,7 @@ public sealed class ReaderController(
    [HttpGet("readers/me", Name = nameof(GetReaderProfileAsync))]
    [Produces("application/json")]
    [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
@@ -179,6 +182,7 @@ public sealed class ReaderController(
       var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
 
       return result.Error.Status switch {
+         WebErrorStatus.BadRequest => BadRequest(problem),
          WebErrorStatus.Unauthorized => Unauthorized(problem),
          WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
          WebErrorStatus.NotFound => NotFound(problem),
@@ -191,22 +195,21 @@ public sealed class ReaderController(
    /// </summary>
    /// <param name="id">Reader identity.</param>
    /// <param name="ct">Cancellation token.</param>
-   /// <returns>The provisioned or existing current reader profile.</returns>
+   /// <returns>No response body.</returns>
    [Authorize(Policy = CampusLibraryPolicies.ReadersOnly)]
    [HttpPost("readers/me/provision", Name = nameof(CreateReaderMeProvisionAsync))]
-   [Produces("application/json")]
-   [ProducesResponseType<ReaderProvisionMeDto>(StatusCodes.Status200OK)]
+   [ProducesResponseType(StatusCodes.Status204NoContent)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
-   public async Task<ActionResult<ReaderProvisionMeDto>> CreateReaderMeProvisionAsync(
+   public async Task<IActionResult> CreateReaderMeProvisionAsync(
       [FromQuery] string? id,
       CancellationToken ct
    ) {
       var result = await readerUseCases.ProvisionMeAsync(id, ct);
       if(result.IsSuccess)
-         return Ok(result.Value);
+         return NoContent();
 
       var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
 
@@ -220,7 +223,7 @@ public sealed class ReaderController(
    }
 
    /// <summary>
-   ///    Updates firstname and lastname of the currently authenticated reader.
+   ///    Completes the initial profile of the currently authenticated reader.
    /// </summary>
    /// <param name="meDto">Profile data entered by the reader.</param>
    /// <param name="ct">Cancellation token.</param>
@@ -234,8 +237,9 @@ public sealed class ReaderController(
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
    public async Task<ActionResult<ReaderDto>> PutReaderMeProfileAsync(
-      [FromBody] ReaderProfileMeDto meDto,
+      [FromBody] ReaderProfileDto meDto,
       CancellationToken ct
    ) {
       var result = await readerUseCases.UpdateMeProfileAsync(meDto, ct);
@@ -249,18 +253,21 @@ public sealed class ReaderController(
          WebErrorStatus.Unauthorized => Unauthorized(problem),
          WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
          WebErrorStatus.NotFound => NotFound(problem),
+         WebErrorStatus.Conflict => Conflict(problem),
          _ => BadRequest(problem)
       };
    }
 
+
+
    /// <summary>
-   ///    Updates profile data of an authenticated reader.
+   ///    Updates mutable data of the currently authenticated reader.
    /// </summary>
-   /// <param name="meDto">Reader data used for self-service update.</param>
+   /// <param name="dto">Mutable reader data. Null properties remain unchanged.</param>
    /// <param name="ct">Cancellation token.</param>
-   /// <returns>The updated current reader profile.</returns>
+   /// <returns>The updated current reader.</returns>
    [Authorize(Policy = CampusLibraryPolicies.ReadersOnly)]
-   [HttpPut("readers/me/update", Name = nameof(UpdateCurrentReaderAsync))]
+   [HttpPut("readers/me/update", Name = nameof(PutReaderMeUpdateAsync))]
    [Consumes("application/json")]
    [Produces("application/json")]
    [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
@@ -269,107 +276,18 @@ public sealed class ReaderController(
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
-   public async Task<ActionResult<ReaderDto>> UpdateCurrentReaderAsync(
-      [FromBody] ReaderUpdateMeDto meDto,
-      CancellationToken ct
-   ) {
-      var result = await readerUseCases.UpdateMeAsync(meDto, ct);
-      if(result.IsSuccess)
-         return Ok(result.Value);
-
-      var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
-
-      return result.Error.Status switch {
-         WebErrorStatus.BadRequest => BadRequest(problem),
-         WebErrorStatus.Unauthorized => Unauthorized(problem),
-         WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
-         WebErrorStatus.NotFound => NotFound(problem),
-         WebErrorStatus.Conflict => Conflict(problem),
-         _ => BadRequest(problem)
-      };
-   }
-
-/* deleted when using AuthN/AuthZ
-   /// <summary>
-   ///    Creates a new reader.
-   /// </summary>
-   /// <param name="dto">Reader data used to create the resource.</param>
-   /// <param name="ct">Cancellation token.</param>
-   /// <returns>The created reader resource.</returns>
-   // Create a new reader through the write-side use case.
-   [HttpPost("readers", Name = nameof(CreateReaderAsync))]
-   [Consumes("application/json")]
-   [Produces("application/json")]
-   [ProducesResponseType<ReaderDto>(StatusCodes.Status201Created)]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
-   public async Task<ActionResult<ReaderDto>> CreateReaderAsync(
-      [FromBody] ReaderCreateDto dto,
-      CancellationToken ct
-   ) {
-      var result = await readerUseCases.CreateAsync(
-         dto: dto,
-         ct: ct
-      );
-
-      if(result.IsSuccess) {
-         var requestedApiVersion = HttpContext.Features.Get<IApiVersioningFeature>()?.RequestedApiVersion;
-
-         return CreatedAtRoute(
-            routeName: nameof(GetReaderByIdAsync),
-            routeValues: new {
-               version = requestedApiVersion?.ToString() ?? "1",
-               id = result.Value.Id
-            },
-            value: result.Value
-         );
-      }
-
-      var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
-
-      return result.Error.Status switch {
-         WebErrorStatus.BadRequest => BadRequest(problem),
-         WebErrorStatus.Unauthorized => Unauthorized(problem),
-         WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
-         WebErrorStatus.Conflict => Conflict(problem),
-         _ => BadRequest(problem)
-      };
-   }
-
-   /// <summary>
-   ///    Updates an existing reader.
-   /// </summary>
-   /// <param name="id">Reader unique id.</param>
-   /// <param name="dto">Reader data used to update the resource.</param>
-   /// <param name="ct">Cancellation token.</param>
-   /// <returns>The updated reader resource.</returns>
-   // Update an existing reader through the write-side use case.
-   [HttpPut("readers/{id:guid}", Name = nameof(UpdateReaderAsync))]
-   [Consumes("application/json")]
-   [Produces("application/json")]
-   [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
-   [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
-   public async Task<ActionResult<ReaderDto>> UpdateReaderAsync(
-      [FromRoute] Guid id,
+   public async Task<ActionResult<ReaderDto>> PutReaderMeUpdateAsync(
       [FromBody] ReaderUpdateDto dto,
       CancellationToken ct
    ) {
-      var result = await readerUseCases.UpdateAsync(
-         id: id,
-         dto: dto,
-         ct: ct
-      );
-
+      var result = await readerUseCases.UpdateMeAsync(dto, ct);
       if(result.IsSuccess)
          return Ok(result.Value);
 
-      var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+      var problem = DomainProblemDetailsFactory.FromDomainError(
+         result.Error,
+         HttpContext
+      );
 
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),
@@ -380,7 +298,7 @@ public sealed class ReaderController(
          _ => BadRequest(problem)
       };
    }
-   */
+
 
    /// <summary>
    ///    Deactivates an existing reader.
@@ -425,73 +343,33 @@ public sealed class ReaderController(
 }
 
 
+
 /*
 Didaktik
 --------
 
-ReadersController ist die HTTP-Schicht des Readers-Moduls.
+ReaderController ist die HTTP-Schicht des Readers-Moduls.
 
-Der Controller enthält keine Fachlogik. Er entscheidet nur, welcher
-Anwendungsbaustein für einen HTTP-Endpunkt aufgerufen wird und wie das
-Result in eine HTTP-Antwort übersetzt wird.
+Lesende Endpunkte verwenden IReaderReadModel:
 
-GET-Endpunkte verwenden das ReadModel:
+- GET /readers
+- GET /readers/{id}
+- GET /readers/email
+- GET /readers/me
 
-- GetAllReadersAsync      -> IReaderReadModel.SelectAllAsync
-- GetReaderByIdAsync      -> IReaderReadModel.FindByIdAsync
-- GetReaderByEmailAsync   -> IReaderReadModel.FindByEmailAsync
+Schreibende Endpunkte verwenden IReaderUseCases:
 
-Schreibende Endpunkte verwenden die UseCase-Fassade:
+- POST /readers/me/provision
+- PUT /readers/me/profile
+- PUT /readers/me/update
+- DELETE /readers/{id}
 
-- CreateReaderAsync       -> IReaderUseCases.CreateAsync
-- UpdateReaderAsync       -> IReaderUseCases.UpdateAsync
-- DeactivateReaderAsync   -> IReaderUseCases.DeactivateAsync
+Part 6 trennt die technische Identität vom fachlichen Reader. Bei /me-Endpunkten
+wird die ReaderId nicht vom Client übertragen. Das Readers-Modul ermittelt den
+aktuellen Reader über das Subject des authentifizierten Benutzers.
 
-Die normale Sicht auf Reader liefert nur aktive Reader. Inaktive Reader
-werden nicht über zusätzliche Routen wie /with-inactive abgefragt, sondern
-über einen Query-Parameter:
-
-   GET /readers
-   GET /readers?includeInactive=true
-
-   GET /readers/{id}
-   GET /readers/{id}?includeInactive=true
-
-   GET /readers/email?email=max@example.org
-   GET /readers/email?email=max@example.org&includeInactive=true
-
-Dadurch bleibt die API ruhiger: Die Ressource bleibt dieselbe, nur die
-Sicht auf diese Ressource wird über einen Parameter erweitert.
-
-Die Fallunterscheidung im Controller ist bewusst explizit gehalten.
-Dadurch sehen Studierende direkt, welcher DomainError.Status zu welcher
-HTTP-Antwort führt.
-
-DomainProblemDetailsFactory erzeugt nur das standardisierte Fehlerobjekt.
-Die Entscheidung über BadRequest, Unauthorized, Forbidden, NotFound oder
-Conflict bleibt im Controller sichtbar.
-
-401 Unauthorized und 403 Forbidden sind bereits in Swagger dokumentiert.
-Die Endpunkte können später mit [Authorize] und Policies geschützt werden,
-ohne die API-Dokumentation grundsätzlich neu aufzubauen.
-
-CreatedAtRoute erzeugt bei erfolgreicher Erstellung eine 201-Created-
-Antwort mit Location-Header auf die neu erzeugte Ressource.
-
-Swagger-Attribute dokumentieren die erwarteten Erfolgs- und Fehlerantworten.
-Sie machen die API für Clients und Tests explizit nachvollziehbar.
-
-Lernziele
----------
-
-- Controller als HTTP-Adapter verstehen
-- Unterschied zwischen GET/ReadModel und schreibenden UseCases erkennen
-- REST-Verhalten von 201 Created und Location-Header nachvollziehen
-- REST-Verhalten von 200 OK bei Update und 204 NoContent bei Delete verstehen
-- DomainError.Status explizit auf HTTP-Antworten abbilden
-- 401 Unauthorized und 403 Forbidden unterscheiden
-- ProblemDetails als standardisiertes Fehlerformat verwenden
-- Swagger-Metadaten für API-Dokumentation einsetzen
-- Query-Parameter zur Erweiterung einer Standardsicht verwenden
-- Keine Domainlogik im Controller platzieren
+DomainProblemDetailsFactory erzeugt ausschließlich die einheitliche Form des
+ProblemDetails-Objekts. Die Controller-Methode ordnet WebErrorStatus sichtbar
+dem dokumentierten HTTP-Status zu. Dadurch stehen Swagger-Angaben und
+tatsächliche Fehlerbehandlung an derselben Stelle.
 */

@@ -220,10 +220,8 @@ Accept: application/json
 
 
 ### Return loan 1 at desk
-### Expected: 200 OK
-### Expected:
-### - the returned LoanDto is included in the response
-### - the Loan is deleted from the database
+### Expected: 204 No Content
+### The Loan is deleted from the database.
 PATCH {{baseUrl}}/loans/{{loan1Id}}/return-at-desk
 Accept: application/json
 

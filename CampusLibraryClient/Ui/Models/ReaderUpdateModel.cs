@@ -41,13 +41,13 @@ public sealed class ReaderUpdateModel {
       Country = reader.AddressDto?.Country ?? "DE"
    };
 
-   public ReaderUpdateMeDto ToDto() => new(
+   public ReaderUpdateDto ToDto() => new(
       Lastname: Lastname?.Trim(),
       Email: Email?.Trim(),
       AddressDto: new AddressDto(
-         Street: Street?.Trim(),
-         PostalCode: PostalCode?.Trim(),
-         City: City?.Trim(),
+         Street: Street?.Trim() ?? string.Empty,
+         PostalCode: PostalCode?.Trim() ?? string.Empty,
+         City: City?.Trim() ?? string.Empty,
          Country: Country?.Trim()
       )
    );
@@ -58,7 +58,7 @@ Didaktik
 --------
 
 ReaderUpdateModel beschreibt die spätere Self-Service-Änderung unter
-/readers/update.
+/readers/me/update.
 
 Änderbar sind nur:
 - Nachname

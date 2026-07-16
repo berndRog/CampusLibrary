@@ -78,7 +78,10 @@ Authorization: Bearer {{accessTokenReader}}
 
 > {%
     client.test("Reader provisioned", function() {
-        client.assert(response.status === 200 || response.status === 201, "Expected HTTP 200/201");
+        client.assert(
+            response.status === 204,
+            `Expected HTTP 204, got ${response.status}`
+        );
     });
 
     client.log("Reader provisioned in CampusLibraryApi.");

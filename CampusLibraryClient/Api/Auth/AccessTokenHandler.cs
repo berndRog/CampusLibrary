@@ -23,6 +23,7 @@ public sealed class AccessTokenHandler(
       HttpContext? httpCtx = ctxAccessor.HttpContext;
 
       if(httpCtx is not null) {
+         // Silent token refresh with student-visible lifecycle logging.
          try {
             await httpCtx.TryRefreshAccessTokenAsync(
                httpClientFactory: httpClientFactory,
@@ -32,6 +33,8 @@ public sealed class AccessTokenHandler(
             );
          }
          catch(Exception ex) {
+            // A network or configuration failure during refresh is logged and the
+            // request continues. The old token may still be valid.
             AppDiagnosticsLogger.LogException(
                logger: logger,
                exception: ex,

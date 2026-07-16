@@ -1,10 +1,12 @@
 using System.Runtime.CompilerServices;
 using CampusLibraryApi._2_BuildingBlocks;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
+using CampusLibraryApi._2_BuildingBlocks._2_Application.Identity;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Readers._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Readers._2_Application.Mappings;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
+using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 
 [assembly: InternalsVisibleTo("CampusLibraryApiTest")]
@@ -28,7 +30,7 @@ namespace CampusLibraryApi._3_Core.Readers._2_Application.UseCases;
 // - Lastname
 // - Address
 //
-// Email is intentionally not part of ReaderProfileMeDto.
+// Email is intentionally not part of ReaderProfileDto.
 // The initial fachliche email was already taken from the technical username
 // during provisioning.
 internal sealed class ReaderUcUpdateMeProfile(
@@ -41,11 +43,11 @@ internal sealed class ReaderUcUpdateMeProfile(
 
    // Executes the initial profile completion workflow for the current reader.
    public async Task<Result<ReaderDto>> ExecuteAsync(
-      ReaderProfileMeDto? meDto,
+      ReaderProfileDto? meDto,
       CancellationToken ct
    ) {
       if (meDto is null)
-         return Result<ReaderDto>.Failure(ReaderErrors.ReaderUpdateMeProfileDtoRequired);
+         return Result<ReaderDto>.Failure(ReaderErrors.ReaderProfileDtoRequired);
 
       // 1) Validate the current identity and read the technical subject.
       // The role check is handled by the controller policy.
@@ -65,7 +67,14 @@ internal sealed class ReaderUcUpdateMeProfile(
       if (meDto.AddressDto is null)
          return Result<ReaderDto>.Failure(ReaderErrors.AddressIsRequired);
 
-      var addressVo = meDto.AddressDto.ToAddressVo();
+      var addressResult = AddressVo.Create(
+         street: meDto.AddressDto.Street,
+         postalCode: meDto.AddressDto.PostalCode,
+         city: meDto.AddressDto.City,
+         country: meDto.AddressDto.Country
+      );
+      if(addressResult.IsFailure)
+         return Result<ReaderDto>.Failure(addressResult.Error);
 
       // 4) Complete the initial profile through the aggregate method.
       // The aggregate decides which values are valid and how the profile
@@ -73,7 +82,7 @@ internal sealed class ReaderUcUpdateMeProfile(
       var resultUpdate = reader.UpdateMyProfile(
          firstname: meDto.Firstname,
          lastname: meDto.Lastname,
-         addressVo: addressVo,
+         addressVo: addressResult.Value,
          updatedAt: clock.UtcNow
       );
 
@@ -118,7 +127,7 @@ Der Client übergibt keine ReaderId. Der aktuelle fachliche Reader wird
 serverseitig über das Subject aus dem Access Token ermittelt. Dadurch kann ein
 Reader nicht versuchen, durch eine fremde Id einen anderen Reader zu ändern.
 
-Subject und Email sind bewusst nicht Teil von ReaderProfileMeDto. Das Subject
+Subject und Email sind bewusst nicht Teil von ReaderProfileDto. Das Subject
 kommt aus dem Access Token. Die initiale fachliche Email wurde bereits beim
 Provisioning aus dem technischen Username übernommen.
 
@@ -127,7 +136,7 @@ nicht zu diesem UseCase, sondern zu:
 
    PUT /readers/me/update
 
-Dafür wird ReaderUpdateMeDto verwendet. Der Vorname bleibt bei dieser späteren
+Dafür wird ReaderUpdateDto verwendet. Der Vorname bleibt bei dieser späteren
 Änderung bewusst unveränderbar.
 
 Der Controller entscheidet über die grobe Autorisierung, z. B. über eine

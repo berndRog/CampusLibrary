@@ -4,7 +4,6 @@ using CampusLibraryClient.Core;
 namespace CampusLibraryClient.Api.Contracts;
 
 public interface IReaderClient {
-
    Task<Result<IEnumerable<ReaderDto>>> GetAllAsync(
       bool includeInactive = false,
       CancellationToken ct = default
@@ -22,22 +21,21 @@ public interface IReaderClient {
       CancellationToken ct = default
    );
 
-   Task<Result<ReaderDto>> GetMeAsync(
-      CancellationToken ct = default
-   );
+   Task<Result<ReaderDto>> GetMeAsync(CancellationToken ct = default);
 
-   Task<Result<ReaderProvisionMeDto>> ProvisionMeAsync(
+   // Id is optional and retained for deterministic tests.
+   Task<Result<bool>> ProvisionMeAsync(
       string? id = null,
       CancellationToken ct = default
    );
 
    Task<Result<ReaderDto>> UpdateMeProfileAsync(
-      ReaderProfileMeDto dto,
+      ReaderProfileDto dto,
       CancellationToken ct = default
    );
 
    Task<Result<ReaderDto>> UpdateMeAsync(
-      ReaderUpdateMeDto dto,
+      ReaderUpdateDto dto,
       CancellationToken ct = default
    );
 

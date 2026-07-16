@@ -8,6 +8,7 @@ using CampusLibraryApiTest.TestInfrastructure;
 using Microsoft.Extensions.Logging;
 using Moq;
 
+using CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
 namespace CampusLibraryApiTest._2_ApplicationTests.UseCases_Mock;
 
 public sealed class ReaderUseCasesMockT {

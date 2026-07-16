@@ -1,6 +1,6 @@
-namespace CampusLibraryApi._2_BuildingBlocks._2_Application.Contracts;
+namespace CampusLibraryApi._2_BuildingBlocks._2_Application.Dtos;
 
-// Loan-relevant reader data shared between modules.
+// Reader data published by Readers for the Loans bounded context.
 public sealed record ReaderLoanInfoDto(
    Guid Id,
    string Firstname,
@@ -9,18 +9,3 @@ public sealed record ReaderLoanInfoDto(
    bool IsActive,
    bool IsProfileCompleted
 );
-
-/*
-Lernziele und Didaktik
-----------------------
-
-Dieses DTO enthält nur Reader-Daten, die für Ausleihvorgänge relevant sind.
-
-Es ist kein ReaderDto des Readers-Moduls und auch kein Reader-Aggregate.
-Es ist ein bewusst kleines Contract-DTO für die Kommunikation zwischen
-Modulen.
-
-Part 6 ergänzt IsProfileCompleted. Dadurch kann an der Modulgrenze sichtbar
-werden, dass Authentifizierung allein noch nicht genügt: Ein Reader muss auch
-fachlich vollständig provisioniert sein, bevor er ausleihen darf.
-*/

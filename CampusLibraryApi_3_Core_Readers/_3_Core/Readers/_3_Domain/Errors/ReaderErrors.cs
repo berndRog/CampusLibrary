@@ -19,11 +19,18 @@ public static class ReaderErrors {
       );
 
 
-   public static readonly DomainError ReaderUpdateMeProfileDtoRequired =
+   public static readonly DomainError ReaderProfileDtoRequired =
       new(
          WebErrorStatus.BadRequest,
-         "Reader: ReaderProfileUpdateDtoRequired",
-         "A ReaderProfileUpdateDto object must be provided."
+         "Reader: ReaderProfileDtoRequired",
+         "A ReaderProfileDto object must be provided."
+      );
+
+   public static readonly DomainError ReaderUpdateDtoRequired =
+      new(
+         WebErrorStatus.BadRequest,
+         "Reader: ReaderUpdateDtoRequired",
+         "A ReaderUpdateDto object must be provided."
       );
 
    public static readonly DomainError FirstnameIsRequired =
@@ -94,13 +101,6 @@ public static class ReaderErrors {
          WebErrorStatus.BadRequest,
          "Reader: ReaderCreateDtoRequired",
          "A ReaderCreateDto object must be provided."
-      );
-
-   public static readonly DomainError ReaderUpdateMeDtoRequired =
-      new(
-         WebErrorStatus.BadRequest,
-         "Reader: ReaderUpdateDtoRequired",
-         "A ReaderUpdateDto object must be provided."
       );
 
    public static readonly DomainError IsAlreadyDeactivated =

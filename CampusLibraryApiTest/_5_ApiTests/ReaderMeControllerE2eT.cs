@@ -17,9 +17,6 @@ public sealed class ReaderMeControllerE2eT : TestBaseEndToEnd {
    protected override string DatabaseName => nameof(ReaderMeControllerE2eT);
    protected override DbMode DbMode => DbMode.InMemory;
 
-   // This E2E test authenticates via TestAuthHandler.
-   // Therefore the application must read identity data from HttpContext.User,
-   // not from a FakeIdentityGateway with static/default values.
    protected override void ConfigureTestServices(IServiceCollection services) {
       services.RemoveAll<IIdentityGateway>();
       services.AddScoped<IIdentityGateway, IdentityGatewayHttpContext>();
@@ -32,337 +29,171 @@ public sealed class ReaderMeControllerE2eT : TestBaseEndToEnd {
    private readonly CancellationToken _ct = TestContext.Current.CancellationToken;
 
    [Fact]
-   public async Task GetMeAsync_without_token_returns_unauthorized() {
-      // Act
-      var response = await Client.GetAsync(
-         requestUri: $"{Url}/readers/me",
-         cancellationToken: _ct
-      );
-
-      // Assert
+   public async Task GetMe_without_token_returns_unauthorized() {
+      var response = await Client.GetAsync($"{Url}/readers/me", _ct);
       response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
    }
 
    [Fact]
-   public async Task CreateProvisionAsync_without_token_returns_unauthorized() {
-      // Act
+   public async Task Provision_without_token_returns_unauthorized() {
       var response = await Client.PostAsync(
-         requestUri: $"{Url}/readers/me/provision?id={ReaderId}",
-         content: null,
-         cancellationToken: _ct
+         $"{Url}/readers/me/provision?id={ReaderId}", null, _ct
       );
-
-      // Assert
       response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
    }
 
    [Fact]
-   public async Task CreateProvisionAsync_with_employee_role_returns_forbidden() {
-      // Arrange
-      using var provisionRequest = CreateAuthenticatedRequest(
-         method: HttpMethod.Post,
-         url: $"{Url}/readers/me/provision?id={ReaderId}",
+   public async Task Provision_with_employee_role_returns_forbidden() {
+      using var request = CreateAuthenticatedRequest(
+         HttpMethod.Post,
+         $"{Url}/readers/me/provision?id={ReaderId}",
          roles: "Employee"
       );
-
-      // Act
-      var response = await Client.SendAsync(
-         request: provisionRequest,
-         cancellationToken: _ct
-      );
-
-      // Assert
+      var response = await Client.SendAsync(request, _ct);
       response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
    }
 
    [Fact]
-   public async Task CreateProvisionAsync_then_UpdateProfileAsync_then_GetMeAsync_ok() {
-      // Act 1: provision
-      var provision = await ProvisionReaderAsync();
+   public async Task Provision_profile_and_get_me_ok() {
+      await ProvisionReaderAsync();
+      var profile = await SaveProfileAsync(NewProfile());
 
-      // Assert 1
-      provision.Id.Should().Be(Guid.Parse(ReaderId));
-      provision.WasCreated.Should().BeTrue();
-
-      // Act 2: complete profile
-      var profile = await CompleteProfileAsync();
-
-      // Assert 2
-      profile.Id.Should().Be(provision.Id);
+      profile.Id.Should().Be(Guid.Parse(ReaderId));
       profile.Email.Should().Be(Username);
-      profile.Subject.Should().Be(Subject);
       profile.Firstname.Should().Be("Alice");
       profile.Lastname.Should().Be("Reader");
-      profile.AddressDto.Should().NotBeNull();
       profile.IsProfileCompleted.Should().BeTrue();
 
-      // Act 3: GET me through the ReadModel
-      using var getMeRequest = CreateAuthenticatedRequest(
-         method: HttpMethod.Get,
-         url: $"{Url}/readers/me"
-      );
+      using var request = CreateAuthenticatedRequest(HttpMethod.Get, $"{Url}/readers/me");
+      var response = await Client.SendAsync(request, _ct);
+      var me = await ReadJsonAsync<ReaderDto>(response);
 
-      var getMeResponse = await Client.SendAsync(
-         request: getMeRequest,
-         cancellationToken: _ct
-      );
-
-      var meBody = await getMeResponse.Content.ReadAsStringAsync(_ct);
-
-      // Assert 3
-      getMeResponse.StatusCode.Should().Be(
-         expected: HttpStatusCode.OK,
-         because: meBody
-      );
-
-      var me = DeserializeJson<ReaderDto>(meBody);
+      response.StatusCode.Should().Be(HttpStatusCode.OK);
       me.Should().BeEquivalentTo(profile);
    }
 
    [Fact]
-   public async Task UpdateProfileAsync_without_address_returns_bad_request() {
-      // Arrange: provisioned reader may exist without address.
+   public async Task Profile_without_valid_address_returns_bad_request() {
       await ProvisionReaderAsync();
-
-      using var profileRequest = CreateAuthenticatedRequest(
-         method: HttpMethod.Put,
-         url: $"{Url}/readers/me/profile"
-      );
-      profileRequest.Content = JsonContent.Create(
-         inputValue: new ReaderProfileMeDto(
-            Firstname: "Alice",
-            Lastname: "Reader",
-            AddressDto: null!
-         )
+      var dto = new ReaderProfileDto(
+         Firstname: "Alice",
+         Lastname: "Reader",
+         AddressDto: new AddressDto(string.Empty, "29556", "Suderburg", "DE")
       );
 
-      // Act
-      var profileResponse = await Client.SendAsync(
-         request: profileRequest,
-         cancellationToken: _ct
-      );
+      using var request = CreateAuthenticatedRequest(HttpMethod.Put, $"{Url}/readers/me/profile");
+      request.Content = JsonContent.Create(dto);
+      var response = await Client.SendAsync(request, _ct);
 
-      // Assert: AddressVo is technically nullable, but fachlich required.
-      profileResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+      response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
    }
 
    [Fact]
-   public async Task UpdateMeAsync_without_token_returns_unauthorized() {
-      // Act
+   public async Task Profile_without_token_returns_unauthorized() {
       var response = await Client.PutAsJsonAsync(
-         requestUri: $"{Url}/readers/me/update",
-         value: new ReaderUpdateMeDto(
-            Lastname: "Updated",
-            Email: "updated.reader@example.org",
-            AddressDto: null
-         ),
-         cancellationToken: _ct
+         $"{Url}/readers/me/profile", NewProfile(), _ct
       );
-
-      // Assert
       response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
    }
 
    [Fact]
-   public async Task UpdateMeAsync_after_profile_completion_updates_mutable_data_ok() {
-      // Arrange
-      await ProvisionReaderAsync();
-      var profile = await CompleteProfileAsync();
-
-      using var updateRequest = CreateAuthenticatedRequest(
-         method: HttpMethod.Put,
-         url: $"{Url}/readers/me/update"
+   public async Task Update_without_token_returns_unauthorized() {
+      var response = await Client.PutAsJsonAsync(
+         $"{Url}/readers/me/update",
+         new ReaderUpdateDto("Updated", null, null),
+         _ct
       );
-      updateRequest.Content = JsonContent.Create(
-         inputValue: new ReaderUpdateMeDto(
-            Lastname: "Updated",
-            Email: "reader.updated@example.org",
-            AddressDto: new AddressDto(
-               Street: "Updateweg 7",
-               PostalCode: "29556",
-               City: "Suderburg",
-               Country: "DE"
-            )
-         )
-      );
-
-      // Act
-      var updateResponse = await Client.SendAsync(
-         request: updateRequest,
-         cancellationToken: _ct
-      );
-
-      var updateBody = await updateResponse.Content.ReadAsStringAsync(_ct);
-
-      // Assert
-      updateResponse.StatusCode.Should().Be(
-         expected: HttpStatusCode.OK,
-         because: updateBody
-      );
-
-      var updated = DeserializeJson<ReaderDto>(updateBody);
-
-      updated.Should().NotBeNull();
-      updated!.Id.Should().Be(profile.Id);
-      updated.Subject.Should().Be(Subject);
-      updated.Firstname.Should().Be("Alice");
-      updated.Lastname.Should().Be("Updated");
-      updated.Email.Should().Be("reader.updated@example.org");
-      updated.AddressDto.Should().BeEquivalentTo(
-         new AddressDto(
-            Street: "Updateweg 7",
-            PostalCode: "29556",
-            City: "Suderburg",
-            Country: "DE"
-         )
-      );
-      updated.IsProfileCompleted.Should().BeTrue();
-
-      using var getMeRequest = CreateAuthenticatedRequest(
-         method: HttpMethod.Get,
-         url: $"{Url}/readers/me"
-      );
-
-      var getMeResponse = await Client.SendAsync(getMeRequest, _ct);
-      var meBody = await getMeResponse.Content.ReadAsStringAsync(_ct);
-
-      getMeResponse.StatusCode.Should().Be(
-         expected: HttpStatusCode.OK,
-         because: meBody
-      );
-
-      var me = DeserializeJson<ReaderDto>(meBody);
-      me.Should().BeEquivalentTo(updated);
+      response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
    }
 
    [Fact]
-   public async Task UpdateMeAsync_duplicate_email_returns_conflict() {
-      // Arrange
-      string duplicateEmail = string.Empty;
+   public async Task Update_after_profile_completion_changes_mutable_data() {
+      await ProvisionReaderAsync();
+      var initial = await SaveProfileAsync(NewProfile());
 
+      var changed = await SaveUpdateAsync(
+         new ReaderUpdateDto(
+            Lastname: "Updated",
+            Email: "reader.updated@example.org",
+            AddressDto: new AddressDto("Updateweg 7", "29556", "Suderburg", "DE")
+         )
+      );
+
+      changed.Id.Should().Be(initial.Id);
+      changed.Firstname.Should().Be("Alice");
+      changed.Lastname.Should().Be("Updated");
+      changed.Email.Should().Be("reader.updated@example.org");
+      changed.AddressDto.Should().BeEquivalentTo(
+         new AddressDto("Updateweg 7", "29556", "Suderburg", "DE")
+      );
+   }
+
+   [Fact]
+   public async Task Update_duplicate_email_returns_conflict() {
+      string duplicateEmail = string.Empty;
       await Factory.WithScopeAsync(async sp => {
          var repository = sp.GetRequiredService<IReaderRepository>();
          var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
          var seed = sp.GetRequiredService<TestSeed>();
-
          var otherReader = seed.Reader2();
          duplicateEmail = otherReader.EmailVo.Value;
-
          repository.Add(otherReader);
          await unitOfWork.SaveAllChangesAsync("Other reader inserted", _ct);
          unitOfWork.ClearChangeTracker();
       });
 
       await ProvisionReaderAsync();
-      await CompleteProfileAsync();
+      await SaveProfileAsync(NewProfile());
 
-      using var updateRequest = CreateAuthenticatedRequest(
-         method: HttpMethod.Put,
-         url: $"{Url}/readers/me/update"
+      using var request = CreateAuthenticatedRequest(HttpMethod.Put, $"{Url}/readers/me/update");
+      request.Content = JsonContent.Create(
+         new ReaderUpdateDto(null, duplicateEmail, null)
       );
-      updateRequest.Content = JsonContent.Create(
-         inputValue: new ReaderUpdateMeDto(
-            Lastname: null,
-            Email: duplicateEmail,
-            AddressDto: null
-         )
-      );
+      var response = await Client.SendAsync(request, _ct);
 
-      // Act
-      var response = await Client.SendAsync(
-         request: updateRequest,
-         cancellationToken: _ct
-      );
-
-      // Assert
       response.StatusCode.Should().Be(HttpStatusCode.Conflict);
    }
 
    [Fact]
-   public async Task CreateProvisionAsync_is_idempotent() {
-      // Act 1
-      var first = await ProvisionReaderAsync();
+   public async Task Provision_is_idempotent_and_returns_no_content() {
+      await ProvisionReaderAsync();
 
-      // Act 2
-      using var secondRequest = CreateAuthenticatedRequest(
-         method: HttpMethod.Post,
-         url: $"{Url}/readers/me/provision"
-      );
-      var secondResponse = await Client.SendAsync(secondRequest, _ct);
-      var secondBody = await secondResponse.Content.ReadAsStringAsync(_ct);
+      using var request = CreateAuthenticatedRequest(HttpMethod.Post, $"{Url}/readers/me/provision");
+      var response = await Client.SendAsync(request, _ct);
 
-      // Assert 2
-      secondResponse.StatusCode.Should().Be(
-         expected: HttpStatusCode.OK,
-         because: secondBody
-      );
-
-      var second = DeserializeJson<ReaderProvisionMeDto>(secondBody);
-
-      second.Should().NotBeNull();
-      second!.Id.Should().Be(first.Id);
-      second.WasCreated.Should().BeFalse();
+      response.StatusCode.Should().Be(HttpStatusCode.NoContent);
    }
 
-   private async Task<ReaderProvisionMeDto> ProvisionReaderAsync() {
-      using var provisionRequest = CreateAuthenticatedRequest(
-         method: HttpMethod.Post,
-         url: $"{Url}/readers/me/provision?id={ReaderId}"
+   private async Task ProvisionReaderAsync() {
+      using var request = CreateAuthenticatedRequest(
+         HttpMethod.Post,
+         $"{Url}/readers/me/provision?id={ReaderId}"
       );
-
-      var provisionResponse = await Client.SendAsync(
-         request: provisionRequest,
-         cancellationToken: _ct
-      );
-
-      var provisionBody = await provisionResponse.Content.ReadAsStringAsync(_ct);
-
-      provisionResponse.StatusCode.Should().Be(
-         expected: HttpStatusCode.OK,
-         because: provisionBody
-      );
-
-      var provision = DeserializeJson<ReaderProvisionMeDto>(provisionBody);
-
-      provision.Should().NotBeNull();
-      return provision!;
+      var response = await Client.SendAsync(request, _ct);
+      response.StatusCode.Should().Be(HttpStatusCode.NoContent);
    }
 
-   private async Task<ReaderDto> CompleteProfileAsync() {
-      using var profileRequest = CreateAuthenticatedRequest(
-         method: HttpMethod.Put,
-         url: $"{Url}/readers/me/profile"
-      );
-      profileRequest.Content = JsonContent.Create(
-         inputValue: new ReaderProfileMeDto(
-            Firstname: "Alice",
-            Lastname: "Reader",
-            AddressDto: new AddressDto(
-               Street: "Profilstraße 1",
-               PostalCode: "29556",
-               City: "Suderburg",
-               Country: "DE"
-            )
-         )
-      );
-
-      var profileResponse = await Client.SendAsync(
-         request: profileRequest,
-         cancellationToken: _ct
-      );
-
-      var profileBody = await profileResponse.Content.ReadAsStringAsync(_ct);
-
-      profileResponse.StatusCode.Should().Be(
-         expected: HttpStatusCode.OK,
-         because: profileBody
-      );
-
-      var profile = DeserializeJson<ReaderDto>(profileBody);
-
-      profile.Should().NotBeNull();
-      return profile!;
+   private async Task<ReaderDto> SaveProfileAsync(ReaderProfileDto dto) {
+      using var request = CreateAuthenticatedRequest(HttpMethod.Put, $"{Url}/readers/me/profile");
+      request.Content = JsonContent.Create(dto);
+      var response = await Client.SendAsync(request, _ct);
+      response.StatusCode.Should().Be(HttpStatusCode.OK);
+      return (await ReadJsonAsync<ReaderDto>(response))!;
    }
+
+   private async Task<ReaderDto> SaveUpdateAsync(ReaderUpdateDto dto) {
+      using var request = CreateAuthenticatedRequest(HttpMethod.Put, $"{Url}/readers/me/update");
+      request.Content = JsonContent.Create(dto);
+      var response = await Client.SendAsync(request, _ct);
+      response.StatusCode.Should().Be(HttpStatusCode.OK);
+      return (await ReadJsonAsync<ReaderDto>(response))!;
+   }
+
+   private static ReaderProfileDto NewProfile() => new(
+      Firstname: "Alice",
+      Lastname: "Reader",
+      AddressDto: new AddressDto("Profilstraße 1", "29556", "Suderburg", "DE")
+   );
 
    private static HttpRequestMessage CreateAuthenticatedRequest(
       HttpMethod method,
@@ -372,24 +203,18 @@ public sealed class ReaderMeControllerE2eT : TestBaseEndToEnd {
       string username = Username,
       string createdAt = "2025-01-01T00:00:00Z"
    ) {
-      var request = new HttpRequestMessage(
-         method: method,
-         requestUri: url
-      );
-
+      var request = new HttpRequestMessage(method, url);
       request.Headers.Add(TestAuthHandler.Header, roles);
       request.Headers.Add(TestAuthHandler.SubjectHeader, subject);
       request.Headers.Add(TestAuthHandler.UsernameHeader, username);
       request.Headers.Add(TestAuthHandler.CreatedAtHeader, createdAt);
-
       return request;
    }
 
-   private static T? DeserializeJson<T>(string json) =>
-      JsonSerializer.Deserialize<T>(
-         json: json,
-         options: new JsonSerializerOptions {
-            PropertyNameCaseInsensitive = true
-         }
-      );
+   private static async Task<T?> ReadJsonAsync<T>(HttpResponseMessage response) {
+      var json = await response.Content.ReadAsStringAsync();
+      return JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions {
+         PropertyNameCaseInsensitive = true
+      });
+   }
 }

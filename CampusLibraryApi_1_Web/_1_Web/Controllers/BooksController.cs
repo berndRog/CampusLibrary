@@ -33,11 +33,11 @@ public sealed class BooksController(
    // Query books through the read model.
    [HttpGet("books", Name = nameof(GetAllBooksAsync))]
    [Produces("application/json")]
-   [ProducesResponseType<IReadOnlyList<BookListItemDto>>(StatusCodes.Status200OK)]
+   [ProducesResponseType<IReadOnlyList<BookDto>>(StatusCodes.Status200OK)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
-   public async Task<ActionResult<IReadOnlyList<BookListItemDto>>> GetAllBooksAsync(
+   public async Task<ActionResult<IReadOnlyList<BookDto>>> GetAllBooksAsync(
       [FromQuery] bool includeInactive = false,
       CancellationToken ct = default
    ) {
@@ -69,12 +69,12 @@ public sealed class BooksController(
    // Query one book by id through the read model.
    [HttpGet("books/{id:guid}", Name = nameof(GetBookByIdAsync))]
    [Produces("application/json")]
-   [ProducesResponseType<BookDetailDto>(StatusCodes.Status200OK)]
+   [ProducesResponseType<BookDto>(StatusCodes.Status200OK)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
-   public async Task<ActionResult<BookDetailDto>> GetBookByIdAsync(
+   public async Task<ActionResult<BookDto>> GetBookByIdAsync(
       [FromRoute] Guid id,
       [FromQuery] bool includeInactive = false,
       CancellationToken ct = default
@@ -114,18 +114,13 @@ public sealed class BooksController(
       [FromRoute] Guid bookId,
       CancellationToken ct = default
    ) {
-      var result = await bookReadModel.FindDeactivationInfoAsync(
-         id: bookId,
-         ct: ct
-      );
+      var result = await bookReadModel.FindDeactivationInfoAsync(bookId, ct);
 
       if(result.IsSuccess)
          return Ok(result.Value);
 
       var problem = DomainProblemDetailsFactory.FromDomainError(
-         result.Error,
-         HttpContext
-      );
+         result.Error, HttpContext);
 
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),
@@ -151,20 +146,18 @@ public sealed class BooksController(
    // Search books through the read model.
    [HttpGet("books/search", Name = nameof(SearchBooksAsync))]
    [Produces("application/json")]
-   [ProducesResponseType<IReadOnlyList<BookListItemDto>>(StatusCodes.Status200OK)]
+   [ProducesResponseType<IReadOnlyList<BookDto>>(StatusCodes.Status200OK)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
-   public async Task<ActionResult<IReadOnlyList<BookListItemDto>>> SearchBooksAsync(
+   public async Task<ActionResult<IReadOnlyList<BookDto>>> SearchBooksAsync(
       [FromQuery] BookSearchField searchField,
       [FromQuery] string searchText,
       [FromQuery] bool includeInactive = false,
       CancellationToken ct = default
    ) {
-      var search = new BookSearchDto(searchField, searchText);
-
       var result = await bookReadModel.SearchAsync(
-         search, includeInactive, ct);
+         searchField, searchText, includeInactive, ct);
       
       if (result.IsSuccess)
          return Ok(result.Value);

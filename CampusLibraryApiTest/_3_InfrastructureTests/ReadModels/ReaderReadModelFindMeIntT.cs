@@ -65,7 +65,6 @@ public sealed class ReaderReadModelFindMeIntT : TestBaseIntegration {
       // Assert
       result.IsSuccess.Should().BeTrue();
       result.Value.Id.Should().Be(reader.Id);
-      result.Value.Subject.Should().Be(Subject);
       result.Value.Email.Should().Be(Username);
       result.Value.IsProfileCompleted.Should().BeTrue();
    }

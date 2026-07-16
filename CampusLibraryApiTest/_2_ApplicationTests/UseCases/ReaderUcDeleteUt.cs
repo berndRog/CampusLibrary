@@ -9,6 +9,7 @@ using CampusLibraryApi._3_Core.Readers._3_Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
 using Moq;
 
+using CampusLibraryApi._2_BuildingBlocks._1_Ports.Contracts;
 namespace CampusLibraryApiTest._2_ApplicationTests.UseCases;
 
 public sealed class ReaderUcDeactivateUt {

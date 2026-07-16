@@ -15,10 +15,10 @@ public sealed class LoanClient(
    private const string Base = "camplib/v1";
 
    // GET /camplib/v1/loans
-   public Task<Result<IEnumerable<LoanListItemDto>>> GetBorrowedAsync(
+   public Task<Result<IEnumerable<LoanDto>>> GetBorrowedAsync(
       CancellationToken ct = default
    ) =>
-      SendAsync<IEnumerable<LoanListItemDto>>(
+      SendAsync<IEnumerable<LoanDto>>(
          send: () => _http.GetAsync(
             requestUri: $"{Base}/loans",
             cancellationToken: ct
@@ -27,10 +27,10 @@ public sealed class LoanClient(
       );
 
    // GET /camplib/v1/loans/me
-   public Task<Result<IEnumerable<LoanListItemDto>>> GetMyBorrowedAsync(
+   public Task<Result<IEnumerable<LoanDto>>> GetMyBorrowedAsync(
       CancellationToken ct = default
    ) =>
-      SendAsync<IEnumerable<LoanListItemDto>>(
+      SendAsync<IEnumerable<LoanDto>>(
          send: () => _http.GetAsync(
             requestUri: $"{Base}/loans/me",
             cancellationToken: ct
@@ -39,11 +39,11 @@ public sealed class LoanClient(
       );
 
    // GET /camplib/v1/loans/{id}
-   public Task<Result<LoanDetailDto>> GetByIdAsync(
+   public Task<Result<LoanDto>> GetByIdAsync(
       Guid id,
       CancellationToken ct = default
    ) =>
-      SendAsync<LoanDetailDto>(
+      SendAsync<LoanDto>(
          send: () => _http.GetAsync(
             requestUri: $"{Base}/loans/{id}",
             cancellationToken: ct
@@ -52,11 +52,11 @@ public sealed class LoanClient(
       );
 
    // GET /camplib/v1/loans/me/{id}
-   public Task<Result<LoanDetailDto>> GetMyByIdAsync(
+   public Task<Result<LoanDto>> GetMyByIdAsync(
       Guid id,
       CancellationToken ct = default
    ) =>
-      SendAsync<LoanDetailDto>(
+      SendAsync<LoanDto>(
          send: () => _http.GetAsync(
             requestUri: $"{Base}/loans/me/{id}",
             cancellationToken: ct
@@ -95,11 +95,11 @@ public sealed class LoanClient(
       );
 
    // PATCH /camplib/v1/loans/{id}/return-at-desk
-   public Task<Result<LoanDto>> ReturnAtDeskAsync(
+   public Task<Result<bool>> ReturnAtDeskAsync(
       Guid id,
       CancellationToken ct = default
    ) =>
-      SendAsync<LoanDto>(
+      SendAsync<bool>(
          send: () => _http.PatchAsync(
             requestUri: $"{Base}/loans/{id}/return-at-desk",
             content: null,

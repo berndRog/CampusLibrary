@@ -40,13 +40,13 @@ public sealed class ReaderProfileModel {
       Country = reader.AddressDto?.Country ?? "DE"
    };
 
-   public ReaderProfileMeDto ToDto() => new(
+   public ReaderProfileDto ToDto() => new(
       Firstname: Firstname?.Trim() ?? string.Empty,
       Lastname: Lastname?.Trim() ?? string.Empty,
       AddressDto: new AddressDto(
-         Street: Street?.Trim(),
-         PostalCode: PostalCode?.Trim(),
-         City: City?.Trim(),
+         Street: Street?.Trim() ?? string.Empty,
+         PostalCode: PostalCode?.Trim() ?? string.Empty,
+         City: City?.Trim() ?? string.Empty,
          Country: Country?.Trim()
       )
    );
@@ -59,7 +59,7 @@ Didaktik
 ReaderProfileModel ist bewusst ein UI-Modell und kein API-DTO.
 
 Die UI arbeitet mit flachen Formularfeldern. Erst beim Speichern wird daraus
-für den initialen Profilabschluss das API-DTO ReaderProfileMeDto erzeugt.
+für den initialen Profilabschluss das API-DTO ReaderProfileDto erzeugt.
 
 Subject und fachliche Email werden hier nicht bearbeitet:
 - Subject kommt aus dem IdentityAccessServer und wird beim Provisioning gesetzt.
