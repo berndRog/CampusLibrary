@@ -1,6 +1,8 @@
 using System.Text.Json.Serialization;
 using Asp.Versioning.ApiExplorer;
+using CampusLibraryApi._1_Web.Security;
 using CampusLibraryApi._3_Core;
+using CampusLibraryApi._3_Core.Loans;
 using CampusLibraryApi._3_Core.Readers;
 using CampusLibraryApi._4_Infrastructure;
 using CampusLibraryApi.Configure;
@@ -10,12 +12,9 @@ namespace CampusLibraryApi;
 public class Program {
 
    public static async Task Main(string[] args) {
-   
+
       //---- Configure DI Container (IServiceCollection) ----
       var builder = WebApplication.CreateBuilder(args);
-      
-      // Access Http-Request in Infrastructure
-      builder.Services.AddHttpContextAccessor();
 
       // Controllers
       builder.Services.AddControllers()
@@ -25,18 +24,25 @@ public class Program {
                new JsonStringEnumConverter()
             );
          });
-      
+
       // Modules
       builder.Services.AddReadersModule();
       builder.Services.AddCatalogModule();
       builder.Services.AddLoansModule();
       builder.Services.AddInfrastructureModule(builder.Configuration);
 
+      bool devIdentityEnabled =
+         builder.Configuration.GetValue<bool>("Features:DevIdentityEnabled");
+
+      if(devIdentityEnabled) {
+         builder.Services.AddDevIdentityGateway(builder.Configuration);
+      }
+
       builder.Services.AddEndpointsApiExplorer();
-      
-      // API versioning 
+
+      // API versioning
       builder.Services.AddApiReaderAndVersioning();
-      
+
       // Swagger
       builder.Services.AddSwagger();
 
@@ -45,7 +51,7 @@ public class Program {
       if (app.Environment.IsDevelopment()) {
          //app.UseHttpLogging();
          app.UseDeveloperExceptionPage();
-      
+
          // // Keep old student/bookmarked URL working after API version migration.
          // app.Use((context, next) => {
          //    if (context.Request.Path.Equals("/swagger/v1/swagger.json", StringComparison.OrdinalIgnoreCase) ||
@@ -54,7 +60,7 @@ public class Program {
          //    }
          //    return next();
          // });
-         
+
          // Avoid stale Swagger UI config/assets after URL/version changes.
          app.Use(async (context, next) => {
             if (context.Request.Path.StartsWithSegments("/swagger", StringComparison.OrdinalIgnoreCase)) {
@@ -70,25 +76,25 @@ public class Program {
          });
 
          app.UseSwagger();
-         
+
          app.UseSwaggerUI(options => {
             // Dynamisch alle API-Versionen anzeigen
             var provider = app.Services.GetRequiredService<IApiVersionDescriptionProvider>();
-      
+
             foreach (var description in provider.ApiVersionDescriptions) {
                options.SwaggerEndpoint(
                   $"/swagger/{description.GroupName}/swagger.json",
                   $"CampusLibraryApi {description.GroupName.ToUpperInvariant()}"
                );
             }
-      
+
             options.RoutePrefix = "swagger";
          });
-         
+
       }
 
       //app.UseHttpsRedirection();
-      
+
       app.MapControllers();
 
       await app.RunAsync();

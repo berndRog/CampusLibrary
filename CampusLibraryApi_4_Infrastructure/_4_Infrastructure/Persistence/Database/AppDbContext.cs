@@ -22,12 +22,10 @@ public sealed class AppDbContext(
       
       // DateTime Converter UTC
       var utcDtConv = new UtcDateTimeConverter();
-      var nullUtcDtConv = new NullableUtcDateTimeConverter();
-
       modelBuilder.ApplyConfiguration(new ConfigReader(utcDtConv));
       modelBuilder.ApplyConfiguration(new ConfigBook(utcDtConv));
       modelBuilder.ApplyConfiguration(new ConfigBookItem());
-      modelBuilder.ApplyConfiguration(new ConfigLoan(utcDtConv, nullUtcDtConv));
+      modelBuilder.ApplyConfiguration(new ConfigLoan(utcDtConv));
       
       base.OnModelCreating(modelBuilder);
    }

@@ -20,11 +20,11 @@ public sealed class BookClient(
    private const string Base = "camplib/v1";
 
    // GET /camplib/v1/books?includeInactive=false
-   public Task<Result<IEnumerable<BookListItemDto>>> GetAllAsync(
+   public Task<Result<IEnumerable<BookDto>>> GetAllAsync(
       bool includeInactive = false,
       CancellationToken ct = default
    ) =>
-      SendAsync<IEnumerable<BookListItemDto>>(
+      SendAsync<IEnumerable<BookDto>>(
          send: () => _http.GetAsync(
             requestUri: $"{Base}/books?includeInactive={QueryStringBuilder.Bool(includeInactive)}",
             cancellationToken: ct
@@ -33,12 +33,12 @@ public sealed class BookClient(
       );
 
    // GET /camplib/v1/books/{id}?includeInactive=false
-   public Task<Result<BookDetailDto>> GetByIdAsync(
+   public Task<Result<BookDto>> GetByIdAsync(
       Guid id,
       bool includeInactive = false,
       CancellationToken ct = default
    ) =>
-      SendAsync<BookDetailDto>(
+      SendAsync<BookDto>(
          send: () => _http.GetAsync(
             requestUri: $"{Base}/books/{id}?includeInactive={QueryStringBuilder.Bool(includeInactive)}",
             cancellationToken: ct
@@ -47,13 +47,13 @@ public sealed class BookClient(
       );
 
    // GET /camplib/v1/books/search?searchField=Title&searchText=Clean%20Code&includeInactive=false
-   public Task<Result<IEnumerable<BookListItemDto>>> SearchAsync(
+   public Task<Result<IEnumerable<BookDto>>> SearchAsync(
       BookSearchField searchField,
       string searchText,
       bool includeInactive = false,
       CancellationToken ct = default
    ) =>
-      SendAsync<IEnumerable<BookListItemDto>>(
+      SendAsync<IEnumerable<BookDto>>(
          send: () => _http.GetAsync(
             requestUri: $"{Base}/books/search?searchField={searchField}&searchText={Uri.EscapeDataString(searchText)}&includeInactive={QueryStringBuilder.Bool(includeInactive)}",
             cancellationToken: ct
@@ -87,6 +87,19 @@ public sealed class BookClient(
             requestUri: $"{Base}/books/{bookId}/items",
             value: dto,
             options: _json,
+            cancellationToken: ct
+         ),
+         ct: ct
+      );
+
+   // GET /camplib/v1/books/{bookId}/deactivation-info
+   public Task<Result<BookDeactivationInfoDto>> GetDeactivationInfoAsync(
+      Guid bookId,
+      CancellationToken ct = default
+   ) =>
+      SendAsync<BookDeactivationInfoDto>(
+         send: () => _http.GetAsync(
+            requestUri: $"{Base}/books/{bookId}/deactivation-info",
             cancellationToken: ct
          ),
          ct: ct

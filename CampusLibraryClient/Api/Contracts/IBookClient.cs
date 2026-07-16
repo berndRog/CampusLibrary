@@ -5,18 +5,18 @@ namespace CampusLibraryClient.Api.Contracts;
 
 public interface IBookClient {
 
-   Task<Result<IEnumerable<BookListItemDto>>> GetAllAsync(
+   Task<Result<IEnumerable<BookDto>>> GetAllAsync(
       bool includeInactive = false,
       CancellationToken ct = default
    );
 
-   Task<Result<BookDetailDto>> GetByIdAsync(
+   Task<Result<BookDto>> GetByIdAsync(
       Guid id,
       bool includeInactive = false,
       CancellationToken ct = default
    );
 
-   Task<Result<IEnumerable<BookListItemDto>>> SearchAsync(
+   Task<Result<IEnumerable<BookDto>>> SearchAsync(
       BookSearchField searchField,
       string searchText,
       bool includeInactive = false,
@@ -31,6 +31,11 @@ public interface IBookClient {
    Task<Result<BookItemDto>> AddBookItemAsync(
       Guid bookId,
       BookItemAddDto dto,
+      CancellationToken ct = default
+   );
+
+   Task<Result<BookDeactivationInfoDto>> GetDeactivationInfoAsync(
+      Guid bookId,
       CancellationToken ct = default
    );
 

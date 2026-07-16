@@ -12,9 +12,9 @@ public interface IReaderUseCases {
       CancellationToken ct
    );
 
-   // Update mutable Reader profile data.
-   Task<Result<ReaderDto>> UpdateAsync(
-      Guid id,
+   // Update mutable profile data of the current Reader.
+   // The Reader is resolved through IIdentityGateway.Subject.
+   Task<Result<ReaderDto>> UpdateMeAsync(
       ReaderUpdateDto dto,
       CancellationToken ct
    );
@@ -42,7 +42,7 @@ Diese Fassade enthält nur Command-Operationen, also Operationen, die den
 Zustand des Systems verändern:
 
 - Reader anlegen
-- Reader ändern
+- eigenen Reader ändern
 - Reader deaktivieren
 
 Abgrenzung:

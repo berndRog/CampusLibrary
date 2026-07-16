@@ -97,6 +97,11 @@ public sealed class DevCurrentUserProvider(
    in diesem didaktischen Modell nicht zur CampusLibrary-Domäne, sondern später
    zum IdentityAccessServer.
 
+   Die API besitzt in Teil 5 eine eigene DevIdentity-Konfiguration für
+   IIdentityGateway. Der Client sendet diese Identität nicht an die API. Damit
+   UI-Perspektive und /me-Endpunkte dieselbe Demo-Person verwenden, sollen beide
+   Anwendungen denselben ActiveProfile-Namen verwenden.
+
    In Teil 6 kann dieser Provider durch einen ClaimsCurrentUserProvider ersetzt
    werden. Die UI-Seiten bleiben dabei weitgehend unverändert, weil sie nur gegen
    ICurrentUserProvider programmiert sind.

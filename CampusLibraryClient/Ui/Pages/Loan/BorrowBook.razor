@@ -27,29 +27,23 @@ else if(_book is null) {
    <p>Buch nicht gefunden.</p>
    <button class="btn btn-outline-secondary" @onclick="Cancel">Zurück zum Katalog</button>
 }
+else if(_alreadyBorrowedByReader) {
+   <div class="alert alert-info" role="alert">
+      Sie haben bereits ein Exemplar dieses Buchs ausgeliehen.
+   </div>
+   <button class="btn btn-outline-secondary" @onclick="Cancel">Zurück zum Katalog</button>
+}
 else {
    <div class="card shadow-sm mb-3">
       <div class="card-body">
          <h2 class="h5 card-title mb-3">Buch</h2>
-
          <dl class="row mb-0">
-            <dt class="col-sm-3">Titel</dt>
-            <dd class="col-sm-9">@_book.Title</dd>
-
-            <dt class="col-sm-3">Untertitel</dt>
-            <dd class="col-sm-9">@_book.Subtitle</dd>
-
-            <dt class="col-sm-3">Autorinnen/Autoren</dt>
-            <dd class="col-sm-9">@_book.AuthorsText</dd>
-
-            <dt class="col-sm-3">ISBN</dt>
-            <dd class="col-sm-9">@_book.Isbn</dd>
-
-            <dt class="col-sm-3">Ausgeliehen / Gesamt</dt>
-            <dd class="col-sm-9">@_borrowedItems / @_totalItems</dd>
-
-            <dt class="col-sm-3">Verfügbar</dt>
-            <dd class="col-sm-9">@_availableItems.Count</dd>
+            <dt class="col-sm-3">Titel</dt><dd class="col-sm-9">@_book.Title</dd>
+            <dt class="col-sm-3">Untertitel</dt><dd class="col-sm-9">@Display(_book.Subtitle)</dd>
+            <dt class="col-sm-3">Autorinnen/Autoren</dt><dd class="col-sm-9">@_book.AuthorsText</dd>
+            <dt class="col-sm-3">ISBN</dt><dd class="col-sm-9">@_book.Isbn</dd>
+            <dt class="col-sm-3">Ausgeliehen / Gesamt</dt><dd class="col-sm-9">@_borrowedItems / @_totalItems</dd>
+            <dt class="col-sm-3">Verfügbar</dt><dd class="col-sm-9">@_availableItems.Count</dd>
          </dl>
       </div>
    </div>
@@ -57,31 +51,23 @@ else {
    <div class="card shadow-sm mb-3">
       <div class="card-body">
          <h2 class="h5 card-title mb-3">Leser/in</h2>
-
          <dl class="row mb-0">
-            <dt class="col-sm-3">Name</dt>
-            <dd class="col-sm-9">@_currentUser.DisplayName</dd>
-
-            <dt class="col-sm-3">E-Mail</dt>
-            <dd class="col-sm-9">@_currentUser.Email</dd>
-
-            <dt class="col-sm-3">Reader Id</dt>
-            <dd class="col-sm-9"><code>@_currentUser.ReaderId</code></dd>
+            <dt class="col-sm-3">Name</dt><dd class="col-sm-9">@_currentUser.DisplayName</dd>
+            <dt class="col-sm-3">E-Mail</dt><dd class="col-sm-9">@_currentUser.Email</dd>
          </dl>
+         <p class="small text-muted mb-0">
+            Die API bestimmt den fachlichen Reader selbst über das konfigurierte Subject.
+            Der Client sendet keine ReaderId.
+         </p>
       </div>
    </div>
 
    <div class="card shadow-sm mb-3">
       <div class="card-body">
          <h2 class="h5 card-title mb-3">Geplante Ausleihe</h2>
-
          <dl class="row mb-0">
-            <dt class="col-sm-3">Ausleihdatum</dt>
-            <dd class="col-sm-9">@DateTime.Today.ToString("yyyy-MM-dd")</dd>
-
-            <dt class="col-sm-3">Rückgabedatum</dt>
-            <dd class="col-sm-9">@DateTime.Today.AddDays(28).ToString("yyyy-MM-dd")</dd>
-
+            <dt class="col-sm-3">Ausleihdatum</dt><dd class="col-sm-9">@DateTime.Today.ToString("yyyy-MM-dd")</dd>
+            <dt class="col-sm-3">Rückgabedatum</dt><dd class="col-sm-9">@DateTime.Today.AddDays(28).ToString("yyyy-MM-dd")</dd>
             <dt class="col-sm-3">Exemplar</dt>
             <dd class="col-sm-9">
                @if(_availableItems.Count == 0) {
@@ -90,9 +76,7 @@ else {
                else {
                   <select class="form-select" @bind="_selectedBookItemId">
                      @foreach(BookItemDto item in _availableItems) {
-                        <option value="@item.Id">
-                           @item.Id (@item.Id)
-                        </option>
+                        <option value="@item.Id">@item.Id</option>
                      }
                   </select>
                }
@@ -103,8 +87,7 @@ else {
 
    <div class="d-flex flex-wrap gap-2">
       <button class="btn btn-outline-secondary" @onclick="Cancel">Abbrechen</button>
-      <button class="btn btn-primary"
-              @onclick="ConfirmBorrowAsync"
+      <button class="btn btn-primary" @onclick="ConfirmBorrowAsync"
               disabled="@(_availableItems.Count == 0 || IsLoading)">
          Ausleihe abschließen
       </button>
@@ -112,41 +95,29 @@ else {
 }
 
 @code {
-
-   [Parameter]
-   public Guid BookId { get; set; }
+   [Parameter] public Guid BookId { get; set; }
 
    private const int AvailableBookItemStatus = 1;
-
-   private BookDetailDto? _book;
-
+   private BookDto? _book;
    private IReadOnlyList<BookItemDto> _availableItems = [];
-
    private int _totalItems;
-
    private int _borrowedItems;
-
    private Guid _selectedBookItemId;
-
+   private bool _alreadyBorrowedByReader;
    private CurrentUserInfo? _currentUser;
 
    protected override async Task OnInitializedAsync() {
       StartLoading();
       Error = null;
-
       _currentUser = await CurrentUserProvider.GetCurrentUserAsync();
 
-      Result<BookDetailDto> result = await BookClient.GetByIdAsync(
-         id: BookId
-      );
-
+      Result<BookDto> result = await BookClient.GetByIdAsync(id: BookId);
       if(result.IsSuccess && result.Value is not null) {
          _book = result.Value;
          await RefreshAvailableBookItemsAsync();
       }
-      else {
+      else
          Error = result.Error;
-      }
 
       StopLoading();
    }
@@ -155,67 +126,52 @@ else {
       if(_book is null)
          return;
 
-      Result<IEnumerable<LoanListItemDto>> loanResult = await LoanClient.GetBorrowedAsync();
+      Result<IEnumerable<LoanDto>> allLoansResult = await LoanClient.GetBorrowedAsync();
+      if(allLoansResult.IsFailure || allLoansResult.Value is null) {
+         Error = allLoansResult.Error;
+         _availableItems = [];
+         return;
+      }
 
-      HashSet<Guid> borrowedBookItemIds = loanResult.IsSuccess && loanResult.Value is not null
-         ? loanResult.Value.Select(loan => loan.BookItemId).ToHashSet()
-         : [];
+      Result<IEnumerable<LoanDto>> myLoansResult = await LoanClient.GetMyBorrowedAsync();
+      if(myLoansResult.IsFailure || myLoansResult.Value is null) {
+         Error = myLoansResult.Error;
+         _availableItems = [];
+         return;
+      }
+
+      HashSet<Guid> borrowedItemIds = allLoansResult.Value
+         .Select(loan => loan.BookItemId)
+         .ToHashSet();
+      HashSet<Guid> myBorrowedItemIds = myLoansResult.Value
+         .Select(loan => loan.BookItemId)
+         .ToHashSet();
 
       IReadOnlyList<BookItemDto> bookItems = _book.BookItems ?? [];
-
-      _totalItems = bookItems.Count;
-
-      if(_totalItems == 0)
-         _totalItems = _book.TotalItems;
-
+      _alreadyBorrowedByReader = bookItems.Any(item => myBorrowedItemIds.Contains(item.Id));
+      _totalItems = bookItems.Count > 0 ? bookItems.Count : _book.TotalItems;
       _availableItems = bookItems
-         .Where(item =>
-            item.Status == AvailableBookItemStatus &&
-            !borrowedBookItemIds.Contains(item.Id)
-         )
+         .Where(item => item.Status == AvailableBookItemStatus && !borrowedItemIds.Contains(item.Id))
          .ToList();
-
-      _borrowedItems = Math.Max(
-         val1: 0,
-         val2: _totalItems - _availableItems.Count
-      );
+      _borrowedItems = Math.Max(0, _totalItems - _availableItems.Count);
 
       if(_availableItems.Count > 0)
          _selectedBookItemId = _availableItems[0].Id;
    }
 
    private async Task ConfirmBorrowAsync() {
-      if(_currentUser?.ReaderId is null) {
-         Error = new ApiError(
-            Status: 400,
-            Title: "Missing reader",
-            Detail: "The current reader has no ReaderId. Check DevIdentity or the login claims."
-         );
-
+      if(_currentUser?.IsReader != true)
          return;
-      }
 
       if(_selectedBookItemId == Guid.Empty) {
-         Error = new ApiError(
-            Status: 400,
-            Title: "Missing book item",
-            Detail: "Select an available book item before completing the loan."
-         );
-
+         Error = new ApiError(400, "Missing book item", "Select an available book item before completing the loan.");
          return;
       }
 
       StartLoading();
       Error = null;
-
-      LoanCreateDto dto = new(
-         ReaderId: _currentUser.ReaderId.Value,
-         BookItemId: _selectedBookItemId
-      );
-
-      Result<LoanDto> result = await LoanClient.BorrowAsync(
-         dto: dto
-      );
+      LoanBorrowMeDto dto = new(BookItemId: _selectedBookItemId);
+      Result<LoanDto> result = await LoanClient.BorrowMyAsync(dto);
 
       if(result.IsFailure) {
          Error = result.Error;
@@ -227,7 +183,13 @@ else {
       Navigation.NavigateTo("/my/loans");
    }
 
-   private void Cancel() {
-      Navigation.NavigateTo("/catalog/books");
-   }
+   private void Cancel() => Navigation.NavigateTo("/catalog/books");
+
+   private static string Display(string? value) =>
+      string.IsNullOrWhiteSpace(value) ? "Nicht verfügbar" : value;
 }
+
+@* Teil 5 verwendet keinen IdentityAccessServer und kein Access Token.
+   Der Client steuert nur die sichtbare Reader-Perspektive. Die API liest ihre
+   eigene DevIdentity-Konfiguration und ermittelt den Reader stabil über Subject.
+*@

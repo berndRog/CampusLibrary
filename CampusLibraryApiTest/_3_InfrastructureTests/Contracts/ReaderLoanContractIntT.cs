@@ -6,6 +6,7 @@ using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Readers._3_Domain.Errors;
 using CampusLibraryApiTest.TestInfrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using CampusLibraryApi._2_BuildingBlocks._3_Domain.Errors;
 
 namespace CampusLibraryApiTest._3_InfrastructureTests.Contracts;
 

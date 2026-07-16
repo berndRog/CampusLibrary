@@ -24,6 +24,13 @@ public static class ReaderErrors {
          "Reader: SubjectRequired",
          "Subject is required."
       );
+      
+   public static readonly DomainError ReaderUpdateDtoRequired =
+      new(
+         WebErrorStatus.BadRequest,
+         "Reader: ReaderUpdateDtoRequired",
+         "A ReaderUpdateDto object must be provided."
+      );   
 
    public static readonly DomainError FirstnameIsRequired =
       new(
@@ -66,6 +73,13 @@ public static class ReaderErrors {
          "Reader: EmailAlreadyInUse",
          "The provided email address is already in use."
       );
+      
+   public static readonly DomainError AddressIsRequired =
+      new(
+         WebErrorStatus.BadRequest,
+         "Reader: Address required",
+         "A valid address with street, postal code and city must be provided."
+      );   
 
    public static readonly DomainError TimestampIsRequired =
       new(
@@ -94,14 +108,7 @@ public static class ReaderErrors {
          "Reader: ReaderCreateDtoRequired",
          "A ReaderCreateDto object must be provided."
       );
-
-   public static readonly DomainError ReaderUpdateDtoRequired =
-      new(
-         WebErrorStatus.BadRequest,
-         "Reader: ReaderUpdateDtoRequired",
-         "A ReaderUpdateDto object must be provided."
-      );
-
+   
    public static readonly DomainError AddressRequired =
       new(
          WebErrorStatus.BadRequest,

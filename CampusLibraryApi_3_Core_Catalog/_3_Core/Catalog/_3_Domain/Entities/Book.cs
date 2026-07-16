@@ -45,7 +45,7 @@ public sealed class Book : AggregateRoot {
       Subtitle = subtitle;
       IsbnVo = isbnVo;
    }
-   
+
    //--- factory methods -------------------------------------------------------
    // Creates a new Book aggregate and initializes its timestamps.
    // Validation errors are returned as Result failures.
@@ -62,19 +62,19 @@ public sealed class Book : AggregateRoot {
       );
       title = title.Trim();
       subtitle = string.IsNullOrWhiteSpace(subtitle) ? null : subtitle.Trim();
-      
+
       IReadOnlyList<string> authorLastnames = AuthorTextParser.ExtractLastnames(
          authorsText: normalizedAuthorsText
       );
-      
+
       // A book needs a valid technical identity.
       if (id == Guid.Empty)
          return Result<Book>.Failure(CatalogErrors.BookIdRequired);
-      
+
       // A book needs at least one author lastname.
       if (authorLastnames.Count == 0)
          return Result<Book>.Failure(CatalogErrors.AuthorsAreRequired);
-      
+
       // A book needs a title.
       if (string.IsNullOrWhiteSpace(title))
          return Result<Book>.Failure(CatalogErrors.TitleIsRequired);
@@ -84,7 +84,7 @@ public sealed class Book : AggregateRoot {
       if (resultIsbn.IsFailure)
          return Result<Book>.Failure(resultIsbn.Error);
       var isbnVo = resultIsbn.Value;
-      
+
       // Create the aggregate with normalized string values.
       var book = new Book(
          id: id,
@@ -98,7 +98,7 @@ public sealed class Book : AggregateRoot {
       var resultCreated = book.Initialize(createdAt);
       if (resultCreated.IsFailure)
          return Result<Book>.Failure(resultCreated.Error);
-      
+
       return Result<Book>.Success(book);
    }
 
@@ -108,7 +108,7 @@ public sealed class Book : AggregateRoot {
       Guid bookItemId,
       DateTime updatedAt
    ) {
-      
+
       // A book item needs a identity == inventary number.
       if (bookItemId == Guid.Empty)
          return Result<BookItem>.Failure(CatalogErrors.BookItemIdRequired);
@@ -132,23 +132,30 @@ public sealed class Book : AggregateRoot {
 
       return Result<BookItem>.Success(bookItem);
    }
-   
-   // Deactivate the Book
+
+   // Deactivates the Book and removes all physical copies from the aggregate.
+   // The application use case must first verify that no current Loan exists
+   // for any of these BookItems.
    public Result Deactivate(
-       DateTime updatedAt
-    ) {
-       if (!IsActive)
-          return Result.Success();
+      DateTime updatedAt
+   ) {
+      // A repeated request is idempotent only when the book is already in the
+      // complete target state. Older database versions may contain an inactive
+      // Book that still owns BookItems. Calling Deactivate again then completes
+      // the cleanup after all current loans have been returned.
+      if(!IsActive && _bookItems.Count == 0)
+         return Result.Success();
 
-       IsActive = false;
-       
-       var resultUpdated = Touch(updatedAt);
-       if (resultUpdated.IsFailure)
-          return Result.Failure(resultUpdated.Error);
+      var resultUpdated = Touch(updatedAt);
+      if(resultUpdated.IsFailure)
+         return Result.Failure(resultUpdated.Error);
 
-       return Result.Success();
+      _bookItems.Clear();
+      IsActive = false;
+
+      return Result.Success();
    }
-   
+
    private static string NormalizeAuthorsText(
       string? authorsText
    ) {
@@ -207,9 +214,8 @@ Beziehung später mit einer Join-Tabelle ab.
 
 Das unterscheidet Book-Author von einem späteren Loan-Modell. Ein Loan ist
 nicht nur eine Verbindung zwischen Reader und BookItem, sondern ein eigener
-fachlicher Vorgang mit Ausleihdatum, Rückgabefrist, Rückgabedatum und Status.
-Loan hätte daher eine eigene fachliche Bedeutung und vermutlich eine eigene
-Identität.
+fachlicher Vorgang mit Ausleihdatum, Rückgabefrist, Verlängerungen und eigener
+Identität. Ein vorhandener Loan repräsentiert eine aktuelle Ausleihe.
 
 Author bleibt dennoch ein eigenes Aggregate Root. Ein Author kann unabhängig
 von einem einzelnen Book existieren und mehreren Books zugeordnet werden.

@@ -78,11 +78,11 @@ GET {{baseUrl}}/readers/email?email={{reader99Email}}
 Accept: application/json
 
 
-### 3. Update reader ===========================================================
+### 3. Update current reader ===================================================
 
-### Update reader 1
+### Update the Reader represented by API-side DevIdentity (ReaderRita)
 ### Expected: 200 OK
-PUT {{baseUrl}}/readers/{{reader1Id}}
+PUT {{baseUrl}}/readers/me/update
 Content-Type: application/json
 Accept: application/json
 
@@ -98,9 +98,9 @@ Accept: application/json
 }
 
 
-### Get updated active reader 1 by id
+### Get updated current Reader by id
 ### Expected: 200 OK with lastname Meier and email e.meier@gmx.de
-GET {{baseUrl}}/readers/{{reader1Id}}
+GET {{baseUrl}}/readers/{{reader99Id}}
 Accept: application/json
 
 
@@ -110,9 +110,9 @@ GET {{baseUrl}}/readers/email?email=e.meier@gmx.de
 Accept: application/json
 
 
-### Get reader 1 by old email
+### Get current Reader by old email
 ### Expected: 404 Not Found
-GET {{baseUrl}}/readers/email?email={{reader1Email}}
+GET {{baseUrl}}/readers/email?email={{reader99Email}}
 Accept: application/json
 
 
@@ -255,7 +255,7 @@ Accept: application/json
 
 ### Update reader with invalid lastname
 ### Expected: 400 Bad Request
-PUT {{baseUrl}}/readers/{{reader2Id}}
+PUT {{baseUrl}}/readers/me/update
 Content-Type: application/json
 Accept: application/json
 
@@ -266,29 +266,22 @@ Accept: application/json
 }
 
 
-### Update unknown reader
-### Expected: 404 Not Found
-PUT {{baseUrl}}/readers/{{unknownReaderId}}
-Content-Type: application/json
-Accept: application/json
-
-{
-  "lastname": "Unknown",
-  "email": null,
-  "addressDto": null
-}
+### Unknown-current-reader test
+### To test 404, temporarily configure DevIdentity.Subject to a subject that
+### does not exist in the Readers table, restart the API, and call:
+### PUT {{baseUrl}}/readers/me/update
 
 
-### Update reader with duplicate email
-### Existing email: e.meier@gmx.de
+### Update current reader with duplicate email
+### Existing email: {{reader2Email}}
 ### Expected: 409 Conflict
-PUT {{baseUrl}}/readers/{{reader2Id}}
+PUT {{baseUrl}}/readers/me/update
 Content-Type: application/json
 Accept: application/json
 
 {
   "lastname": null,
-  "email": "e.meier@gmx.de",
+  "email": "{{reader2Email}}",
   "addressDto": null
 }
 

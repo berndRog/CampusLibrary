@@ -8,18 +8,18 @@
 
 <PageTitle>Ausleihe Details</PageTitle>
 
-<h1 class="h3 mb-3">Ausleihe Details</h1>
+<h1 class="h3 mb-3">Details</h1>
 
-<ErrorAlert Error="Error"/>
+<ErrorAlert Error="Error" />
 
-@if (IsLoading || _currentUser is null) {
+@if(IsLoading || _currentUser is null) {
    <p class="text-muted">Ausleihe wird geladen...</p>
 }
-else if (_loan is null) {
-   <p>Keine Ausleihe gefunden.</p>
+else if(Error is not null) {
+   @* ErrorAlert above displays the API error. *@
 }
-else if (!CanViewLoan()) {
-   <p>Diese Ausleihe kann mit der aktuellen Demo-Identität nicht angezeigt werden.</p>
+else if(_loan is null) {
+   <p>Keine Ausleihe gefunden.</p>
 }
 else {
    <h2 class="h5">Buch</h2>
@@ -36,7 +36,6 @@ else {
 
       <dt class="col-sm-3 mb-0">ISBN</dt>
       <dd class="col-sm-9 mb-0">@Display(_loan.Isbn)</dd>
-
    </dl>
 
    <dl class="row mb-0">
@@ -49,32 +48,25 @@ else {
    <dl class="row mb-0">
       <dt class="col-sm-3 mb-0">Name</dt>
       <dd class="col-sm-9 mb-0">@Display(ReaderName)</dd>
-     
-      <dt class="col-sm-3 mb-0">Email</dt> 
+
+      <dt class="col-sm-3 mb-0">Email</dt>
       <dd class="col-sm-9 mb-0">@_loan.Email</dd>
    </dl>
 
    <h2 class="h5 mt-2">Ausleihe</h2>
-   
-   <dl class="row mb-0">
 
+   <dl class="row mb-0">
       <dt class="col-sm-3 mb-0">Ausleihdatum</dt>
       <dd class="col-sm-9 mb-0">@FormatDate(_loan.LoanDate)</dd>
 
       <dt class="col-sm-3 mb-0">Fällig am</dt>
       <dd class="col-sm-9 mb-0">@FormatDate(_loan.DueDate)</dd>
-      
-      <dt class="col-sm-3 mb-0">Status</dt>
-      <dd class="col-sm-9 mb-0">@(_loan.Status == 1 ? "ausgeliehen" : "zurückgegeben")</dd>
-      
+
       <dt class="col-sm-3 mb-0">Verlängerungen</dt>
       <dd class="col-sm-9 mb-0">@_loan.RenewalCount</dd>
 
       <dt class="col-sm-3 mb-0">Überfällig</dt>
       <dd class="col-sm-9 mb-0">@YesNo(_loan.IsOverdue)</dd>
-
-      @* <dt class="col-sm-3 mb-1">Zurückgegeben am</dt> *@
-      @* <dd class="col-sm-9 mb-1">@(_loan.ReturnedAt is null ? "Nein" : FormatDate(_loan.ReturnedAt.Value))</dd> *@
 
       <dt class="col-sm-3 mb-1">Verlängerbar</dt>
       <dd class="col-sm-9 mb-1">@YesNo(_loan.CanRenew)</dd>
@@ -85,12 +77,18 @@ else {
          Zurück zur Übersicht
       </button>
 
-      @if (_loan.ReturnedAt is null) {
-         <button class="btn btn-outline-primary" @onclick="RenewAsync" disabled="@(!_loan.CanRenew || IsLoading)">
+      @if(_currentUser.IsReader) {
+         <button class="btn btn-outline-primary"
+                 @onclick="RenewAsync"
+                 disabled="@(!_loan.CanRenew || IsLoading)">
             Verlängern
          </button>
+      }
 
-         <button class="btn btn-primary" @onclick="ReturnAtDeskAsync" disabled="@IsLoading">
+      @if(_currentUser.IsEmployee) {
+         <button class="btn btn-primary"
+                 @onclick="ReturnAtDeskAsync"
+                 disabled="@IsLoading">
             Zurückgeben
          </button>
       }
@@ -99,15 +97,16 @@ else {
 
 @code {
 
-   [Parameter] public Guid LoanId { get; set; }
+   [Parameter]
+   public Guid LoanId { get; set; }
 
-   private LoanDetailDto? _loan;
+   private LoanDto? _loan;
 
    private CurrentUserInfo? _currentUser;
 
    private string ReaderName {
       get {
-         if (_loan is null)
+         if(_loan is null)
             return string.Empty;
 
          return $"{_loan.Firstname} {_loan.Lastname}".Trim();
@@ -123,38 +122,36 @@ else {
       StartLoading();
       Error = null;
 
-      var result = await LoanClient.GetByIdAsync(id: LoanId);
+      Result<LoanDto> result = _currentUser?.IsReader == true
+         ? await LoanClient.GetMyByIdAsync(
+            id: LoanId
+         )
+         : await LoanClient.GetByIdAsync(
+            id: LoanId
+         );
 
-      if (result.IsSuccess && result.Value is not null)
+      if(result.IsSuccess && result.Value is not null)
          _loan = result.Value;
-      else
+      else {
          Error = result.Error;
+         _loan = null;
+      }
 
       StopLoading();
    }
 
-   private bool CanViewLoan() {
-      if (_currentUser is null || _loan is null)
-         return false;
-
-      if (_currentUser.IsEmployee)
-         return true;
-
-      if (_currentUser.IsReader && _currentUser.ReaderId == _loan.ReaderId)
-         return true;
-
-      return false;
-   }
-
    private async Task RenewAsync() {
-      if (_loan is null)
+      if(_loan is null || _currentUser?.IsReader != true)
          return;
 
       StartLoading();
       Error = null;
 
-      var result = await LoanClient.RenewAsync(_loan.Id);
-      if (result.IsFailure) {
+      Result<LoanDto> result = await LoanClient.RenewMyAsync(
+         id: _loan.Id
+      );
+
+      if(result.IsFailure) {
          Error = result.Error;
          StopLoading();
          return;
@@ -164,27 +161,31 @@ else {
    }
 
    private async Task ReturnAtDeskAsync() {
-      if (_loan is null)
+      if(_loan is null || _currentUser?.IsEmployee != true)
          return;
 
       StartLoading();
       Error = null;
 
-      var result = await LoanClient.ReturnAtDeskAsync(_loan.Id);
-      if (result.IsFailure) {
+      Result<bool> result = await LoanClient.ReturnAtDeskAsync(
+         id: _loan.Id
+      );
+
+      if(result.IsFailure) {
          Error = result.Error;
          StopLoading();
          return;
       }
 
-      await LoadAsync();
+      BackToOverview();
    }
 
    private void BackToOverview() {
-      if (_currentUser?.IsReader == true)
-         Navigation.NavigateTo("/my/loans");
-      else
-         Navigation.NavigateTo("/loans");
+      Navigation.NavigateTo(
+         _currentUser?.IsReader == true
+            ? "/my/loans"
+            : "/loans"
+      );
    }
 
    private static string Display(
@@ -200,5 +201,16 @@ else {
    private static string YesNo(
       bool value
    ) => value ? "Ja" : "Nein";
-
 }
+
+@* Didaktik:
+   Die Detailseite führt keine Client-seitige Eigentumsprüfung mehr durch.
+
+   Reader verwenden GET /loans/me/{id}. Die API bestimmt den fachlichen Reader
+   aus dem konfigurierten API-DevIdentity-Subject und liefert nur eine eigene Ausleihe. Employees
+   verwenden weiterhin den administrativen Endpunkt GET /loans/{id}.
+
+   Client-seitige Prüfungen sind nur für die Darstellung von Aktionen gedacht:
+   Reader können ihre eigene Ausleihe verlängern; die Rückgabe am Desk ist eine
+   Employee-Aktion. Die API führt die fachliche Identitäts- und Eigentumsprüfung über ihre DevIdentity aus.
+*@

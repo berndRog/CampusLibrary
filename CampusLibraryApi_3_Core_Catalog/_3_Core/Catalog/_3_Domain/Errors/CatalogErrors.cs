@@ -28,13 +28,13 @@ public static class CatalogErrors {
          "The book was not found."
       );
 
-   public static readonly DomainError AuthorsAreRequired = 
+   public static readonly DomainError AuthorsAreRequired =
       new(
          WebErrorStatus.BadRequest,
          "Catalog: Book Author(s) Is/Are Required",
          "At least one author is required."
    );
-   
+
    public static readonly DomainError TitleIsRequired =
       new(
          WebErrorStatus.BadRequest,
@@ -62,7 +62,14 @@ public static class CatalogErrors {
          "Catalog: Book Already Exists",
          "A book with this ISBN already exists."
       );
-   
+
+   public static readonly DomainError BookCannotBeDeactivatedWithLoans =
+      new(
+         WebErrorStatus.Conflict,
+         "Catalog: Book Cannot Be Deactivated With Loans",
+         "The book cannot be deactivated while one of its book items is borrowed."
+      );
+
    public static readonly DomainError BookCreateDtoRequired =
       new(
          WebErrorStatus.BadRequest,
@@ -108,7 +115,7 @@ public static class CatalogErrors {
          "Catalog: Invalid uthor Id",
          "The given author Id is invalid."
       );
-   
+
    public static readonly DomainError AuthorIdRequired =
       new(
          WebErrorStatus.BadRequest,
@@ -129,7 +136,7 @@ public static class CatalogErrors {
          "Catalog: Author Firstname Required",
          "A first name must be provided."
       );
-   
+
    public static readonly DomainError InvalidFirstname =
       new(
          WebErrorStatus.BadRequest,
@@ -157,8 +164,8 @@ public static class CatalogErrors {
          "Catalog: Author Already Exists",
          "An author with this name already exists."
       );
-   
-      
+
+
    public static readonly DomainError AuthorCreateDtoRequired =
       new(
          WebErrorStatus.BadRequest,
@@ -219,27 +226,6 @@ public static class CatalogErrors {
          WebErrorStatus.NotFound,
          "BookItem: NotFound",
          "The book item was not found."
-      );
-
-   public static readonly DomainError BookItemInventoryNumberIsRequired =
-      new(
-         WebErrorStatus.BadRequest,
-         "BookItem: InventoryNumberRequired",
-         "An inventory number must be provided."
-      );
-
-   public static readonly DomainError InvalidInventoryNumber =
-      new(
-         WebErrorStatus.BadRequest,
-         "BookItem: InvalidInventoryNumber",
-         "The inventory number is too short or too long (2–40 characters)."
-      );
-
-   public static readonly DomainError BookItemAlreadyExists =
-      new(
-         WebErrorStatus.Conflict,
-         "BookItem: AlreadyExists",
-         "A book item with this inventory number already exists."
       );
 
    public static readonly DomainError InvalidBookItemStatus =

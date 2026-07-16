@@ -4,15 +4,6 @@ namespace CampusLibraryApi._3_Core.Loans._2_Application.Mappings;
 
 public static class LoanMappings {
    
-   public static LoanDto ToLoanDto(this Loan loan) => new(
-      Id: loan.Id,
-      LoanDate: loan.LoanDate,
-      DueDate: loan.DueDate,
-      ReaderId: loan.ReaderId,
-      BookItemId: loan.BookItemId,
-      ReturnedAt: loan.ReturnedAt,
-      Status: (int) loan.Status,
-      RenewalCount: loan.RenewalCount
-   );
+
    
 }

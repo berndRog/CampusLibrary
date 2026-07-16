@@ -80,6 +80,7 @@ public sealed class ReaderController(
    [HttpGet("readers/{id:guid}", Name = nameof(GetReaderByIdAsync))]
    [Produces("application/json")]
    [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
@@ -100,6 +101,7 @@ public sealed class ReaderController(
       var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
 
       return result.Error.Status switch {
+         WebErrorStatus.BadRequest => BadRequest(problem),
          WebErrorStatus.Unauthorized => Unauthorized(problem),
          WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
          WebErrorStatus.NotFound => NotFound(problem),
@@ -150,7 +152,7 @@ public sealed class ReaderController(
          _ => BadRequest(problem)
       };
    }
-
+   
    /// <summary>
    ///    Creates a new reader.
    /// </summary>
@@ -200,14 +202,14 @@ public sealed class ReaderController(
    }
 
    /// <summary>
-   ///    Updates an existing reader.
+   ///    Updates mutable data of the current reader.
    /// </summary>
-   /// <param name="id">Reader unique id.</param>
-   /// <param name="dto">Reader data used to update the resource.</param>
+   /// <param name="dto">Mutable reader data. Null properties remain unchanged.</param>
    /// <param name="ct">Cancellation token.</param>
-   /// <returns>The updated reader resource.</returns>
-   // Update an existing reader through the write-side use case.
-   [HttpPut("readers/{id:guid}", Name = nameof(UpdateReaderAsync))]
+   /// <returns>The updated current reader.</returns>
+   // Part 5 resolves the current Reader through the API-side DevIdentity.
+   // The client does not send a Reader id.
+   [HttpPut("readers/me/update", Name = nameof(UpdateReaderMeAsync))]
    [Consumes("application/json")]
    [Produces("application/json")]
    [ProducesResponseType<ReaderDto>(StatusCodes.Status200OK)]
@@ -216,13 +218,11 @@ public sealed class ReaderController(
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
-   public async Task<ActionResult<ReaderDto>> UpdateReaderAsync(
-      [FromRoute] Guid id,
+   public async Task<ActionResult<ReaderDto>> UpdateReaderMeAsync(
       [FromBody] ReaderUpdateDto dto,
       CancellationToken ct
    ) {
-      var result = await readerUseCases.UpdateAsync(
-         id: id,
+      var result = await readerUseCases.UpdateMeAsync(
          dto: dto,
          ct: ct
       );
@@ -230,7 +230,10 @@ public sealed class ReaderController(
       if(result.IsSuccess)
          return Ok(result.Value);
 
-      var problem = DomainProblemDetailsFactory.FromDomainError(result.Error, HttpContext);
+      var problem = DomainProblemDetailsFactory.FromDomainError(
+         result.Error,
+         HttpContext
+      );
 
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),
@@ -262,10 +265,7 @@ public sealed class ReaderController(
       [FromRoute] Guid id,
       CancellationToken ct
    ) {
-      var result = await readerUseCases.DeactivateAsync(
-         id: id,
-         ct: ct
-      );
+      var result = await readerUseCases.DeactivateAsync(id, ct);
 
       if(result.IsSuccess)
          return NoContent();
@@ -286,6 +286,8 @@ public sealed class ReaderController(
    }
 }
 
+
+
 /*
 Didaktik
 --------
@@ -305,7 +307,7 @@ GET-Endpunkte verwenden das ReadModel:
 Schreibende Endpunkte verwenden die UseCase-Fassade:
 
 - CreateReaderAsync       -> IReaderUseCases.CreateAsync
-- UpdateReaderAsync       -> IReaderUseCases.UpdateAsync
+- UpdateReaderMeAsync     -> IReaderUseCases.UpdateMeAsync
 - DeactivateReaderAsync   -> IReaderUseCases.DeactivateAsync
 
 Die normale Sicht auf Reader liefert nur aktive Reader. Inaktive Reader
@@ -348,6 +350,7 @@ Lernziele
 - Controller als HTTP-Adapter verstehen
 - Unterschied zwischen GET/ReadModel und schreibenden UseCases erkennen
 - REST-Verhalten von 201 Created und Location-Header nachvollziehen
+- Self-Service-Update über /readers/me/update verstehen
 - REST-Verhalten von 200 OK bei Update und 204 NoContent bei Delete verstehen
 - DomainError.Status explizit auf HTTP-Antworten abbilden
 - 401 Unauthorized und 403 Forbidden unterscheiden

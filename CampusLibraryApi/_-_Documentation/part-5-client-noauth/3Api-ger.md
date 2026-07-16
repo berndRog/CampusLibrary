@@ -1,12 +1,12 @@
 # API-Nutzung aus Sicht des Clients — Teil 5
 
-Dieses Dokument beschreibt, welche CampusLibraryApi-Endpunkte der Blazor-SSR-Client in Teil 5 verwendet.
+Dieses Dokument beschreibt die aktuell verwendeten HTTP-Endpunkte und Transporttypen des Branches `part-5/client-noauth`.
 
 Englische Version: [3Api.md](3Api.md)
 
 ## Grundidee
 
-Der Client ruft die API über typisierte API-Clients auf:
+Der Blazor-SSR-Client verwendet modulbezogene HTTP-Clients:
 
 ```text
 IReaderClient -> ReaderClient
@@ -14,251 +14,398 @@ IBookClient   -> BookClient
 ILoanClient   -> LoanClient
 ```
 
-Die API-Basisadresse kommt aus `appsettings.json`:
-
-```json
-{
-  "CampusLibraryApi": {
-    "BaseUrl": "https://localhost:8010/"
-  }
-}
-```
-
-Alle fachlichen Routen liegen unter:
+Gemeinsame Basisadresse:
 
 ```text
-/camplib/v1
+https://localhost:8010/camplib/v1
 ```
+
+Der Client referenziert keine Core-Projekte der API. Er besitzt eigene DTOs mit derselben JSON-Struktur wie die öffentlichen DTOs der Module.
 
 ## Auth-Status in Teil 5
 
-Teil 5 verwendet keine echten geschützten API-Aufrufe.
+Teil 5 verwendet keine echte API-Authentifizierung.
+
+```text
+kein Bearer-Token
+kein Authorization-Header
+keine DevIdentity-Header vom Client
+kein laufender IdentityAccessServer erforderlich
+```
+
+Die API liest ihre technische Identität aus:
+
+```text
+CampusLibraryApi/appsettings.json
+```
+
+Datenfluss für `/me`:
+
+```text
+DevIdentity -> DevIdentityGateway -> IIdentityGateway
+            -> IdentitySubject.Check -> Reader.Subject
+```
+
+Für manuelle HTTP-Tests kann die API deshalb direkt aufgerufen werden.
+
+## DevIdentity-Voraussetzungen
+
+Beispiel für das Reader-Profil:
 
 ```json
 {
-  "Features": {
-    "AuthNEnabled": false,
-    "DevIdentityEnabled": true,
-    "ApiAccessTokenEnabled": false,
-    "AuthZEnabled": false
+  "DevIdentity": {
+    "ActiveProfile": "ReaderRita",
+    "Profiles": {
+      "ReaderRita": {
+        "IsAuthenticated": true,
+        "Subject": "reader-099",
+        "AccountType": "reader",
+        "Email": "r.reader@library.local",
+        "CreatedAt": "2025-01-01T00:00:00Z",
+        "AdminRights": 0
+      }
+    }
   }
 }
 ```
 
-Der `AccessTokenHandler` wird nicht an den CampusLibraryApi-HttpClient gehängt, solange `ApiAccessTokenEnabled=false` ist.
-
-`DevIdentity` steuert nur die UI-Perspektive. Es ersetzt keine Authentifizierung und keine Autorisierung.
-
-## Readers API aus Sicht des Clients
-
-### Readers laden
-
-Client-Methode:
+Die wichtigste Bedingung ist:
 
 ```text
-IReaderClient.GetAllAsync(includeInactive=false)
+DevIdentity.Subject == Reader.Subject in der Datenbank
 ```
 
-HTTP-Aufruf:
+Die E-Mail ist dafür nicht geeignet, weil `Reader.Email` über das Self-Service-Update geändert werden kann.
 
-```http
-GET /camplib/v1/readers?includeInactive=false
-```
+## Gemeinsame Fehlerantworten
 
-Verwendet von:
+Controller übersetzen fachliche Fehler in `ProblemDetails`.
+
+Typische Statuscodes:
 
 ```text
-/readers
-ReadersList.razor
+400 Bad Request   ungültige Eingabe
+401 Unauthorized  technische Identität nicht als authentifiziert markiert
+403 Forbidden     Identität ist kein Reader oder Zugriff nicht erlaubt
+404 Not Found     Ressource oder aktueller Reader nicht gefunden
+409 Conflict      Eindeutigkeits- oder Zustandskonflikt
 ```
 
-Response-Typ:
+## Readers API
+
+### ReaderDto
 
 ```csharp
 public sealed record ReaderDto(
    Guid Id,
    string? Firstname,
    string? Lastname,
-   string? Email,
+   string Email,
    AddressDto? AddressDto,
    bool IsActive,
-   string? Subject
+   string Subject
 );
 ```
 
-In der UI angezeigt:
+### AddressDto
 
-```text
-Name
-Email
-Status
+```csharp
+public sealed record AddressDto(
+   string Street,
+   string PostalCode,
+   string City,
+   string? Country
+);
 ```
 
-`Subject` wird nicht angezeigt. Es ist eine technische Identität und wird erst im AuthN/AuthZ-Kontext fachlich wichtig.
+### Readers laden
 
-### Reader per id laden
+Clientmethode:
 
-Client-Methode:
+```text
+IReaderClient.GetAllAsync(includeInactive=false)
+```
+
+HTTP:
+
+```http
+GET /camplib/v1/readers?includeInactive=false
+```
+
+Antwort:
+
+```text
+200 OK + ReaderDto[]
+```
+
+Mit inaktiven Readern:
+
+```http
+GET /camplib/v1/readers?includeInactive=true
+```
+
+### Reader per Id laden
+
+Clientmethode:
 
 ```text
 IReaderClient.GetByIdAsync(id, includeInactive=false)
 ```
 
-HTTP-Aufruf:
+HTTP:
 
 ```http
 GET /camplib/v1/readers/{id}?includeInactive=false
 ```
 
+Antworten:
+
+```text
+200 OK
+404 Not Found
+```
+
 ### Reader per E-Mail laden
 
-Client-Methode:
+Clientmethode:
 
 ```text
 IReaderClient.GetByEmailAsync(email, includeInactive=false)
 ```
 
-HTTP-Aufruf:
+HTTP:
 
 ```http
 GET /camplib/v1/readers/email?email={email}&includeInactive=false
 ```
 
-### Reader anlegen
+Die E-Mail-Suche ist eine normale Query. Sie wird nicht für die technische `/me`-Zuordnung verwendet.
 
-Die API-Client-Methode kann technisch vorhanden sein:
+### Reader administrativ anlegen
 
-```text
-IReaderClient.CreateAsync(dto)
-```
-
-In Teil 5 gibt es aber bewusst keine sichtbare UI-Funktion `Reader anlegen`.
-
-Grund:
+Clientmethode:
 
 ```text
-Reader sollen später aus einem technischen Benutzer im IdentityAccessServer provisioniert werden.
+IReaderClient.CreateAsync(ReaderCreateDto dto)
 ```
 
-Teil 5 verwendet Reader aus Seed-/Testdaten.
+HTTP:
 
-### Reader aktualisieren
+```http
+POST /camplib/v1/readers
+Content-Type: application/json
+```
 
-Die API-Client-Methode kann technisch vorhanden sein:
+Request:
+
+```csharp
+public sealed record ReaderCreateDto(
+   string Firstname,
+   string Lastname,
+   string Email,
+   AddressDto AddressDto,
+   string Subject,
+   string? Id = null
+);
+```
+
+Beispiel:
+
+```json
+{
+  "firstname": "Rita",
+  "lastname": "Reader",
+  "email": "r.reader@library.local",
+  "addressDto": {
+    "street": "Bibliotheksweg 99",
+    "postalCode": "29556",
+    "city": "Suderburg",
+    "country": "DE"
+  },
+  "subject": "reader-099",
+  "id": "00000099-0000-0000-0000-000000000000"
+}
+```
+
+Antwort:
 
 ```text
-IReaderClient.UpdateAsync(id, dto)
+201 Created
+Location: /camplib/v1/readers/{id}
 ```
 
-Auch das ist in Teil 5 nicht der zentrale UI-Workflow.
+Die optionale Id unterstützt deterministische Tests und HTTP-Skripte.
+
+### Aktuellen Reader aktualisieren
+
+Der frühere administrative Updatepfad wurde durch Self-Service ersetzt.
+
+Clientmethode:
+
+```text
+IReaderClient.UpdateMeAsync(ReaderUpdateDto dto)
+```
+
+HTTP:
+
+```http
+PUT /camplib/v1/readers/me/update
+Content-Type: application/json
+```
+
+Request:
+
+```csharp
+public sealed record ReaderUpdateDto(
+   string? Lastname,
+   string? Email,
+   AddressDto? AddressDto
+);
+```
+
+Beispiel:
+
+```json
+{
+  "lastname": "Meier",
+  "email": "e.meier@gmx.de",
+  "addressDto": {
+    "street": "Neue Straße 1",
+    "postalCode": "29556",
+    "city": "Suderburg",
+    "country": "DE"
+  }
+}
+```
+
+Semantik:
+
+```text
+null -> bisherigen Wert unverändert lassen
+```
+
+Die API bestimmt den Reader über `IIdentityGateway.Subject`. Der Request enthält keine ReaderId.
+
+Mögliche Antworten:
+
+```text
+200 OK       Reader aktualisiert
+400          ungültige Profilwerte
+401          DevIdentity nicht authentifiziert
+403          aktives Profil ist kein Reader
+404          kein Reader mit dem Subject gefunden
+409          neue E-Mail wird bereits verwendet
+```
+
+Hinweis: Ein eigener `GET /readers/me`-Endpunkt ist im aktuellen Part-5-Controller nicht öffentlich vorhanden. Die interne Auflösung des aktuellen Readers wird für Update- und Loan-Self-Service genutzt.
 
 ### Reader deaktivieren
 
-Falls die UI diese Funktion nutzt, ruft der Client den bestehenden API-Endpunkt auf:
+Clientmethode:
 
 ```text
 IReaderClient.DeactivateAsync(id)
 ```
 
-Aktueller Client-Aufruf:
+HTTP:
 
 ```http
 DELETE /camplib/v1/readers/{id}
 ```
 
-Fachlich ist das ein Deaktivieren, kein physisches Löschen.
+Antwort:
 
-## Catalog API aus Sicht des Clients
+```text
+204 No Content
+```
+
+Der Reader wird fachlich deaktiviert und bleibt gespeichert. Eine Deaktivierung kann abgelehnt werden, wenn aktuelle Loans bestehen.
+
+## Catalog API
+
+### BookDto
+
+Liste und Detailansicht verwenden denselben Typ:
+
+```csharp
+public sealed record BookDto(
+   Guid Id,
+   string AuthorsText,
+   string Title,
+   string? Subtitle,
+   string Isbn,
+   IReadOnlyList<BookItemDto> BookItems,
+   int TotalItems,
+   int AvailableItems,
+   bool IsActive
+);
+```
+
+### BookItemDto
+
+```csharp
+public sealed record BookItemDto(
+   Guid Id,
+   Guid BookId,
+   int Status
+);
+```
+
+Statuswerte:
+
+```text
+1 Available
+2 Unavailable
+3 Lost
+4 Damaged
+```
+
+Es gibt im aktuellen Transportvertrag keine `InventoryNumber`.
 
 ### Bücher laden
 
-Client-Methode:
+Clientmethode:
 
 ```text
 IBookClient.GetAllAsync(includeInactive=false)
 ```
 
-HTTP-Aufruf:
+HTTP:
 
 ```http
 GET /camplib/v1/books?includeInactive=false
 ```
 
-Verwendet von:
-
-```text
-/catalog/books
-BooksList.razor
-```
-
-Mitarbeiter laden auch inaktive Bücher:
+Mitarbeiter können auch inaktive Bücher laden:
 
 ```http
 GET /camplib/v1/books?includeInactive=true
 ```
 
-Response-Typ:
+### Buch per Id laden
 
-```csharp
-public sealed record BookListItemDto(
-   Guid Id,
-   string? AuthorsText,
-   string? Title,
-   string? Subtitle,
-   string? Isbn,
-   int TotalItems,
-   int AvailableItems,
-   bool IsActive
-);
-```
-
-Die Katalogtabelle zeigt:
-
-```text
-Aktion | Titel | Autorinnen/Autoren | ISBN | Exemplare | Status
-```
-
-Die Spalte `Titel` enthält Titel und Untertitel. Die Spalte `Exemplare` zeigt ausgeliehen / gesamt.
-
-### Buch per id laden
-
-Client-Methode:
+Clientmethode:
 
 ```text
 IBookClient.GetByIdAsync(id, includeInactive=false)
 ```
 
-HTTP-Aufruf:
+HTTP:
 
 ```http
 GET /camplib/v1/books/{id}?includeInactive=false
 ```
 
-Response-Typ:
-
-```csharp
-public sealed record BookDetailDto(
-   Guid Id,
-   string? AuthorsText,
-   string? Title,
-   string? Subtitle,
-   string? Isbn,
-   IReadOnlyList<BookItemDto>? BookItems,
-   int TotalItems,
-   int AvailableItems,
-   bool IsActive
-);
-```
-
 ### Bücher suchen
 
-Client-Methode:
+Clientmethode:
 
 ```text
 IBookClient.SearchAsync(searchField, searchText, includeInactive=false)
 ```
 
-HTTP-Aufruf:
+HTTP:
 
 ```http
 GET /camplib/v1/books/search?searchField=Title&searchText=Clean%20Code&includeInactive=false
@@ -272,58 +419,57 @@ AuthorLastName
 Isbn
 ```
 
+Antwort ist ebenfalls `BookDto[]`. Separate Typen wie `BookSearchDto`, `BookListItemDto` oder `BookDetailDto` werden nicht mehr verwendet.
+
 ### Buch anlegen
 
-Client-Methode:
+Clientmethode:
 
 ```text
-IBookClient.CreateAsync(dto)
+IBookClient.CreateAsync(BookCreateDto dto)
 ```
 
-HTTP-Aufruf:
+HTTP:
 
 ```http
 POST /camplib/v1/books
 Content-Type: application/json
 ```
 
-Request-Typ:
+Request:
 
 ```csharp
 public sealed record BookCreateDto(
-   string? AuthorsText,
-   string? Title,
+   string AuthorsText,
+   string Title,
    string? Subtitle,
-   string? Isbn,
+   string Isbn,
    string? Id = null
 );
 ```
 
-Verwendet von:
+Antwort:
 
 ```text
-/catalog/books/create
-BookCreate.razor
+201 Created + BookDto
 ```
-
-Diese Seite ist für Mitarbeiter vorgesehen.
 
 ### BookItem hinzufügen
 
-Client-Methode:
+Clientmethode:
 
 ```text
-IBookClient.AddBookItemAsync(bookId, dto)
+IBookClient.AddBookItemAsync(bookId, BookItemAddDto dto)
 ```
 
-HTTP-Aufruf:
+HTTP:
 
 ```http
 POST /camplib/v1/books/{bookId}/items
 Content-Type: application/json
 ```
 
-Request-Typ:
+Request:
 
 ```csharp
 public sealed record BookItemAddDto(
@@ -331,159 +477,168 @@ public sealed record BookItemAddDto(
 );
 ```
 
-Response-Typ:
+Antwort:
+
+```text
+201 Created + BookItemDto
+```
+
+### Deaktivierungsinformationen laden
+
+Clientmethode:
+
+```text
+IBookClient.GetDeactivationInfoAsync(bookId)
+```
+
+HTTP:
+
+```http
+GET /camplib/v1/books/{bookId}/deactivation-info
+```
+
+Antwort:
 
 ```csharp
-public sealed record BookItemDto(
-   Guid Id,
+public sealed record BookDeactivationInfoDto(
    Guid BookId,
-   int Status
+   int TotalItems,
+   int BorrowedItems,
+   IReadOnlyList<BookLoanInfoDto> CurrentLoans
 );
 ```
 
-Verwendet von:
-
-```text
-/catalog/books/{bookId}/items/add
-BookItemAdd.razor
-```
-
-Die API hat keine separate `InventoryNumber` mehr. Die UI zeigt `BookItem.Id` als Inventarnummer an.
-
 ### Buch deaktivieren
 
-Client-Methode:
+Clientmethode:
 
 ```text
 IBookClient.DeactivateAsync(bookId)
 ```
 
-HTTP-Aufruf:
+HTTP:
 
 ```http
 PATCH /camplib/v1/books/{bookId}/deactivate
 ```
 
-Verwendet von:
+Antwort:
 
 ```text
-/catalog/books/{bookId}/deactivate
-BookDeactivate.razor
+200 OK + BookDto
 ```
 
-Der Client ruft keinen separaten BookItem-Delete-Endpunkt auf. Das Entfernen beziehungsweise Sperren der Exemplare ist Aufgabe des API-Use-Cases.
+Bei aktuellen Ausleihen kann die Deaktivierung mit einem Konflikt abgelehnt werden.
 
-## Loans API aus Sicht des Clients
+## Loans API
 
-### Ausgeliehene Loans laden
+### LoanDto
 
-Client-Methode:
-
-```text
-ILoanClient.GetBorrowedAsync()
-```
-
-HTTP-Aufruf:
-
-```http
-GET /camplib/v1/loans
-```
-
-Verwendet von:
-
-```text
-/loans
-LoansList.razor
-/my/loans
-MyLoansList.razor
-```
-
-Response-Typ:
+Liste und Detailansicht verwenden denselben Typ:
 
 ```csharp
-public sealed record LoanListItemDto(
+public sealed record LoanDto(
    Guid Id,
    Guid ReaderId,
-   string? Firstname,
-   string? Lastname,
-   Guid BookItemId,
-   string? Title,
-   string? Subtitle,
-   DateTime LoanDate,
-   DateTime DueDate,
-   int Status,
-   bool IsOverdue
-);
-```
-
-`BookItemId` wird in der UI als Inventarnummer angezeigt.
-
-### Loan per id laden
-
-Client-Methode:
-
-```text
-ILoanClient.GetByIdAsync(id)
-```
-
-HTTP-Aufruf:
-
-```http
-GET /camplib/v1/loans/{id}
-```
-
-Response-Typ:
-
-```csharp
-public sealed record LoanDetailDto(
-   Guid Id,
-   Guid ReaderId,
-   string? Firstname,
-   string? Lastname,
-   string? Email,
+   string Firstname,
+   string Lastname,
+   string Email,
    Guid BookItemId,
    Guid BookId,
-   string? AuthorsText,
-   string? Title,
+   string AuthorsText,
+   string Title,
    string? Subtitle,
-   string? Isbn,
+   string Isbn,
    bool BookIsActive,
    bool IsAvailableForLoan,
    DateTime LoanDate,
    DateTime DueDate,
-   DateTime? ReturnedAt,
-   int Status,
    int RenewalCount,
    bool IsOverdue,
    bool CanRenew
 );
 ```
 
-Verwendet von:
+`LoanDto` besitzt bewusst keine Felder `Status` und `ReturnedAt`. Ein gespeicherter Loan ist eine aktuelle Ausleihe.
+
+### Alle aktuellen Loans laden
+
+Clientmethode:
 
 ```text
-/loans/{loanId}
-LoanDetails.razor
+ILoanClient.GetBorrowedAsync()
 ```
 
-Die Detailseite zeigt Buchdaten, Inventarnummer, Readerdaten mit Email und Ausleihdaten. Renew und Return werden von dort gestartet.
+HTTP:
 
-### BookItem ausleihen
+```http
+GET /camplib/v1/loans
+```
 
-Client-Methode:
+Antwort:
 
 ```text
-ILoanClient.BorrowAsync(dto)
+200 OK + LoanDto[]
 ```
 
-HTTP-Aufruf:
+### Eigene aktuelle Loans laden
+
+Clientmethode:
+
+```text
+ILoanClient.GetMyBorrowedAsync()
+```
+
+HTTP:
+
+```http
+GET /camplib/v1/loans/me
+```
+
+Die API löst den Reader über Subject auf. Bei einem Reader ohne Loans wird eine leere Liste mit `200 OK` geliefert.
+
+### Loan administrativ per Id laden
+
+```http
+GET /camplib/v1/loans/{id}
+```
+
+Clientmethode:
+
+```text
+ILoanClient.GetByIdAsync(id)
+```
+
+### Eigenen Loan per Id laden
+
+```http
+GET /camplib/v1/loans/me/{id}
+```
+
+Clientmethode:
+
+```text
+ILoanClient.GetMyByIdAsync(id)
+```
+
+Der Endpunkt prüft, ob der Loan dem über Subject ermittelten Reader gehört.
+
+### BookItem administrativ ausleihen
+
+Clientmethode:
+
+```text
+ILoanClient.BorrowAsync(LoanCreateDto dto)
+```
+
+HTTP:
 
 ```http
 POST /camplib/v1/loans
 Content-Type: application/json
 ```
 
-Request-Typ:
+Request:
 
 ```csharp
 public sealed record LoanCreateDto(
@@ -493,81 +648,161 @@ public sealed record LoanCreateDto(
 );
 ```
 
-Verwendet von:
+### BookItem als aktueller Reader ausleihen
+
+Clientmethode:
 
 ```text
-/catalog/books/{bookId}/borrow
-BorrowBook.razor
+ILoanClient.BorrowMyAsync(LoanBorrowMeDto dto)
 ```
 
-Die UI wählt ein tatsächlich verfügbares BookItem aus und sendet dessen `BookItemId`.
-
-### Loan zurückgeben
-
-Client-Methode:
-
-```text
-ILoanClient.ReturnAtDeskAsync(id)
-```
-
-HTTP-Aufruf:
+HTTP:
 
 ```http
-PATCH /camplib/v1/loans/{id}/return-at-desk
+POST /camplib/v1/loans/me
+Content-Type: application/json
 ```
 
-### Loan verlängern
+Request:
 
-Client-Methode:
+```csharp
+public sealed record LoanBorrowMeDto(
+   Guid BookItemId,
+   string? Id = null
+);
+```
+
+Beispiel:
+
+```json
+{
+  "bookItemId": "00000002-0000-0000-0000-000000000000",
+  "id": "00000099-0000-0001-0000-000000000000"
+}
+```
+
+Antwort:
+
+```text
+201 Created + LoanDto
+Location: /camplib/v1/loans/me/{id}
+```
+
+### Loan administrativ verlängern
+
+Clientmethode:
 
 ```text
 ILoanClient.RenewAsync(id)
 ```
 
-HTTP-Aufruf:
+HTTP:
 
 ```http
 PATCH /camplib/v1/loans/{id}/renew
 ```
 
-## Fehlerbehandlung
-
-Alle API-Clients verwenden:
+Antwort:
 
 ```text
-BaseApiClient<TClient>
+200 OK + LoanDto
 ```
 
-Erfolgreiche Antworten werden als `Result<T>.Success` zurückgegeben. Fehlerhafte Antworten werden als `Result<T>.Failure(ApiError)` zurückgegeben.
+### Eigenen Loan verlängern
 
-Die UI zeigt Fehler über:
+Clientmethode:
 
 ```text
-ErrorAlert.razor
+ILoanClient.RenewMyAsync(id)
 ```
 
-## Spätere Reader-Provisionierung
-
-Die später geplanten Endpunkte gehören nicht zu Teil 5, werden aber für die Fortsetzung festgehalten.
+HTTP:
 
 ```http
-POST /camplib/v1/readers/me/provision
-Authorization: Bearer <access_token>
+PATCH /camplib/v1/loans/me/{id}/renew
 ```
 
-Die API liest `subject` und `email` aus dem Token. Der Client sendet kein Subject im Body.
+Zusätzlich zur normalen Verlängerungslogik wird die Zugehörigkeit zum aktuellen Reader geprüft.
+
+### Loan zurückgeben
+
+Clientmethode:
+
+```text
+ILoanClient.ReturnAtDeskAsync(id)
+```
+
+HTTP:
 
 ```http
-POST /camplib/v1/readers/me/profile
-Authorization: Bearer <access_token>
-Content-Type: application/json
+PATCH /camplib/v1/loans/{id}/return-at-desk
 ```
 
-Beispielbody:
+Antwort:
 
-```json
-{
-  "firstname": "Erika",
-  "lastname": "Mustermann"
-}
+```text
+204 No Content
 ```
+
+Die Rückgabe löscht den Loan. Daher ist danach korrekt:
+
+```http
+GET /camplib/v1/loans/me/{id}
+```
+
+```text
+404 Not Found
+```
+
+## Manueller `/me`-Ablauf
+
+Datei:
+
+```text
+CampusLibraryApi/_5_ApiTest/Loan_Me.http
+```
+
+Voraussetzungen:
+
+```text
+API läuft auf https://localhost:8010
+ActiveProfile der API ist ReaderRita
+Subject stimmt mit dem Reader in der Datenbank überein
+BookItem ist vorhanden und verfügbar
+LoanId ist noch nicht vorhanden
+```
+
+Erwartete Reihenfolge:
+
+```text
+1. GET /loans/me                         -> 200
+2. POST /loans/me                        -> 201
+3. GET /loans/me/{id}                    -> 200
+4. PATCH /loans/me/{id}/renew            -> 200
+5. PATCH /loans/{id}/return-at-desk      -> 204
+6. GET /loans/me/{id}                    -> 404
+```
+
+## ProblemDetails im Client
+
+`BaseApiClient` verarbeitet erfolgreiche Antworten und Fehler zentral.
+
+Client-Aufrufe liefern:
+
+```text
+Result<T>.Success(value)
+Result<T>.Failure(error)
+```
+
+UI-Komponenten müssen deshalb nicht selbst JSON-ProblemDetails parsen.
+
+## Abgrenzung zu Teil 6
+
+In Teil 6 bleiben die fachlichen Routen und DTOs weitgehend erhalten. Anders ist die technische Identitätsquelle:
+
+```text
+Teil 5: API DevIdentity aus appsettings
+Teil 6: validiertes Access Token
+```
+
+Der Client aktiviert dann `AccessTokenHandler`; die API liest `sub`, Username, Rolle, CreatedAt und AdminRights aus Claims statt aus Konfiguration.

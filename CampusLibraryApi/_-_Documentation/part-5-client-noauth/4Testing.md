@@ -1,29 +1,25 @@
 # Testing Strategy — Part 5
 
-This document describes the testing strategy for Part 5 of the `CampusLibrary` project.
-
-Part 5 adds `CampusLibraryClient`, a Blazor SSR client without real authentication. The existing backend tests from Part 4 remain important. The new focus is manual and exploratory client/API testing.
+This document describes the testing strategy for branch `part-5/client-noauth`.
 
 German version: [4Testing-ger.md](4Testing-ger.md)
 
-## Known status
+## Verified state
 
-After the BookItem identity change, the following was reported:
+The current state was successfully verified locally on July 15, 2026:
 
 ```text
+dotnet clean
+Build succeeded
+
 dotnet build
 Build succeeded
 
 dotnet test
-196 total, 0 failed, 0 skipped
+212 total, 212 succeeded, 0 failed, 0 skipped
 ```
 
-Important:
-
-```text
-dotnet test currently mainly verifies the API.
-Pure client changes are verified through dotnet build and browser tests.
-```
+The complete `Loan_Me.http` workflow was also executed successfully.
 
 ## Test projects and applications
 
@@ -33,526 +29,606 @@ Automated test project:
 CampusLibraryApiTest
 ```
 
-Client project:
-
-```text
-CampusLibraryClient
-```
-
-Backend projects:
+Applications under test:
 
 ```text
 CampusLibraryApi
+CampusLibraryClient
+```
+
+Other projects included in the build:
+
+```text
 CampusLibraryApi_1_Web
 CampusLibraryApi_2_BuildingBlocks
 CampusLibraryApi_3_Core_Readers
 CampusLibraryApi_3_Core_Catalog
 CampusLibraryApi_3_Core_Loan
 CampusLibraryApi_4_Infrastructure
+IdentityAccessServer
+Shared
 ```
+
+The IdentityAccessServer is built, but is not required for Part 5 runtime or `/me` HTTP tests.
 
 ## Test levels
 
-Part 5 keeps the automated backend test levels from Part 4:
+The current state uses:
 
 ```text
-Domain tests
-Value object tests
-Use case mock tests
-Use case integration tests
-Repository integration tests
-ReadModel integration tests
-cross-module contract integration tests
-Controller/API end-to-end tests
+domain tests
+value-object tests
+use-case mock tests
+use-case integration tests
+repository integration tests
+read-model integration tests
+BC-to-BC contract integration tests
+controller/API end-to-end tests
+DI tests
 manual HTTP files
+client build
+manual browser smoke tests
 ```
 
-Part 5 adds:
+## 1. Full regression
 
-```text
-Blazor client build test
-manual Client/API smoke tests
-manual UI perspective tests through DevIdentity
-```
-
-## 1. Backend regression tests
-
-Run this when API, DTOs, use cases, read models, Seed/TestSeed or tests were changed:
+After changing API, client, DTOs, DevIdentity, use cases or tests:
 
 ```bash
+dotnet clean
+dotnet build
 dotnet test
 ```
 
-Important backend test areas:
+Expected state:
 
 ```text
-Readers deactivate behavior
-Catalog workflows for Book and BookItem
-Loans workflows Borrow, Renew and Return
-ReadModel projections
-cross-module contracts
-API status codes and ProblemDetails responses
+Build succeeded
+212 tests succeeded
+0 failed
+0 skipped
 ```
 
-## 2. Client build
-
-Run this after client changes:
+## 2. Git checks before commit
 
 ```bash
-dotnet build
+git status
+git diff --check
+git add -A
+git diff --cached --check
 ```
 
-This verifies:
+After commit:
+
+```bash
+git status
+```
+
+Expected:
 
 ```text
-CampusLibraryClient compiles
-Razor components compile
-DTOs match the current API contract
-DI registration is consistent
-prepared Auth files do not break the no-auth mode
+working tree clean
 ```
 
-## 3. Start manual Client + API tests
+## 3. Reader test focus
 
-Start the API:
+Important Reader rules:
+
+```text
+Reader creation validates Subject and email
+Subject and email are unique
+Reader deactivation is soft delete
+inactive Readers are hidden by default
+a Reader with current Loans cannot be deactivated
+UpdateMe resolves the Reader by Subject
+UpdateMe accepts only mutable profile data
+null in ReaderUpdateDto means unchanged
+```
+
+### Use-case tests for UpdateMe
+
+Verify:
+
+```text
+IdentitySubject.Check is honored
+unauthenticated identity -> error
+Employee profile -> AccessNotAllowed
+empty or invalid Subject -> error
+Reader by Subject not found -> NotFound
+new email invalid -> BadRequest
+new email already used -> Conflict
+valid values are persisted
+omitted values remain unchanged
+```
+
+### API endpoint
+
+```http
+PUT /camplib/v1/readers/me/update
+```
+
+Expected status codes:
+
+```text
+200 success
+400 validation
+401 unauthenticated
+403 not a Reader
+404 Subject has no Reader
+409 duplicate email
+```
+
+## 4. DevIdentity tests
+
+Client and API read separate configurations.
+
+### TC-P5-IDENTITY-001 — Consistent Reader profile
+
+Preconditions:
+
+```text
+client ActiveProfile = ReaderRita
+API ActiveProfile    = ReaderRita
+API Subject          = reader-099
+Reader.Subject       = reader-099
+```
+
+Expected:
+
+```text
+Client shows Reader perspective.
+API /me endpoints operate on Rita Reader.
+No token and no identity header are sent.
+```
+
+### TC-P5-IDENTITY-002 — Subject mismatch
+
+Temporarily configure the API:
+
+```text
+Subject = unknown-reader
+```
+
+Restart the API and call a `/me` endpoint.
+
+Expected:
+
+```text
+404 Not Found
+```
+
+This confirms that association uses Subject, not email or ReaderId.
+
+### TC-P5-IDENTITY-003 — Employee profile on Reader endpoint
+
+API configuration:
+
+```text
+ActiveProfile = EmployeeAdmin
+```
+
+Call:
+
+```http
+GET /camplib/v1/loans/me
+```
+
+Expected:
+
+```text
+403 Forbidden
+```
+
+### TC-P5-IDENTITY-004 — Simulated unauthenticated identity
+
+Profile:
+
+```text
+IsAuthenticated = false
+```
+
+Expected for Reader self-service:
+
+```text
+401 Unauthorized
+```
+
+### TC-P5-IDENTITY-005 — AdminRights compatibility
+
+Precondition:
+
+```text
+AdminRights = 0
+```
+
+Expected:
+
+```text
+IdentityGateway returns 0.
+CampusLibrary does not evaluate the value as a business permission.
+Self-service works unchanged.
+```
+
+## 5. Start API and client
+
+API:
 
 ```bash
 dotnet run --project CampusLibraryApi
 ```
 
-Start the client:
+Client:
 
 ```bash
 dotnet run --project CampusLibraryClient
 ```
 
-Client address:
+Addresses:
 
 ```text
-https://localhost:6040
+API:    https://localhost:8010
+Client: https://localhost:6040
 ```
 
-API BaseUrl in the client:
+The API must run for direct `.http` tests. The client is not required for them.
 
-```json
+## 6. Database and HTTP scripts
+
+Manual files:
+
+```text
+CampusLibraryApi/_5_ApiTest/Reader.http
+CampusLibraryApi/_5_ApiTest/Reader_Post.http
+CampusLibraryApi/_5_ApiTest/Book.http
+CampusLibraryApi/_5_ApiTest/Book_Post.http
+CampusLibraryApi/_5_ApiTest/BookItem_Post.http
+CampusLibraryApi/_5_ApiTest/Loan.http
+CampusLibraryApi/_5_ApiTest/Loan_Post.http
+CampusLibraryApi/_5_ApiTest/Loan_Me.http
+```
+
+Before a deterministic full run:
+
+```text
+reset the database
+create Reader test data
+create Book and BookItem test data
+run Loan scripts last
+```
+
+Optional `Id` fields in create DTOs allow fixed IDs in HTTP and integration tests.
+
+## 7. Manual Reader test
+
+### TC-P5-READERS-001 — Create Reader 99
+
+```http
+POST /camplib/v1/readers
+```
+
+Important values:
+
+```text
+ReaderId = 00000099-0000-0000-0000-000000000000
+Subject  = reader-099
+Email    = r.reader@library.local
+```
+
+Expected:
+
+```text
+201 Created
+```
+
+### TC-P5-READERS-002 — Update current Reader
+
+API profile:
+
+```text
+ActiveProfile = ReaderRita
+Subject = reader-099
+```
+
+Request:
+
+```http
+PUT /camplib/v1/readers/me/update
+Content-Type: application/json
+
 {
-  "CampusLibraryApi": {
-    "BaseUrl": "https://localhost:8010/"
+  "lastname": "Meier",
+  "email": "e.meier@gmx.de",
+  "addressDto": {
+    "street": "Neue Straße 1",
+    "postalCode": "29556",
+    "city": "Suderburg",
+    "country": "DE"
   }
 }
 ```
 
-## 4. Smoke tests
-
-### TC-P5-CLIENT-001 — Client starts
-
-Steps:
+Expected:
 
 ```text
-1. Start CampusLibraryApi.
-2. Start CampusLibraryClient.
-3. Open the client in the browser.
+200 OK
+Reader.Subject remains reader-099
+Reader.Email changes
 ```
 
-Expected result:
+### TC-P5-READERS-003 — Old email is not identity association
+
+After the update:
 
 ```text
-The home page is displayed.
-No real login is required.
-The horizontal Bootstrap navigation is visible.
+DevIdentity.Username may still be r.reader@library.local.
+Reader.Email is e.meier@gmx.de.
+/me endpoints continue to work through Subject.
 ```
 
-### TC-P5-CLIENT-002 — Navigation works
+### TC-P5-READERS-004 — Deactivate Reader
 
-Steps:
+```http
+DELETE /camplib/v1/readers/{id}
+```
+
+Expected without current Loans:
 
 ```text
-1. Open Home.
-2. Open Catalog.
-3. Open Readers if the employee profile is active.
-4. Open Loans.
+204 No Content
+normal GET -> 404
+GET with includeInactive=true -> 200 and IsActive=false
 ```
 
-Expected result:
+## 8. Catalog regression
+
+Verify:
 
 ```text
-All visible pages can be opened.
-The active menu item is recognizable.
-The layout remains stable.
+BookDto is used for list and detail
+search returns BookDto[]
+BookItemDto contains Id, BookId and Status
+no InventoryNumber in the transport contract
+book creation returns 201
+BookItem creation returns 201
+inactive books are hidden by default
+deactivation info shows current Loans
+book deactivation cannot violate current Loan rules
 ```
 
-### TC-P5-CLIENT-003 — Auth is inactive
+### TC-P5-CATALOG-001 — Books list
 
-Precondition:
-
-```json
-{
-  "Features": {
-    "AuthNEnabled": false,
-    "DevIdentityEnabled": true,
-    "ApiAccessTokenEnabled": false,
-    "AuthZEnabled": false
-  }
-}
+```http
+GET /camplib/v1/books?includeInactive=false
 ```
 
-Expected result:
+Expected:
 
 ```text
-No login redirect occurs.
-No AccessTokenHandler is required for API calls.
-DevIdentity only controls the UI perspective.
+200 OK
+BookDto[]
 ```
 
-## 5. DevIdentity tests
+### TC-P5-CATALOG-002 — Search
 
-### TC-P5-IDENTITY-001 — Employee perspective
-
-Precondition:
-
-```json
-{
-  "DevIdentity": {
-    "ActiveProfile": "EmployeeAdmin"
-  }
-}
+```http
+GET /camplib/v1/books/search?searchField=Title&searchText=Clean%20Code&includeInactive=false
 ```
 
-Expected result:
+Expected:
 
 ```text
-Navigation shows Home, Catalog, Readers, Loans, Logout.
-Catalog shows employee actions.
-Readers page is visible.
+200 OK
+BookDto[]
 ```
 
-### TC-P5-IDENTITY-002 — Reader perspective
+### TC-P5-CATALOG-003 — Add BookItem
 
-Precondition:
-
-```json
-{
-  "DevIdentity": {
-    "ActiveProfile": "ReaderRita"
-  }
-}
+```http
+POST /camplib/v1/books/{bookId}/items
 ```
 
-Expected result:
+Expected:
 
 ```text
-Navigation shows Home, Catalog, Loans, Logout.
-Catalog shows a borrow action when an item is available.
-ReaderId is available for Borrow.
+201 Created
+BookItemDto.Status = 1
 ```
 
-## 6. Readers client tests
+## 9. Loan regression
 
-### TC-P5-READERS-001 — Load readers list
-
-Steps:
+Important rules:
 
 ```text
-1. Activate EmployeeAdmin.
-2. Start CampusLibraryApi with seed data.
-3. Open /readers.
+Loan has no Status and no ReturnedAt
+an existing Loan means a current borrowing process
+Borrow validates Reader and BookItem through module contracts
+BookItem must be available
+Renew checks due state and maximum renewals
+ReturnAtDesk deletes the Loan
 ```
 
-Expected result:
+### Administrative tests
 
 ```text
-The Readers page displays reader rows.
-The table displays name, email and status.
-Subject is not displayed.
+GET   /loans
+GET   /loans/{id}
+POST  /loans
+PATCH /loans/{id}/renew
+PATCH /loans/{id}/return-at-desk
 ```
 
-### TC-P5-READERS-002 — No reader creation in Part 5
-
-Steps:
+### Reader self-service
 
 ```text
-1. Open /readers.
-2. Look for a Create reader action.
+GET   /loans/me
+GET   /loans/me/{id}
+POST  /loans/me
+PATCH /loans/me/{id}/renew
 ```
 
-Expected result:
+For every `/me` route verify that another Reader's Loan is not visible or renewable.
+
+## 10. Verified Loan_Me.http workflow
+
+File:
 
 ```text
-There is no UI function for creating a reader.
-Reader provisioning is planned for later AuthN/AuthZ parts.
+CampusLibraryApi/_5_ApiTest/Loan_Me.http
 ```
 
-## 7. Catalog client tests
-
-### TC-P5-CATALOG-001 — Load books list
-
-Steps:
+Preconditions:
 
 ```text
-1. Start CampusLibraryApi with seed data.
-2. Open /catalog/books.
+ActiveProfile = ReaderRita
+Subject = reader-099
+Reader with reader-099 exists
+BookItem 00000002-0000-0000-0000-000000000000 is available
+LoanId 00000099-0000-0001-0000-000000000000 does not exist yet
 ```
 
-Expected result:
+Expected responses:
 
 ```text
-The catalog table is displayed.
-Column structure: Action | Title | Authors | ISBN | Items | Status.
-Title and subtitle are shown together in the Title column.
-Action comes first.
-Items displays borrowed / total.
+GET /loans/me
+-> 200 OK, initially possibly []
+
+POST /loans/me
+-> 201 Created
+
+GET /loans/me/{id}
+-> 200 OK
+
+PATCH /loans/me/{id}/renew
+-> 200 OK
+
+PATCH /loans/{id}/return-at-desk
+-> 204 No Content
+
+GET /loans/me/{id}
+-> 404 Not Found
 ```
 
-### TC-P5-CATALOG-002 — Search by title
+The final 404 is not a test failure. It confirms the delete-on-return model.
 
-Steps:
+## 11. Client smoke tests
 
-```text
-1. Open /catalog/books.
-2. Select search field Title.
-3. Enter search text.
-4. Click Search.
-```
-
-Expected result:
-
-```text
-Matching books are displayed.
-If nothing matches, an empty result message is shown.
-```
-
-### TC-P5-CATALOG-003 — Search by author last name
-
-Steps:
-
-```text
-1. Open /catalog/books.
-2. Select search field Author last name.
-3. Enter a known last name.
-4. Click Search.
-```
-
-Expected result:
-
-```text
-Books with a matching author last name are displayed.
-```
-
-### TC-P5-CATALOG-004 — Create book
+### TC-P5-CLIENT-001 — Client starts without login
 
 Precondition:
 
 ```text
-EmployeeAdmin is active.
+AuthNEnabled = false
+DevIdentityEnabled = true
+ApiAccessTokenEnabled = false
+AuthZEnabled = false
 ```
 
-Steps:
+Expected:
 
 ```text
-1. Open /catalog/books.
-2. Click Create book.
-3. Enter title, optional subtitle, authors and ISBN.
-4. Save the book.
+no login redirect
+no Bearer token
+home page and navigation are displayed
 ```
 
-Expected result:
+### TC-P5-CLIENT-002 — Reader perspective
+
+Client profile:
 
 ```text
-The book is created through POST /camplib/v1/books.
-A success message is displayed.
-The first item can be added afterwards.
+ActiveProfile = ReaderRita
 ```
 
-### TC-P5-CATALOG-005 — Add item to active book
-
-Precondition:
+Expected:
 
 ```text
-EmployeeAdmin is active.
-An active book exists.
+catalog is visible
+/my/loans is visible
+Reader can borrow an available BookItem
+BorrowMyAsync sends no ReaderId
 ```
 
-Steps:
+### TC-P5-CLIENT-003 — Employee perspective
+
+Client profile:
 
 ```text
-1. Open /catalog/books.
-2. Click Add item on an active book.
-3. Execute Add item.
+ActiveProfile = EmployeeAdmin
 ```
 
-Expected result:
+Expected:
 
 ```text
-POST /camplib/v1/books/{bookId}/items is called.
-The API generates a unique BookItem.Id.
-The UI displays this id as inventory number.
+/readers is visible
+/loans is visible
+Catalog actions for create, add item and deactivate are visible
 ```
 
-### TC-P5-CATALOG-006 — Deactivate book
+### TC-P5-CLIENT-004 — API unavailable
 
-Precondition:
+Stop the API and open a client page that loads data.
+
+Expected:
 
 ```text
-EmployeeAdmin is active.
-An active book exists.
+no unhandled UI exception
+understandable central error message
 ```
 
-Steps:
+## 12. DTO regression rules
+
+When public API DTOs change, always verify both sides:
 
 ```text
-1. Open /catalog/books.
-2. Click Deactivate on an active book.
-3. Confirm the action.
+API module DTO
+client transport DTO
+API client method
+Razor page or model
+controller E2E test
 ```
 
-Expected result:
+Do not reintroduce:
 
 ```text
-PATCH /camplib/v1/books/{bookId}/deactivate is called.
-The book is inactive afterwards.
-Inactive books do not offer adding new items.
+BookListItemDto
+BookDetailDto
+BookSearchDto
+LoanListItemDto
+LoanDetailDto
+Loan.Status
+Loan.ReturnedAt
+BookItem.InventoryNumber in the current transport contract
 ```
 
-## 8. Borrow tests
+## 13. Regression rules
 
-### TC-P5-BORROW-001 — Borrow book as reader
-
-Precondition:
+After DevIdentity changes:
 
 ```text
-ReaderRita is active.
-The book has at least one actually available item.
+compare API and client appsettings
+compare ActiveProfile
+verify Subject against Reader test data
+restart the API
+run Loan_Me.http
 ```
 
-Steps:
+After Reader self-service changes:
 
 ```text
-1. Open /catalog/books.
-2. Click Borrow on an available book.
-3. Select inventory number.
-4. Complete the loan.
+mock test
+integration test
+controller E2E test
+Reader.http
+client build
 ```
 
-Expected result:
+After Loan self-service changes:
 
 ```text
-POST /camplib/v1/loans is called.
-The request contains ReaderId and BookItemId.
-BookItemId is displayed as inventory number in the UI.
-After success, the client navigates to /my/loans.
+ownership tests
+identity error tests
+Loan_Me.http
+client Borrow/MyLoans smoke test
 ```
 
-### TC-P5-BORROW-002 — Unavailable books cannot be borrowed
-
-Steps:
-
-```text
-1. Activate ReaderRita.
-2. Open /catalog/books.
-3. Check a book without an available item.
-```
-
-Expected result:
-
-```text
-No Borrow button is offered.
-The UI considers BookItem status and currently borrowed BookItemIds.
-```
-
-## 9. Loans client tests
-
-### TC-P5-LOANS-001 — Load loans list
-
-Steps:
-
-```text
-1. Start CampusLibraryApi with seed data.
-2. Open /loans.
-```
-
-Expected result:
-
-```text
-The list displays borrowed loans.
-The UI displays reader, title, inventory number, loan date, due date, status and overdue flag.
-Inventory number is the BookItemId.
-```
-
-### TC-P5-LOANS-002 — Open loan details
-
-Steps:
-
-```text
-1. Open /loans.
-2. Open Details for a loan.
-```
-
-Expected result:
-
-```text
-The detail page displays book data, inventory number, reader data including email and loan data.
-Renew and Return are located on the detail page.
-```
-
-### TC-P5-LOANS-003 — Renew loan
-
-Steps:
-
-```text
-1. Open loan details.
-2. If renewable, click Renew.
-```
-
-Expected result:
-
-```text
-PATCH /camplib/v1/loans/{id}/renew is called.
-The detail data is updated or an API error is displayed.
-```
-
-### TC-P5-LOANS-004 — Return loan
-
-Steps:
-
-```text
-1. Open loan details.
-2. Click Return.
-```
-
-Expected result:
-
-```text
-PATCH /camplib/v1/loans/{id}/return-at-desk is called.
-The loan is marked as returned or an API error is displayed.
-```
-
-## 10. Error handling
-
-### TC-P5-ERROR-001 — API not reachable
-
-Steps:
-
-```text
-1. Start CampusLibraryClient.
-2. Stop CampusLibraryApi.
-3. Open /catalog/books or /readers.
-```
-
-Expected result:
-
-```text
-The page does not crash.
-ErrorAlert displays a network/API error.
-```
-
-## 11. Regression rules
-
-```text
-Create reader does not belong to Part 5.
-Subject is not displayed in the readers list.
-InventoryNumber must not return as a DTO property.
-BookItemId may be labeled as inventory number in the UI.
-Action comes first in the catalog table.
-Title and subtitle are shown together in the Title column.
-DevIdentity is not real authentication.
-```
+A green `dotnet test` does not replace manual `.http` and browser tests because feature-flag and configuration errors may only appear at runtime.

@@ -27,8 +27,7 @@ public interface IReaderClient {
       CancellationToken ct = default
    );
 
-   Task<Result<ReaderDto>> UpdateAsync(
-      Guid id,
+   Task<Result<ReaderDto>> UpdateMeAsync(
       ReaderUpdateDto dto,
       CancellationToken ct = default
    );

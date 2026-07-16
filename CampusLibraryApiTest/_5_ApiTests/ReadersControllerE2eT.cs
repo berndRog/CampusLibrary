@@ -118,7 +118,7 @@ public sealed class ReadersControllerE2eT : TestBaseEndToEnd {
    }
 
    [Fact]
-   public async Task UpdateAsync_ok() {
+   public async Task UpdateMeAsync_ok() {
       // Arrange
       ReaderDto expectedReaderDto = default!;
       ReaderUpdateDto updateDto = default!;
@@ -128,30 +128,37 @@ public sealed class ReadersControllerE2eT : TestBaseEndToEnd {
          var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
          var seed = sp.GetRequiredService<TestSeed>();
 
-         var reader1 = seed.Reader1();
-         var reader2 = seed.Reader2();
-         updateDto = Mappings.ToReaderUpdateDto(reader2);
+         // TestBaseFactory configures IIdentityGateway for Rita Reader.
+         var currentReader = seed.RitaReader();
+         var sourceReader = seed.Reader2();
+         updateDto = Mappings.ToReaderUpdateDto(sourceReader);
 
          expectedReaderDto = new ReaderDto(
-            Id: reader1.Id,
-            Firstname: reader1.Firstname,
-            Lastname: updateDto.Lastname ?? reader1.Lastname,
-            Email: updateDto.Email ?? reader1.EmailVo.Value,
-            AddressDto: updateDto.AddressDto ?? reader1.AddressVo.ToAddressDto(),
-            IsActive: reader1.IsActive,
-            Subject: reader1.Subject
+            Id: currentReader.Id,
+            Firstname: currentReader.Firstname,
+            Lastname: updateDto.Lastname ?? currentReader.Lastname,
+            Email: updateDto.Email ?? currentReader.EmailVo.Value,
+            AddressDto: updateDto.AddressDto ?? currentReader.AddressVo.ToAddressDto(),
+            IsActive: currentReader.IsActive,
+            Subject: currentReader.Subject
          );
 
-         repository.Add(reader1);
-         await unitOfWork.SaveAllChangesAsync("Reader1 inserted", TestContext.Current.CancellationToken);
+         repository.Add(currentReader);
+         await unitOfWork.SaveAllChangesAsync(
+            "RitaReader inserted",
+            TestContext.Current.CancellationToken
+         );
          unitOfWork.ClearChangeTracker();
       });
 
       // Act
       var response = await Client.PutAsJsonAsync(
-         $"{_url}/readers/{expectedReaderDto.Id}", updateDto, _ct);
-      
-      var actualReaderDto = 
+         $"{_url}/readers/me/update",
+         updateDto,
+         _ct
+      );
+
+      var actualReaderDto =
          await response.Content.ReadFromJsonAsync<ReaderDto>(_ct);
 
       // Assert

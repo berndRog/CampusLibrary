@@ -36,18 +36,17 @@ public static class Program {
 
          // Makes the authentication state available to Blazor components.
          builder.Services.AddCascadingAuthenticationState();
-
-         // Required for controllers or pages that use [Authorize].
-         builder.Services.AddAuthorization();
       }
 
-      if(authZEnabled) {
-         // Part 8: role/policy based authorization for UI decisions.
+      if(authNEnabled || authZEnabled) {
+         // Part 6: role-based authorization for routable Blazor pages.
+         // Named client policies are intentionally not used.
          builder.Services.ConfigureAuthZ();
       }
 
       if(apiAccessTokenEnabled) {
-         // Part 8: forwards the current user's access token to CampusLibraryApi.
+         // Part 6: forwards the current user's access token for the protected /readers/me flow.
+         // Part 7 will harden all API client calls systematically.
          builder.Services.AddTransient<AccessTokenHandler>();
       }
 

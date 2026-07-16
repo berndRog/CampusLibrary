@@ -223,7 +223,7 @@ public sealed class Seed(
       Loan1(), Loan2(), Loan3()
    ];
    #endregion
-   
+
    #region -------------- Helper Methods ----------------------------------------------------
    private Reader CreateReader(
       string id,
@@ -363,7 +363,7 @@ public sealed class Seed(
       if (result.IsFailure)
          throw new Exception($"Invalid book item in Seed: {inventoryNumber}");
    }
-   
+
    private Loan CreateLoan(
       string id,
       string readerId,
@@ -399,7 +399,7 @@ public sealed class Seed(
       if (resultBookItemId.IsFailure)
          throw new Exception($"Invalid book item id in Seed: {bookItemId}");
 
-      
+
       var resultLoanPeriod = LoanPeriodVo.Create(
           loanDate: borrowedAt,
           dueDate: dueAt
@@ -410,7 +410,7 @@ public sealed class Seed(
             $"{dueAt.ToShortDateString()}"
          );
       var loanVo = resultLoanPeriod.Value;
-      
+
       // Create the Loan aggregate through its factory method.
       var result = Loan.Create(
          id: resultLoanId.Value,
@@ -432,44 +432,44 @@ public sealed class Seed(
 /*
    Lernziele und Didaktik
    ----------------------
-   
+
    Diese Seed-Klasse stellt stabile Testdaten für das CampusLibrary-Projekt
    bereit. In Teil 1 und Teil 2 wurden nur Reader-Daten benötigt. In Teil 3
    wurde mit Catalog ein zweites Fachmodul ergänzt. In Teil 4 wird mit Loans
    ein drittes Fachmodul eingeführt.
-   
+
    Die Reader-Daten bleiben unverändert. Dadurch kann geprüft werden, dass das
    neue Loans-Modul keine bestehenden Reader-Funktionen beschädigt.
-   
+
    Für Catalog werden Books und BookItems erzeugt. Ein Book beschreibt das
    bibliografische Werk, zum Beispiel "Clean Code" oder "Domain-Driven Design".
    Ein BookItem beschreibt ein konkretes physisches Exemplar dieses Buchs.
-   
+
    Autorinnen und Autoren werden in dieser reduzierten Catalog-Version bewusst
    nicht als eigene Domain Entity modelliert. Stattdessen enthält Book einen
    kommaseparierten Autorentext. Damit bleibt der Catalog-Teil didaktisch
    schlank.
-   
+
    Die Beziehung Book -> BookItem zeigt weiterhin eine echte 1:n-Beziehung.
    Ein Book kann mehrere BookItems besitzen. Die BookItems werden nicht direkt
    erzeugt, sondern über AddBookItem am Book-Aggregate hinzugefügt. Dadurch
    bleibt die fachliche Konsistenzgrenze des Book-Aggregates auch bei Testdaten
    erhalten.
-   
+
    Mit Loans wird nun die eigentliche fachlich wichtige m:n-Beziehung eingeführt:
    Ein Reader kann über die Zeit viele BookItems ausleihen, und ein BookItem kann
    über die Zeit von verschiedenen Readern ausgeliehen werden. Diese Beziehung
    wird aber nicht als reine technische Join-Tabelle modelliert. Stattdessen
    entsteht mit Loan ein eigenes fachliches Objekt.
-   
-   Loan besitzt eigene fachliche Daten, zum Beispiel Ausleihdatum, Rückgabefrist,
-   Rückgabedatum, Verlängerungen und Status. Deshalb ist Loan ein eigenes Modell
+
+   Loan besitzt eigene fachliche Daten, zum Beispiel Ausleihdatum, Rückgabefrist
+   und Verlängerungen. Deshalb ist Loan ein eigenes Modell
    im Loans-Modul und nicht nur eine Navigation zwischen Reader und BookItem.
-   
+
    Die Loan-Seed-Daten verweisen nur über ReaderId und BookItemId auf andere
    Module. Reader und BookItem werden nicht als Objekte in das Loan-Aggregate
    eingebettet. Dadurch bleibt sichtbar, dass die Module fachlich getrennt sind.
-   
+
    Didaktisch wichtig ist die Trennung zwischen Seed-Daten und Fachlogik:
    Der Seed erzeugt Beispieldaten. Die Regeln bleiben aber im Domänenmodell,
    also in Reader, Book, BookItem, IsbnVo und Loan.

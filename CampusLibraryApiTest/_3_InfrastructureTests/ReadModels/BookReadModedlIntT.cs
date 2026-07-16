@@ -35,7 +35,7 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
 
       // Act
       var result = await readModel.FindByIdAsync(
-         id: book1.Id, 
+         id: book1.Id,
          includeInactive: false,
          ct: ct
       );
@@ -371,14 +371,10 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
 
       unitOfWork.ClearChangeTracker();
 
-      var search = new BookSearchDto(
-         SearchField: BookSearchField.Title,
-         SearchText: book1.Title
-      );
-
       // Act
       var result = await readModel.SearchAsync(
-         search: search,
+         searchField: BookSearchField.Title,
+         searchText: book1.Title,
          ct: ct
       );
 
@@ -431,14 +427,10 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
 
       unitOfWork.ClearChangeTracker();
 
-      var search = new BookSearchDto(
-         SearchField: BookSearchField.Isbn,
-         SearchText: book1.IsbnVo.Value
-      );
-
       // Act
       var result = await readModel.SearchAsync(
-         search: search,
+         searchField: BookSearchField.Isbn,
+         searchText: book1.IsbnVo.Value,
          ct: ct
       );
 
@@ -491,14 +483,10 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
          .OrderBy(id => id)
          .ToList();
 
-      var search = new BookSearchDto(
-         SearchField: BookSearchField.AuthorLastName,
-         SearchText: searchText
-      );
-
       // Act
       var result = await readModel.SearchAsync(
-         search: search,
+         searchField: BookSearchField.AuthorLastName,
+         searchText: searchText,
          ct: ct
       );
 
@@ -541,14 +529,10 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
 
       unitOfWork.ClearChangeTracker();
 
-      var search = new BookSearchDto(
-         SearchField: BookSearchField.AuthorLastName,
-         SearchText: "Robert"
-      );
-
       // Act
       var result = await readModel.SearchAsync(
-         search: search,
+         searchField: BookSearchField.AuthorLastName,
+         searchText: "Robert",
          ct: ct
       );
 
@@ -580,14 +564,10 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
 
       unitOfWork.ClearChangeTracker();
 
-      var search = new BookSearchDto(
-         SearchField: BookSearchField.Title,
-         SearchText: "Unknown Book Title"
-      );
-
       // Act
       var result = await readModel.SearchAsync(
-         search: search,
+         searchField: BookSearchField.Title,
+         searchText: "Unknown Book Title",
          ct: ct
       );
 
@@ -631,14 +611,10 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
 
       unitOfWork.ClearChangeTracker();
 
-      var search = new BookSearchDto(
-         SearchField: BookSearchField.Title,
-         SearchText: deactivatedBook.Title
-      );
-
       // Act
       var result = await readModel.SearchAsync(
-         search: search,
+         searchField: BookSearchField.Title,
+         searchText: deactivatedBook.Title,
          ct: ct
       );
 
@@ -685,14 +661,10 @@ public sealed class BookReadModelIntT : TestBaseIntegration {
 
       unitOfWork.ClearChangeTracker();
 
-      var search = new BookSearchDto(
-         SearchField: BookSearchField.Title,
-         SearchText: deactivatedBook.Title
-      );
-
       // Act
       var result = await readModel.SearchAsync(
-         search: search,
+         searchField: BookSearchField.Title,
+         searchText: deactivatedBook.Title,
          includeInactive: true,
          ct: ct
       );

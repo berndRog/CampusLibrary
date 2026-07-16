@@ -5,7 +5,6 @@ using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Loans._2_Application.Dtos;
-using CampusLibraryApi._3_Core.Loans._3_Domain.Enums;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Policies;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 using CampusLibraryApiTest.TestController;
@@ -21,6 +20,224 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
 
    private readonly string _url = "/camplib/v1";
    private readonly CancellationToken _ct = TestContext.Current.CancellationToken;
+
+   [Fact]
+   public async Task GetMyBorrowedLoansAsync_returns_only_current_reader_loans() {
+      Guid expectedLoanId = default;
+      string subject = string.Empty;
+      string username = string.Empty;
+
+      await Factory.WithScopeAsync(async sp => {
+         var readerRepository = sp.GetRequiredService<IReaderRepository>();
+         var bookRepository = sp.GetRequiredService<IBookRepository>();
+         var loanRepository = sp.GetRequiredService<ILoanRepository>();
+         var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
+         var seed = sp.GetRequiredService<TestSeed>();
+
+         var reader = seed.Reader1();
+         var loan = seed.Loan1();
+
+         expectedLoanId = loan.Id;
+         subject = reader.Subject;
+         username = reader.EmailVo.Value;
+
+         readerRepository.AddRange(seed.Readers);
+         bookRepository.AddRange(seed.Books);
+         loanRepository.AddRange(seed.Loans);
+
+         await unitOfWork.SaveAllChangesAsync(
+            "Readers, books and loans inserted",
+            _ct
+         );
+
+         unitOfWork.ClearChangeTracker();
+      });
+
+      Factory.TestSubject = subject;
+      Factory.TestUsername = username;
+
+      var response = await Client.GetAsync(
+         requestUri: $"{_url}/loans/me",
+         cancellationToken: _ct
+      );
+
+      var body = await response.Content.ReadAsStringAsync(_ct);
+
+      response.StatusCode.Should().Be(
+         expected: HttpStatusCode.OK,
+         because: body
+      );
+
+      var loans = await response.Content.ReadFromJsonAsync<List<LoanDto>>(
+         _ct
+      );
+
+      loans.Should().NotBeNull();
+      loans.Should().ContainSingle();
+      loans![0].Id.Should().Be(expectedLoanId);
+   }
+
+   [Fact]
+   public async Task GetMyLoanByIdAsync_loan_of_other_reader_returns_not_found() {
+      Guid otherLoanId = default;
+      string subject = string.Empty;
+      string username = string.Empty;
+
+      await Factory.WithScopeAsync(async sp => {
+         var readerRepository = sp.GetRequiredService<IReaderRepository>();
+         var bookRepository = sp.GetRequiredService<IBookRepository>();
+         var loanRepository = sp.GetRequiredService<ILoanRepository>();
+         var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
+         var seed = sp.GetRequiredService<TestSeed>();
+
+         var currentReader = seed.Reader1();
+         var otherLoan = seed.Loan2();
+
+         otherLoanId = otherLoan.Id;
+         subject = currentReader.Subject;
+         username = currentReader.EmailVo.Value;
+
+         readerRepository.AddRange(seed.Readers);
+         bookRepository.AddRange(seed.Books);
+         loanRepository.AddRange(seed.Loans);
+
+         await unitOfWork.SaveAllChangesAsync(
+            "Readers, books and loans inserted",
+            _ct
+         );
+
+         unitOfWork.ClearChangeTracker();
+      });
+
+      Factory.TestSubject = subject;
+      Factory.TestUsername = username;
+
+      var response = await Client.GetAsync(
+         requestUri: $"{_url}/loans/me/{otherLoanId}",
+         cancellationToken: _ct
+      );
+
+      response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+   }
+
+   [Fact]
+   public async Task BorrowMyBookItemAsync_uses_reader_from_dev_identity() {
+      Guid expectedReaderId = default;
+      Guid bookItemId = default;
+      string subject = string.Empty;
+      string username = string.Empty;
+
+      await Factory.WithScopeAsync(async sp => {
+         var readerRepository = sp.GetRequiredService<IReaderRepository>();
+         var bookRepository = sp.GetRequiredService<IBookRepository>();
+         var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
+         var seed = sp.GetRequiredService<TestSeed>();
+
+         var reader = seed.Reader1();
+         var books = seed.Books;
+
+         expectedReaderId = reader.Id;
+         subject = reader.Subject;
+         username = reader.EmailVo.Value;
+         bookItemId = books
+            .SelectMany(book => book.BookItems)
+            .First()
+            .Id;
+
+         readerRepository.AddRange(seed.Readers);
+         bookRepository.AddRange(books);
+
+         await unitOfWork.SaveAllChangesAsync(
+            "Readers and books inserted",
+            _ct
+         );
+
+         unitOfWork.ClearChangeTracker();
+      });
+
+      Factory.TestSubject = subject;
+      Factory.TestUsername = username;
+
+      var response = await Client.PostAsJsonAsync(
+         requestUri: $"{_url}/loans/me",
+         value: new LoanBorrowMeDto(
+            BookItemId: bookItemId
+         ),
+         cancellationToken: _ct
+      );
+
+      var body = await response.Content.ReadAsStringAsync(_ct);
+
+      response.StatusCode.Should().Be(
+         expected: HttpStatusCode.Created,
+         because: body
+      );
+
+      var loan = await response.Content.ReadFromJsonAsync<LoanDto>(_ct);
+
+      loan.Should().NotBeNull();
+      loan!.ReaderId.Should().Be(expectedReaderId);
+      loan.BookItemId.Should().Be(bookItemId);
+   }
+
+   [Fact]
+   public async Task RenewMyLoanAsync_renews_only_current_reader_loan() {
+      Guid loanId = default;
+      DateTime oldDueDate = default;
+      string subject = string.Empty;
+      string username = string.Empty;
+
+      await Factory.WithScopeAsync(async sp => {
+         var readerRepository = sp.GetRequiredService<IReaderRepository>();
+         var bookRepository = sp.GetRequiredService<IBookRepository>();
+         var loanRepository = sp.GetRequiredService<ILoanRepository>();
+         var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
+         var seed = sp.GetRequiredService<TestSeed>();
+
+         var reader = seed.Reader1();
+         var loan = seed.Loan1();
+
+         loanId = loan.Id;
+         oldDueDate = loan.DueDate;
+         subject = reader.Subject;
+         username = reader.EmailVo.Value;
+
+         readerRepository.AddRange(seed.Readers);
+         bookRepository.AddRange(seed.Books);
+         loanRepository.Add(loan);
+
+         await unitOfWork.SaveAllChangesAsync(
+            "Readers, books and loan inserted",
+            _ct
+         );
+
+         unitOfWork.ClearChangeTracker();
+      });
+
+      Factory.TestSubject = subject;
+      Factory.TestUsername = username;
+
+      var response = await Client.PatchAsync(
+         requestUri: $"{_url}/loans/me/{loanId}/renew",
+         content: null,
+         cancellationToken: _ct
+      );
+
+      var body = await response.Content.ReadAsStringAsync(_ct);
+
+      response.StatusCode.Should().Be(
+         expected: HttpStatusCode.OK,
+         because: body
+      );
+
+      var loan = await response.Content.ReadFromJsonAsync<LoanDto>(_ct);
+
+      loan.Should().NotBeNull();
+      loan!.RenewalCount.Should().Be(1);
+      loan.DueDate.Should().Be(
+         oldDueDate.AddDays(LoanRules.StandardRenewalDays)
+      );
+   }
 
    [Fact]
    public async Task GetLoanByIdAsync_ok() {
@@ -75,7 +292,7 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
       response.StatusCode.Should().Be(HttpStatusCode.OK);
 
       var actualLoanDto = await response.Content
-         .ReadFromJsonAsync<LoanDetailDto>(
+         .ReadFromJsonAsync<LoanDto>(
             _ct
          );
 
@@ -84,13 +301,11 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
       actualLoanDto!.Id.Should().Be(loanId);
       actualLoanDto.ReaderId.Should().Be(readerId);
       actualLoanDto.BookItemId.Should().Be(bookItemId);
-      actualLoanDto.Status.Should().Be((int)LoanStatus.Borrowed);
 
       actualLoanDto.Firstname.Should().NotBeNullOrWhiteSpace();
       actualLoanDto.Lastname.Should().NotBeNullOrWhiteSpace();
       actualLoanDto.Title.Should().NotBeNullOrWhiteSpace();
 
-      actualLoanDto.ReturnedAt.Should().BeNull();
       actualLoanDto.IsOverdue.Should().BeFalse();
       actualLoanDto.CanRenew.Should().BeTrue();
    }
@@ -127,10 +342,7 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
          var loans = seed.Loans;
 
          expectedLoanIds = loans
-            .Where(l =>
-               l.Status == LoanStatus.Borrowed &&
-               l.ReturnedAt is null)
-            .OrderBy(l => l.DueDate)
+                        .OrderBy(l => l.DueDate)
             .ThenBy(l => l.LoanDate)
             .ThenBy(l => l.Id)
             .Select(l => l.Id)
@@ -166,7 +378,7 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
       response.StatusCode.Should().Be(HttpStatusCode.OK);
 
       var actualLoanDtos = await response.Content
-         .ReadFromJsonAsync<List<LoanListItemDto>>(
+         .ReadFromJsonAsync<List<LoanDto>>(
             _ct
          );
 
@@ -181,13 +393,9 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
          );
 
       actualLoanDtos.Should().OnlyContain(l =>
-         l.Status == (int)LoanStatus.Borrowed
-      );
-
-      actualLoanDtos.Should().OnlyContain(l =>
          !string.IsNullOrWhiteSpace(l.Firstname) &&
          !string.IsNullOrWhiteSpace(l.Lastname) &&
-         !string.IsNullOrWhiteSpace(l.Title) 
+         !string.IsNullOrWhiteSpace(l.Title)
       );
    }
 
@@ -258,8 +466,6 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
       actualLoanDto!.Id.Should().Be(Guid.Parse(dto.Id!));
       actualLoanDto.ReaderId.Should().Be(expectedReaderId);
       actualLoanDto.BookItemId.Should().Be(expectedBookItemId);
-      actualLoanDto.Status.Should().Be((int)LoanStatus.Borrowed);
-      actualLoanDto.ReturnedAt.Should().BeNull();
       actualLoanDto.RenewalCount.Should().Be(0);
 
       actualLoanDto.DueDate.Should().Be(
@@ -306,6 +512,64 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
             Id: "a1000009-0000-0000-0000-000000000000",
             ReaderId: existingLoan.ReaderId,
             BookItemId: existingLoan.BookItemId
+         );
+      });
+
+      // Act
+      var response = await Client.PostAsJsonAsync(
+         $"{_url}/loans",
+         dto,
+         _ct
+      );
+
+      // Assert
+      response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+   }
+
+   [Fact]
+   public async Task BorrowBookItemAsync_same_book_different_item_already_borrowed_by_reader_returns_conflict() {
+      // Arrange
+      LoanCreateDto dto = default!;
+
+      await Factory.WithScopeAsync(async sp => {
+         var readerRepository = sp.GetRequiredService<IReaderRepository>();
+         var bookRepository = sp.GetRequiredService<IBookRepository>();
+         var loanRepository = sp.GetRequiredService<ILoanRepository>();
+         var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
+         var seed = sp.GetRequiredService<TestSeed>();
+
+         var readers = seed.Readers;
+         var books = seed.Books;
+         var existingLoan = seed.Loan1();
+         var book1 = books[0];
+
+         var secondBookItemOfSameBook = book1.BookItems.Single(bookItem =>
+            bookItem.Id == Guid.Parse(seed.BookItem2Id)
+         );
+
+         readerRepository.AddRange(
+            readers: readers
+         );
+
+         bookRepository.AddRange(
+            books: books
+         );
+
+         loanRepository.Add(
+            loan: existingLoan
+         );
+
+         await unitOfWork.SaveAllChangesAsync(
+            "Readers, books and existing loan inserted",
+            _ct
+         );
+
+         unitOfWork.ClearChangeTracker();
+
+         dto = new LoanCreateDto(
+            Id: "a1000010-0000-0000-0000-000000000000",
+            ReaderId: existingLoan.ReaderId,
+            BookItemId: secondBookItemOfSameBook.Id
          );
       });
 
@@ -440,17 +704,21 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
       );
 
       // Assert
-      response.StatusCode.Should().Be(HttpStatusCode.OK);
+      response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-      var actualLoanDto = await response.Content
-         .ReadFromJsonAsync<LoanDto>(
-            _ct
+      await Factory.WithScopeAsync(async sp => {
+         var loanRepository = sp.GetRequiredService<ILoanRepository>();
+         var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
+
+         unitOfWork.ClearChangeTracker();
+
+         var deletedLoan = await loanRepository.FindByIdAsync(
+            id: loanId,
+            ct: _ct
          );
 
-      actualLoanDto.Should().NotBeNull();
-      actualLoanDto!.Id.Should().Be(loanId);
-      actualLoanDto.Status.Should().Be((int)LoanStatus.Returned);
-      actualLoanDto.ReturnedAt.Should().NotBeNull();
+         deletedLoan.Should().BeNull();
+      });
    }
 
    [Fact]
@@ -470,59 +738,14 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
    }
 
    [Fact]
-   public async Task ReturnLoanAtDeskAsync_already_returned_loan_returns_conflict() {
-      // Arrange
-      Guid loanId = default;
-
-      await Factory.WithScopeAsync(async sp => {
-         var loanRepository = sp.GetRequiredService<ILoanRepository>();
-         var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
-         var seed = sp.GetRequiredService<TestSeed>();
-
-         var loan = seed.Loan1();
-         loanId = loan.Id;
-
-         loanRepository.Add(
-            loan: loan
-         );
-
-         await unitOfWork.SaveAllChangesAsync(
-            "Loan inserted",
-            _ct
-         );
-
-         var resultReturned = loan.ReturnAtDesk(
-            returnedAt: loan.LoanDate.AddDays(1)
-         );
-
-         resultReturned.IsSuccess.Should().BeTrue();
-
-         await unitOfWork.SaveAllChangesAsync(
-            "Loan returned",
-            _ct
-         );
-
-         unitOfWork.ClearChangeTracker();
-      });
-
-      // Act
-      var response = await Client.PatchAsync(
-         $"{_url}/loans/{loanId}/return-at-desk",
-         content: null,
-         cancellationToken: _ct
-      );
-
-      // Assert
-      response.StatusCode.Should().Be(HttpStatusCode.Conflict);
-   }
-
-   [Fact]
    public async Task RenewLoanAsync_ok() {
       // Arrange
       Guid loanId = default;
       DateTime oldDueDate = default;
 
       await Factory.WithScopeAsync(async sp => {
+         var readerRepository = sp.GetRequiredService<IReaderRepository>();
+         var bookRepository = sp.GetRequiredService<IBookRepository>();
          var loanRepository = sp.GetRequiredService<ILoanRepository>();
          var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
          var seed = sp.GetRequiredService<TestSeed>();
@@ -531,12 +754,17 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
          loanId = loan.Id;
          oldDueDate = loan.DueDate;
 
+         // Renew returns a complete LoanDto. The post-command read model enriches
+         // the Loan through the Readers and Catalog module contracts, so the
+         // referenced Reader and BookItem must exist in this E2E arrangement.
+         readerRepository.Add(seed.Reader1());
+         bookRepository.AddRange(seed.Books);
          loanRepository.Add(
             loan: loan
          );
 
          await unitOfWork.SaveAllChangesAsync(
-            "Loan inserted",
+            "Reader, books and loan inserted",
             _ct
          );
 
@@ -560,7 +788,6 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
 
       actualLoanDto.Should().NotBeNull();
       actualLoanDto!.Id.Should().Be(loanId);
-      actualLoanDto.Status.Should().Be((int)LoanStatus.Borrowed);
       actualLoanDto.RenewalCount.Should().Be(1);
 
       actualLoanDto.DueDate.Should().Be(
@@ -582,53 +809,6 @@ public sealed class LoansControllerE2eT : TestBaseEndToEnd {
 
       // Assert
       response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-   }
-
-   [Fact]
-   public async Task RenewLoanAsync_returned_loan_returns_conflict() {
-      // Arrange
-      Guid loanId = default;
-
-      await Factory.WithScopeAsync(async sp => {
-         var loanRepository = sp.GetRequiredService<ILoanRepository>();
-         var unitOfWork = sp.GetRequiredService<IUnitOfWork>();
-         var seed = sp.GetRequiredService<TestSeed>();
-
-         var loan = seed.Loan1();
-         loanId = loan.Id;
-
-         loanRepository.Add(
-            loan: loan
-         );
-
-         await unitOfWork.SaveAllChangesAsync(
-            "Loan inserted",
-            _ct
-         );
-
-         var resultReturned = loan.ReturnAtDesk(
-            returnedAt: loan.LoanDate.AddDays(1)
-         );
-
-         resultReturned.IsSuccess.Should().BeTrue();
-
-         await unitOfWork.SaveAllChangesAsync(
-            "Loan returned",
-            _ct
-         );
-
-         unitOfWork.ClearChangeTracker();
-      });
-
-      // Act
-      var response = await Client.PatchAsync(
-         $"{_url}/loans/{loanId}/renew",
-         content: null,
-         cancellationToken: _ct
-      );
-
-      // Assert
-      response.StatusCode.Should().Be(HttpStatusCode.Conflict);
    }
 
    [Fact]

@@ -1,0 +1,102 @@
+@baseUrl = https://localhost:8010/camplib/v1
+
+### ============================================================
+### Loans /me API without client, bearer token or IA server
+### ============================================================
+###
+### The API reads the current technical identity from:
+### CampusLibraryApi/appsettings.json
+###
+### Required active profile:
+### DevIdentity:ActiveProfile = ReaderRita
+###
+### ReaderRita.Subject must match RitaReader.Subject in Seed.cs.
+### No Authorization header and no development identity header are sent.
+### ============================================================
+
+@bookItemId = 00000002-0000-0000-0000-000000000000
+@loanId = 00000099-0000-0001-0000-000000000000
+
+### Get current Reader loans
+GET {{baseUrl}}/loans/me
+Accept: application/json
+
+> {%
+   client.test("Current Reader loans loaded", function() {
+      client.assert(
+         response.status === 200,
+         `Expected HTTP 200, got ${response.status}`
+      );
+   });
+%}
+
+### Borrow an available BookItem for the configured Reader
+POST {{baseUrl}}/loans/me
+Content-Type: application/json
+Accept: application/json
+
+{
+  "bookItemId": "{{bookItemId}}",
+  "id": "{{loanId}}"
+}
+
+> {%
+   client.test("BookItem borrowed for current Reader", function() {
+      client.assert(
+         response.status === 201,
+         `Expected HTTP 201, got ${response.status}`
+      );
+   });
+%}
+
+### Get current Reader loan by id
+GET {{baseUrl}}/loans/me/{{loanId}}
+Accept: application/json
+
+> {%
+   client.test("Current Reader loan loaded", function() {
+      client.assert(
+         response.status === 200,
+         `Expected HTTP 200, got ${response.status}`
+      );
+   });
+%}
+
+### Renew current Reader loan
+PATCH {{baseUrl}}/loans/me/{{loanId}}/renew
+Accept: application/json
+
+> {%
+   client.test("Current Reader loan renewed", function() {
+      client.assert(
+         response.status === 200,
+         `Expected HTTP 200, got ${response.status}`
+      );
+   });
+%}
+
+### Return at service desk; the Loan is deleted
+PATCH {{baseUrl}}/loans/{{loanId}}/return-at-desk
+Accept: application/json
+
+> {%
+   client.test("Loan returned and deleted", function() {
+      client.assert(
+         response.status === 204,
+         `Expected HTTP 204, got ${response.status}`
+      );
+   });
+%}
+
+### Deleted loan is no longer available
+GET {{baseUrl}}/loans/me/{{loanId}}
+Accept: application/json
+
+> {%
+   client.test("Deleted loan is not found", function() {
+      client.assert(
+         response.status === 404,
+         `Expected HTTP 404, got ${response.status}`
+      );
+   });
+%}
