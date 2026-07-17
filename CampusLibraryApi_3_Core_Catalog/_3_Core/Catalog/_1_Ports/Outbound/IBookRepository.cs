@@ -13,11 +13,6 @@ public interface IBookRepository {
       string isbn,
       CancellationToken ct = default
    );
-
-   Task<bool> ExistsBookItemByInventoryNumberAsync(
-      string inventoryNumber,
-      CancellationToken ct = default
-   );
    
    void Add(Book book);
    void AddRange(IEnumerable<Book> books);

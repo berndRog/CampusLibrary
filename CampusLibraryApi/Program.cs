@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using Asp.Versioning.ApiExplorer;
 using CampusLibraryApi._3_Core;
+using CampusLibraryApi._3_Core.Loans;
 using CampusLibraryApi._3_Core.Readers;
 using CampusLibraryApi._4_Infrastructure;
 using CampusLibraryApi.Configure;

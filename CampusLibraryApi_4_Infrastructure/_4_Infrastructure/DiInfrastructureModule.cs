@@ -29,16 +29,18 @@ public static class DiInfrastructureModule {
       services.AddScoped<IReaderDbContext, ReaderDbContextEf>();
       services.AddScoped<ICatalogDbContext, CatalogDbContextEf>();
       services.AddScoped<ILoanDbContext, LoadDbContextEf>();
-      
+
       // Adapters
       services.AddScoped<IReaderLoanContract, ReaderLoanContractEf>();
       services.AddScoped<IBookItemLoanContract, BookItemLoanContractEf>();
-      
+      services.AddScoped<ILoanCatalogContract, LoanCatalogContractEf>();
+      services.AddScoped<ILoanReaderContract, LoanReaderContractEf>();
+
       // Repositories
       services.AddScoped<IReaderRepository, ReaderRepositoryEf>();
       services.AddScoped<IBookRepository, BookRepositoryEf>();
       services.AddScoped<ILoanRepository, LoanRepositoryEf>();
-      
+
       // ReadModels
       services.AddScoped<IReaderReadModel, ReaderReadModelEf>();
       services.AddScoped<IBookReadModel, BookReadModelEf>();
@@ -47,14 +49,6 @@ public static class DiInfrastructureModule {
       // Unit of Work
       services.AddScoped<IUnitOfWork, UnitOfWorkEf>();
 
-      // // IdentityGateway
-      // //services.AddScoped<IIdentityGateway, IdentityGatewayHttpContext>();
-      // services.AddScoped<IIdentityGateway>(_ => new FakeIdentityGateway(
-      //    subject: "11111111-0002-0000-0000-000000000000",
-      //    username: "w.wagner@banking.de",
-      //    createdAt: DateTime.UtcNow,
-      //    adminRights: 511
-      // ));
 
       // IClock
       services.AddScoped<IClock, AppSystemClock>();

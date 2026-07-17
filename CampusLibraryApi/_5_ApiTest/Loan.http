@@ -18,11 +18,9 @@
 ### - Books and BookItems already exist.
 ###
 ### Current Loans behavior:
-### - Loans do not use IsActive.
-### - Loans use LoanStatus.
-### - Borrowed = 1
-### - Returned = 2
-### - Cancelled = 3
+### - Loans do not use IsActive or LoanStatus.
+### - A stored Loan represents a current borrowing.
+### - Returning an item deletes the Loan.
 ###
 ### Current routes:
 ### - GET   /loans
@@ -37,27 +35,27 @@
 
 ### Reader ids from Readers.http =============================================
 
-@reader1Id = 10000000-0000-0000-0000-000000000000
-@reader2Id = 20000000-0000-0000-0000-000000000000
-@unknownReaderId = 99999999-9999-9999-9999-999999999999
+@reader1Id = 00000001-0000-0000-0000-000000000000
+@reader2Id = 00000002-0000-0000-0000-000000000000
+@unknownReaderId = 00000999-0000-0000-0000-000000000000
 
 
 ### BookItem ids from Books.http =============================================
 
-@bookItem1Id = be000001-0000-0000-0000-000000000000
-@bookItem2Id = be000002-0000-0000-0000-000000000000
-@bookItem3Id = be000003-0000-0000-0000-000000000000
-@bookItem4Id = be000004-0000-0000-0000-000000000000
-@unknownBookItemId = be999999-0000-0000-0000-000000000000
+@bookItem1Id = 00000001-0000-0000-0000-000000000000
+@bookItem2Id = 00000002-0000-0000-0000-000000000000
+@bookItem3Id = 00000003-0000-0000-0000-000000000000
+@bookItem4Id = 00000004-0000-0000-0000-000000000000
+@unknownBookItemId = 00000999-0000-0000-0000-000000000000
 
 
 ### Loan ids =================================================================
 
-@loan1Id = a1000001-0000-0000-0000-000000000000
-@loan2Id = a1000002-0000-0000-0000-000000000000
-@loan3Id = a1000003-0000-0000-0000-000000000000
-@duplicateLoanId = a1000009-0000-0000-0000-000000000000
-@unknownLoanId = a1999999-0000-0000-0000-000000000000
+@loan1Id = 00000001-0000-0000-0000-000000000000
+@loan2Id = 00000002-0000-0000-0000-000000000000
+@loan3Id = 00000003-0000-0000-0000-000000000000
+@duplicateLoanId = 00000009-0000-0000-0000-000000000000
+@unknownLoanId = 00000999-0000-0000-0000-000000000000
 
 
 ### 1. Verify empty loans collection ==========================================
@@ -80,57 +78,6 @@ GET {{baseUrl}}/loans/not-a-guid
 Accept: application/json
 
 
-### 2. Borrow book items =======================================================
-
-### Borrow BookItem 1 for Reader 1
-### Expected: 201 Created
-### Expected body:
-### - id = loan1Id
-### - readerId = reader1Id
-### - bookItemId = bookItem1Id
-### - status = 1
-### - returnedAt = null
-### - renewalCount = 0
-POST {{baseUrl}}/loans
-Content-Type: application/json
-Accept: application/json
-
-{
-  "id": "{{loan1Id}}",
-  "readerId": "{{reader1Id}}",
-  "bookItemId": "{{bookItem1Id}}"
-}
-
-
-### Borrow BookItem 3 for Reader 2
-### Expected: 201 Created
-### Expected body:
-### - status = 1
-### - returnedAt = null
-POST {{baseUrl}}/loans
-Content-Type: application/json
-Accept: application/json
-
-{
-  "id": "{{loan2Id}}",
-  "readerId": "{{reader2Id}}",
-  "bookItemId": "{{bookItem3Id}}"
-}
-
-
-### Borrow BookItem 4 for Reader 1
-### Expected: 201 Created
-### This loan is used as another borrowed loan in the list endpoint.
-POST {{baseUrl}}/loans
-Content-Type: application/json
-Accept: application/json
-
-{
-  "id": "{{loan3Id}}",
-  "readerId": "{{reader1Id}}",
-  "bookItemId": "{{bookItem4Id}}"
-}
-
 
 ### 3. Verify borrowed loans ===================================================
 
@@ -139,7 +86,6 @@ Accept: application/json
 ### Expected detail data:
 ### - reader data is included
 ### - book item data is included
-### - status = 1
 ### - isOverdue = false
 ### - canRenew = true
 GET {{baseUrl}}/loans/{{loan1Id}}
@@ -150,7 +96,6 @@ Accept: application/json
 ### Expected: 200 OK
 ### Expected:
 ### - loan1, loan2 and loan3 are included
-### - status = 1 for all entries
 GET {{baseUrl}}/loans
 Accept: application/json
 
@@ -242,7 +187,6 @@ Accept: application/json
 ### Renew borrowed loan 1
 ### Expected: 200 OK
 ### Expected:
-### - status = 1
 ### - renewalCount = 1
 ### - dueDate is extended by LoanRules.StandardRenewalDays
 PATCH {{baseUrl}}/loans/{{loan1Id}}/renew
@@ -272,24 +216,17 @@ Accept: application/json
 
 ### 7. Return loan at desk =====================================================
 ### Run these after the renew tests.
-### They change the state of loan 1 from Borrowed to Returned.
+### They delete loan 1.
 
 
 ### Return loan 1 at desk
-### Expected: 200 OK
-### Expected:
-### - status = 2
-### - returnedAt is not null
+### Expected: 204 No Content
 PATCH {{baseUrl}}/loans/{{loan1Id}}/return-at-desk
 Accept: application/json
 
 
 ### Get returned loan 1 by id
-### Expected: 200 OK
-### Expected:
-### - status = 2
-### - returnedAt is not null
-### - canRenew = false
+### Expected: 404 Not Found because the Loan was deleted
 GET {{baseUrl}}/loans/{{loan1Id}}
 Accept: application/json
 
@@ -304,13 +241,13 @@ Accept: application/json
 
 
 ### Return already returned loan 1
-### Expected: 409 Conflict
+### Expected: 404 Not Found
 PATCH {{baseUrl}}/loans/{{loan1Id}}/return-at-desk
 Accept: application/json
 
 
 ### Renew returned loan 1
-### Expected: 409 Conflict
+### Expected: 404 Not Found
 PATCH {{baseUrl}}/loans/{{loan1Id}}/renew
 Accept: application/json
 

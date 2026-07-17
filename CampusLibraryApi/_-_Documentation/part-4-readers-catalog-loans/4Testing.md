@@ -9,7 +9,7 @@ Part 4 verifies the Readers, Catalog and Loans modules.
 Final automated test result:
 
 ```text
-Test summary: total: 202, failed: 0, succeeded: 202, skipped: 0
+Test summary: total: 196, failed: 0, succeeded: 196, skipped: 0
 Build succeeded
 ```
 

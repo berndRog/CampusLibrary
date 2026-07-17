@@ -1,6 +1,5 @@
 using CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Entities;
-using CampusLibraryApi._3_Core.Loans._3_Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace CampusLibraryApi._4_Infrastructure.Persistence.Loans;
@@ -23,10 +22,7 @@ internal sealed class LoanRepositoryEf(
       CancellationToken ct
    ) => await loanDbContext.Loans
       .FirstOrDefaultAsync(
-         loan =>
-            loan.BookItemId == bookItemId &&
-            loan.Status == LoanStatus.Borrowed &&
-            loan.ReturnedAt == null,
+         loan => loan.BookItemId == bookItemId,
          ct
       );
 
@@ -34,11 +30,7 @@ internal sealed class LoanRepositoryEf(
       Guid readerId,
       CancellationToken ct
    ) => await loanDbContext.Loans
-      .Where(loan =>
-         loan.ReaderId == readerId &&
-         loan.Status == LoanStatus.Borrowed &&
-         loan.ReturnedAt == null
-      )
+      .Where(loan => loan.ReaderId == readerId)
       .OrderBy(loan => loan.LoanPeriodVo.DueDate)
       .ThenBy(loan => loan.LoanPeriodVo.LoanDate)
       .ThenBy(loan => loan.Id)
@@ -56,5 +48,11 @@ internal sealed class LoanRepositoryEf(
       IEnumerable<Loan> loans
    ) => loanDbContext.AddRange(
       loans: loans
+   );
+
+   public void Remove(
+      Loan loan
+   ) => loanDbContext.Remove(
+      loan: loan
    );
 }

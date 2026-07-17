@@ -36,17 +36,19 @@ public sealed class Seed(
 
    public AddressVo AddressRegVo
       => AddressVo.Create("Am Markt 14", "04109", "Leipzig", "DE").GetValueOrThrow();
+
    #endregion
 
    #region -------------- Test Readers (Entities) ------------------------------------------
-   private const string Reader1Id = "00000001-0000-0000-0000-000000000000";
-   private const string Reader2Id = "00000002-0000-0000-0000-000000000000";
-   private const string Reader3Id = "00000003-0000-0000-0000-000000000000";
-   private const string Reader4Id = "00000004-0000-0000-0000-000000000000";
-   private const string Reader5Id = "00000005-0000-0000-0000-000000000000";
-   private const string Reader6Id = "00000006-0000-0000-0000-000000000000";
+   public const string Reader1Id = "00000001-0000-0000-0000-000000000000";
+   public const string Reader2Id = "00000002-0000-0000-0000-000000000000";
+   public const string Reader3Id = "00000003-0000-0000-0000-000000000000";
+   public const string Reader4Id = "00000004-0000-0000-0000-000000000000";
+   public const string Reader5Id = "00000005-0000-0000-0000-000000000000";
+   public const string Reader6Id = "00000006-0000-0000-0000-000000000000";
 
-   private const string ReaderRegisterId = "00000007-0000-0000-0000-000000000000";
+   public const string ReaderRegisterId = "00000007-0000-0000-0000-000000000000";
+
 
    public Reader Reader1() => CreateReader(
       id: Reader1Id,
@@ -68,7 +70,7 @@ public sealed class Seed(
 
    public Reader Reader3() => CreateReader(
       id: Reader3Id,
-      firstname: "Arno",
+      firstname: "Arne",
       lastname: "Arndt",
       email: "a.arndt@t-online.de",
       addressVo: Address3Vo,
@@ -117,10 +119,10 @@ public sealed class Seed(
    #endregion
 
    #region -------------- Test Books (Aggregates) ------------------------------------------
-   public const string Book1Id = "b0000001-0000-0000-0000-000000000000";
-   public const string Book2Id = "b0000002-0000-0000-0000-000000000000";
-   public const string Book3Id = "b0000003-0000-0000-0000-000000000000";
-   public const string Book4Id = "b0000004-0000-0000-0000-000000000000";
+   public const string Book1Id = "00000001-0000-0000-0000-000000000000";
+   public const string Book2Id = "00000002-0000-0000-0000-000000000000";
+   public const string Book3Id = "00000003-0000-0000-0000-000000000000";
+   public const string Book4Id = "00000004-0000-0000-0000-000000000000";
 
    public Book Book1() => CreateBook(
       id: Book1Id,
@@ -167,18 +169,18 @@ public sealed class Seed(
    #endregion
 
    #region -------------- Test BookItems ---------------------------------------------------
-   public const string BookItem1Id = "be000001-0000-0000-0000-000000000000";
-   public const string BookItem2Id = "be000002-0000-0000-0000-000000000000";
-   public const string BookItem3Id = "be000003-0000-0000-0000-000000000000";
-   public const string BookItem4Id = "be000004-0000-0000-0000-000000000000";
-   public const string BookItem5Id = "be000005-0000-0000-0000-000000000000";
-   public const string BookItem6Id = "be000006-0000-0000-0000-000000000000";
+   public const string BookItem1Id = "00000001-0000-0000-0000-000000000000";
+   public const string BookItem2Id = "00000002-0000-0000-0000-000000000000";
+   public const string BookItem3Id = "00000003-0000-0000-0000-000000000000";
+   public const string BookItem4Id = "00000004-0000-0000-0000-000000000000";
+   public const string BookItem5Id = "00000005-0000-0000-0000-000000000000";
+   public const string BookItem6Id = "00000006-0000-0000-0000-000000000000";
    #endregion
 
    #region -------------- Test Loans (Aggregates) ------------------------------------------
-   public const string Loan1Id = "a1000001-0000-0000-0000-000000000000";
-   public const string Loan2Id = "a1000002-0000-0000-0000-000000000000";
-   public const string Loan3Id = "a1000003-0000-0000-0000-000000000000";
+   public const string Loan1Id = "00000001-0000-0000-0000-000000000000";
+   public const string Loan2Id = "00000002-0000-0000-0000-000000000000";
+   public const string Loan3Id = "00000003-0000-0000-0000-000000000000";
 
    public Loan Loan1() => CreateLoan(
       id: Loan1Id,
@@ -208,7 +210,7 @@ public sealed class Seed(
       Loan1(), Loan2(), Loan3()
    ];
    #endregion
-   
+
    #region -------------- Helper Methods ----------------------------------------------------
    private Reader CreateReader(
       string id,
@@ -342,14 +344,13 @@ public sealed class Seed(
       // The Book aggregate controls its BookItems.
       var result = book.AddBookItem(
          bookItemId: resultBookItemId.Value,
-         inventoryNumber: inventoryNumber,
          updatedAt: clock.UtcNow.Add(TimeSpan.FromHours(6))
       );
 
       if (result.IsFailure)
          throw new Exception($"Invalid book item in Seed: {inventoryNumber}");
    }
-   
+
    private Loan CreateLoan(
       string id,
       string readerId,
@@ -385,7 +386,7 @@ public sealed class Seed(
       if (resultBookItemId.IsFailure)
          throw new Exception($"Invalid book item id in Seed: {bookItemId}");
 
-      
+
       var resultLoanPeriod = LoanPeriodVo.Create(
           loanDate: borrowedAt,
           dueDate: dueAt
@@ -396,7 +397,7 @@ public sealed class Seed(
             $"{dueAt.ToShortDateString()}"
          );
       var loanVo = resultLoanPeriod.Value;
-      
+
       // Create the Loan aggregate through its factory method.
       var result = Loan.Create(
          id: resultLoanId.Value,
@@ -418,45 +419,50 @@ public sealed class Seed(
 /*
    Lernziele und Didaktik
    ----------------------
-   
+
    Diese Seed-Klasse stellt stabile Testdaten für das CampusLibrary-Projekt
    bereit. In Teil 1 und Teil 2 wurden nur Reader-Daten benötigt. In Teil 3
    wurde mit Catalog ein zweites Fachmodul ergänzt. In Teil 4 wird mit Loans
    ein drittes Fachmodul eingeführt.
-   
+
    Die Reader-Daten bleiben unverändert. Dadurch kann geprüft werden, dass das
    neue Loans-Modul keine bestehenden Reader-Funktionen beschädigt.
-   
+
    Für Catalog werden Books und BookItems erzeugt. Ein Book beschreibt das
    bibliografische Werk, zum Beispiel "Clean Code" oder "Domain-Driven Design".
    Ein BookItem beschreibt ein konkretes physisches Exemplar dieses Buchs.
-   
+
    Autorinnen und Autoren werden in dieser reduzierten Catalog-Version bewusst
    nicht als eigene Domain Entity modelliert. Stattdessen enthält Book einen
    kommaseparierten Autorentext. Damit bleibt der Catalog-Teil didaktisch
    schlank.
-   
+
    Die Beziehung Book -> BookItem zeigt weiterhin eine echte 1:n-Beziehung.
    Ein Book kann mehrere BookItems besitzen. Die BookItems werden nicht direkt
    erzeugt, sondern über AddBookItem am Book-Aggregate hinzugefügt. Dadurch
    bleibt die fachliche Konsistenzgrenze des Book-Aggregates auch bei Testdaten
    erhalten.
-   
+
    Mit Loans wird nun die eigentliche fachlich wichtige m:n-Beziehung eingeführt:
    Ein Reader kann über die Zeit viele BookItems ausleihen, und ein BookItem kann
    über die Zeit von verschiedenen Readern ausgeliehen werden. Diese Beziehung
    wird aber nicht als reine technische Join-Tabelle modelliert. Stattdessen
    entsteht mit Loan ein eigenes fachliches Objekt.
-   
-   Loan besitzt eigene fachliche Daten, zum Beispiel Ausleihdatum, Rückgabefrist,
-   Rückgabedatum, Verlängerungen und Status. Deshalb ist Loan ein eigenes Modell
+
+   Loan besitzt eigene fachliche Daten, zum Beispiel Ausleihdatum, Rückgabefrist
+   und Verlängerungen. Deshalb ist Loan ein eigenes Modell
    im Loans-Modul und nicht nur eine Navigation zwischen Reader und BookItem.
-   
+
    Die Loan-Seed-Daten verweisen nur über ReaderId und BookItemId auf andere
    Module. Reader und BookItem werden nicht als Objekte in das Loan-Aggregate
    eingebettet. Dadurch bleibt sichtbar, dass die Module fachlich getrennt sind.
-   
+
    Didaktisch wichtig ist die Trennung zwischen Seed-Daten und Fachlogik:
    Der Seed erzeugt Beispieldaten. Die Regeln bleiben aber im Domänenmodell,
    also in Reader, Book, BookItem, IsbnVo und Loan.
+
+   Die stabilen Demo-IDs werden pro Tabelle einfach durchnummeriert. Dadurch
+   können HTTP-Tests, Integrationstests und Client-Demos dieselben gut lesbaren
+   IDs verwenden. Die Werte dürfen sich zwischen unterschiedlichen Tabellen
+   wiederholen, weil jede Tabelle ihren eigenen fachlichen Entity-Typ enthält.
 */

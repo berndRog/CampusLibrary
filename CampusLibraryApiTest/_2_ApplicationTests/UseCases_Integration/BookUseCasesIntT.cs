@@ -4,6 +4,8 @@ using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Catalog._2_Application.Dtos;
 using CampusLibraryApi._3_Core.Catalog._2_Application.UseCases;
 using CampusLibraryApi._3_Core.Catalog._3_Domain.Errors;
+using CampusLibraryApi._3_Core.Loans._1_Ports.Inbound;
+using CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
 using CampusLibraryApiTest.TestInfrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -55,14 +57,14 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
 
       resultFind.IsSuccess.Should().BeTrue();
 
-      var actualBookDetailDto = resultFind.Value;
+      var actualBookDto = resultFind.Value;
 
-      actualBookDetailDto.Id.Should().Be(createdBookDto.Id);
-      actualBookDetailDto.AuthorsText.Should().Be(createdBookDto.AuthorsText);
-      actualBookDetailDto.Title.Should().Be(createdBookDto.Title);
-      actualBookDetailDto.Subtitle.Should().Be(createdBookDto.Subtitle);
-      actualBookDetailDto.Isbn.Should().Be(createdBookDto.Isbn);
-      actualBookDetailDto.IsActive.Should().BeTrue();
+      actualBookDto.Id.Should().Be(createdBookDto.Id);
+      actualBookDto.AuthorsText.Should().Be(createdBookDto.AuthorsText);
+      actualBookDto.Title.Should().Be(createdBookDto.Title);
+      actualBookDto.Subtitle.Should().Be(createdBookDto.Subtitle);
+      actualBookDto.Isbn.Should().Be(createdBookDto.Isbn);
+      actualBookDto.IsActive.Should().BeTrue();
    }
 
    [Fact]
@@ -157,20 +159,12 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
 
       // Arrange
       var book1 = seed.Book1();
-
       repository.Add(book1);
 
-      await unitOfWork.SaveAllChangesAsync(
-         "Book1 inserted",
-         ct
-      );
-
+      await unitOfWork.SaveAllChangesAsync("Book1 inserted", ct);
       unitOfWork.ClearChangeTracker();
 
-      var dto = new BookItemAddDto(
-         InventoryNumber: "CL-UC-BOOK-0001",
-         Id: seed.BookItem1Id
-      );
+      var dto = new BookItemAddDto(seed.BookItem1Id);
 
       // Act
       var resultAddBookItem = await useCases.AddBookItemAsync(
@@ -180,72 +174,19 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       );
 
       resultAddBookItem.IsSuccess.Should().BeTrue();
-
       unitOfWork.ClearChangeTracker();
 
       // Assert
       var resultFind = await readModel.FindByIdAsync(
          id: book1.Id,
+         includeInactive: false,
          ct: ct
       );
-
       resultFind.IsSuccess.Should().BeTrue();
 
-      var actualBookDetailDto = resultFind.Value;
-
-      actualBookDetailDto.BookItems
-         .Should()
-         .ContainSingle(bi => bi.InventoryNumber == dto.InventoryNumber);
-
-      actualBookDetailDto.TotalItems.Should().Be(1);
-      actualBookDetailDto.AvailableItems.Should().Be(1);
-   }
-
-   [Fact]
-   public async Task AddBookItemAsync_duplicate_inventory_number_fails() {
-      using var scope = Root.CreateDefaultScope();
-      var ct = TestContext.Current.CancellationToken;
-      var useCases = scope.ServiceProvider.GetRequiredService<IBookUseCases>();
-      var repository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
-      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
-
-      // Arrange
-      var book1 = seed.Book1();
-      var book2 = seed.Book2();
-
-      var resultExistingBookItem = book1.AddBookItem(
-         bookItemId: Guid.Parse(seed.BookItem1Id),
-         inventoryNumber: "CL-UC-BOOK-0001",
-         updatedAt: book1.CreatedAt.AddDays(1)
-      );
-
-      resultExistingBookItem.IsSuccess.Should().BeTrue();
-
-      repository.AddRange([book1, book2]);
-
-      await unitOfWork.SaveAllChangesAsync(
-         "Book1 and Book2 inserted",
-         ct
-      );
-
-      unitOfWork.ClearChangeTracker();
-
-      var dto = new BookItemAddDto(
-         InventoryNumber: "CL-UC-BOOK-0001",
-         Id: seed.BookItem2Id
-      );
-
-      // Act
-      var resultAddBookItem = await useCases.AddBookItemAsync(
-         id: book2.Id,
-         dto: dto,
-         ct: ct
-      );
-
-      // Assert
-      resultAddBookItem.IsFailure.Should().BeTrue();
-      resultAddBookItem.Error.Should().Be(CatalogErrors.BookItemAlreadyExists);
+      var actualBookDto = resultFind.Value;
+      actualBookDto.TotalItems.Should().Be(1);
+      actualBookDto.AvailableItems.Should().Be(1);
    }
 
    [Fact]
@@ -259,7 +200,6 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       var unknownBookId = Guid.Parse("99000000-0000-0000-0000-000000000000");
 
       var dto = new BookItemAddDto(
-         InventoryNumber: "CL-UC-BOOK-0001",
          Id: seed.BookItem1Id
       );
 
@@ -288,7 +228,9 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
 
       // Arrange
-      var book1 = seed.Book1();
+      var book1 = seed.Books.First(
+         book => book.Id == Guid.Parse(seed.Book1Id)
+      );
 
       repository.Add(book1);
 
@@ -306,6 +248,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       );
 
       resultDeactivate.IsSuccess.Should().BeTrue();
+      resultDeactivate.Value.TotalItems.Should().Be(0);
 
       unitOfWork.ClearChangeTracker();
 
@@ -317,6 +260,7 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
 
       actualBook.Should().NotBeNull();
       actualBook!.IsActive.Should().BeFalse();
+      actualBook.BookItems.Should().BeEmpty();
 
       // Assert: read model hides inactive books from the normal query side.
       var resultFind = await readModel.FindByIdAsync(
@@ -325,6 +269,97 @@ public sealed class BookUseCasesIntT : TestBaseIntegration {
       );
 
       resultFind.IsFailure.Should().BeTrue();
+   }
+
+   [Fact]
+   public async Task DeactivateAsync_with_current_loan_fails_then_succeeds_after_return() {
+      using var scope = Root.CreateDefaultScope();
+      var ct = TestContext.Current.CancellationToken;
+      var useCases = scope.ServiceProvider.GetRequiredService<IBookUseCases>();
+      var bookRepository = scope.ServiceProvider.GetRequiredService<IBookRepository>();
+      var loanUseCases = scope.ServiceProvider.GetRequiredService<ILoanUseCases>();
+      var loanRepository = scope.ServiceProvider.GetRequiredService<ILoanRepository>();
+      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
+
+      // Arrange
+      var book1 = seed.Books.First(
+         book => book.Id == Guid.Parse(seed.Book1Id)
+      );
+      var loan1 = seed.Loan1();
+      var expectedBookItemIds = book1.BookItems
+         .Select(bookItem => bookItem.Id)
+         .ToArray();
+
+      bookRepository.Add(book1);
+      loanRepository.Add(loan1);
+
+      await unitOfWork.SaveAllChangesAsync(
+         "Book and loan inserted",
+         ct
+      );
+
+      unitOfWork.ClearChangeTracker();
+
+      // Act
+      var resultDeactivate = await useCases.DeactivateAsync(
+         id: book1.Id,
+         ct: ct
+      );
+
+      // Assert
+      resultDeactivate.IsFailure.Should().BeTrue();
+      resultDeactivate.Error.Should().Be(
+         CatalogErrors.BookCannotBeDeactivatedWithLoans
+      );
+
+      unitOfWork.ClearChangeTracker();
+
+      var actualBook = await bookRepository.FindByIdAsync(
+         id: book1.Id,
+         ct: ct
+      );
+
+      actualBook.Should().NotBeNull();
+      actualBook!.IsActive.Should().BeTrue();
+      actualBook.BookItems
+         .Select(bookItem => bookItem.Id)
+         .Should()
+         .BeEquivalentTo(expectedBookItemIds);
+
+      // Return the item. In the simplified lifecycle this deletes the Loan.
+      var resultReturn = await loanUseCases.ReturnAtDeskAsync(
+         loanId: loan1.Id,
+         ct: ct
+      );
+
+      resultReturn.IsSuccess.Should().BeTrue();
+
+      // A new deactivation request can now complete the operation.
+      var resultDeactivateAfterReturn = await useCases.DeactivateAsync(
+         id: book1.Id,
+         ct: ct
+      );
+
+      resultDeactivateAfterReturn.IsSuccess.Should().BeTrue();
+      resultDeactivateAfterReturn.Value.TotalItems.Should().Be(0);
+
+      unitOfWork.ClearChangeTracker();
+
+      var deletedLoan = await loanRepository.FindByIdAsync(
+         id: loan1.Id,
+         ct: ct
+      );
+
+      var deactivatedBook = await bookRepository.FindByIdAsync(
+         id: book1.Id,
+         ct: ct
+      );
+
+      deletedLoan.Should().BeNull();
+      deactivatedBook.Should().NotBeNull();
+      deactivatedBook!.IsActive.Should().BeFalse();
+      deactivatedBook.BookItems.Should().BeEmpty();
    }
 
    [Fact]

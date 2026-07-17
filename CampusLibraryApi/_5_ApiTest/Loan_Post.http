@@ -1,0 +1,55 @@
+@baseUrl = https://localhost:8010/camplib/v1
+
+### Reader ids from Readers.http =============================================
+
+@reader1Id = 00000001-0000-0000-0000-000000000000
+@reader2Id = 00000002-0000-0000-0000-000000000000
+
+### BookItem ids from Books.http =============================================
+@bookItem1Id = 00000001-0000-0000-0000-000000000000
+@bookItem2Id = 00000002-0000-0000-0000-000000000000
+@bookItem3Id = 00000003-0000-0000-0000-000000000000
+@bookItem4Id = 00000004-0000-0000-0000-000000000000
+
+### Loan ids =================================================================
+@loan1Id = 00000001-0000-0000-0000-000000000000
+@loan2Id = 00000002-0000-0000-0000-000000000000
+@loan3Id = 00000003-0000-0000-0000-000000000000
+
+
+### 2. Borrow book items =======================================================
+
+### Borrow BookItem 1 for Reader 1
+POST {{baseUrl}}/loans
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{loan1Id}}",
+  "readerId": "{{reader1Id}}",
+  "bookItemId": "{{bookItem1Id}}"
+}
+
+
+### Borrow BookItem 3 for Reader 2
+POST {{baseUrl}}/loans
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{loan2Id}}",
+  "readerId": "{{reader2Id}}",
+  "bookItemId": "{{bookItem3Id}}"
+}
+
+
+### Borrow BookItem 4 for Reader 1
+POST {{baseUrl}}/loans
+Content-Type: application/json
+Accept: application/json
+
+{
+  "id": "{{loan3Id}}",
+  "readerId": "{{reader1Id}}",
+  "bookItemId": "{{bookItem4Id}}"
+}

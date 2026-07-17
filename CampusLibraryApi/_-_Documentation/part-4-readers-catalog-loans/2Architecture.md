@@ -7,7 +7,7 @@ The application is a project-based modular monolith with three business modules:
 Final automated test result:
 
 ```text
-202 tests
+196 tests
 0 failed
 0 skipped
 Build succeeded
@@ -184,6 +184,8 @@ BookItem / Loan:
 - status describes the business lifecycle
 ```
 
+A `BookItem` no longer has a separate inventory number. The unique `BookItemId` identifies the physical copy; the UI may still label this id as the inventory number.
+
 A Loan is not active/inactive. It is borrowed, returned or cancelled.
 
 ## Loan use cases
@@ -234,6 +236,78 @@ CanRenew
 ```
 
 The rules for these values should stay aligned with the domain policies.
+
+## Current DTO shapes
+
+The following DTOs reflect the current decision: no separate `InventoryNumber`, but `BookItemId` as the unique physical-copy identity.
+
+```csharp
+public sealed record ReaderLoanInfoDto(
+   Guid Id,
+   string Firstname,
+   string Lastname,
+   string Email,
+   bool IsActive
+);
+
+public sealed record LoanDetailDto(
+   Guid Id,
+
+   Guid ReaderId,
+   string Firstname,
+   string Lastname,
+   string Email,
+
+   Guid BookItemId,
+
+   Guid BookId,
+   string AuthorsText,
+   string Title,
+   string? Subtitle,
+   string Isbn,
+   bool BookIsActive,
+   bool IsAvailableForLoan,
+
+   DateTime LoanDate,
+   DateTime DueDate,
+   DateTime? ReturnedAt,
+
+   int Status,
+   int RenewalCount,
+
+   bool IsOverdue,
+   bool CanRenew
+);
+
+public sealed record BookItemAddDto(
+   string? Id
+);
+
+public sealed record BookItemDto(
+   Guid Id,
+   Guid BookId,
+   int Status
+);
+
+public sealed record LoanListItemDto(
+   Guid Id,
+
+   Guid ReaderId,
+   string Firstname,
+   string Lastname,
+
+   Guid BookItemId,
+
+   string Title,
+   string? Subtitle,
+
+   DateTime LoanDate,
+   DateTime DueDate,
+
+   int Status,
+   bool IsOverdue
+);
+```
 
 ## Infrastructure
 

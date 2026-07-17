@@ -14,7 +14,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CampusLibraryApi_4_Infrastr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CampusLibraryApi_3_Core_Catalog", "CampusLibraryApi_3_Core_Catalog\CampusLibraryApi_3_Core_Catalog.csproj", "{5F20951B-E1D4-4FB4-949B-378D2E46A5DD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CampusLibraryApi_3_Core_Loan", "CampusLibraryApi_3_Core_Loan\CampusLibraryApi_3_Core_Loan.csproj", "{EF6D84BF-C33C-43F8-88D8-0A7281DA9A63}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CampusLibraryApi_3_Core_Loans", "CampusLibraryApi_3_Core_Loans\CampusLibraryApi_3_Core_Loans.csproj", "{EF6D84BF-C33C-43F8-88D8-0A7281DA9A63}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

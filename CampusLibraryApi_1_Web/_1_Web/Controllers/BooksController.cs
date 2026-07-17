@@ -32,11 +32,11 @@ public sealed class BooksController(
    // Query books through the read model.
    [HttpGet("books", Name = nameof(GetAllBooksAsync))]
    [Produces("application/json")]
-   [ProducesResponseType<IReadOnlyList<BookListItemDto>>(StatusCodes.Status200OK)]
+   [ProducesResponseType<IReadOnlyList<BookDto>>(StatusCodes.Status200OK)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
-   public async Task<ActionResult<IReadOnlyList<BookListItemDto>>> GetAllBooksAsync(
+   public async Task<ActionResult<IReadOnlyList<BookDto>>> GetAllBooksAsync(
       [FromQuery] bool includeInactive = false,
       CancellationToken ct = default
    ) {
@@ -68,12 +68,12 @@ public sealed class BooksController(
    // Query one book by id through the read model.
    [HttpGet("books/{id:guid}", Name = nameof(GetBookByIdAsync))]
    [Produces("application/json")]
-   [ProducesResponseType<BookDetailDto>(StatusCodes.Status200OK)]
+   [ProducesResponseType<BookDto>(StatusCodes.Status200OK)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
-   public async Task<ActionResult<BookDetailDto>> GetBookByIdAsync(
+   public async Task<ActionResult<BookDto>> GetBookByIdAsync(
       [FromRoute] Guid id,
       [FromQuery] bool includeInactive = false,
       CancellationToken ct = default
@@ -86,6 +86,41 @@ public sealed class BooksController(
 
       var problem = DomainProblemDetailsFactory.FromDomainError(
          result.Error, HttpContext);
+      return result.Error.Status switch {
+         WebErrorStatus.BadRequest => BadRequest(problem),
+         WebErrorStatus.Unauthorized => Unauthorized(problem),
+         WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
+         WebErrorStatus.NotFound => NotFound(problem),
+         _ => BadRequest(problem)
+      };
+   }
+
+   /// <summary>
+   ///    Returns the current loan blockers for book deactivation.
+   /// </summary>
+   /// <param name="bookId">Book unique id.</param>
+   /// <param name="ct">Cancellation token.</param>
+   /// <returns>Current loans that prevent deactivation.</returns>
+
+   [HttpGet("books/{bookId:guid}/deactivation-info", Name = nameof(GetBookDeactivationInfoAsync))]
+   [Produces("application/json")]
+   [ProducesResponseType<BookDeactivationInfoDto>(StatusCodes.Status200OK)]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
+   public async Task<ActionResult<BookDeactivationInfoDto>> GetBookDeactivationInfoAsync(
+      [FromRoute] Guid bookId,
+      CancellationToken ct = default
+   ) {
+      var result = await bookReadModel.FindDeactivationInfoAsync(bookId, ct);
+
+      if(result.IsSuccess)
+         return Ok(result.Value);
+
+      var problem = DomainProblemDetailsFactory.FromDomainError(
+         result.Error, HttpContext);
+
       return result.Error.Status switch {
          WebErrorStatus.BadRequest => BadRequest(problem),
          WebErrorStatus.Unauthorized => Unauthorized(problem),
@@ -110,21 +145,19 @@ public sealed class BooksController(
    // Search books through the read model.
    [HttpGet("books/search", Name = nameof(SearchBooksAsync))]
    [Produces("application/json")]
-   [ProducesResponseType<IReadOnlyList<BookListItemDto>>(StatusCodes.Status200OK)]
+   [ProducesResponseType<IReadOnlyList<BookDto>>(StatusCodes.Status200OK)]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
-   public async Task<ActionResult<IReadOnlyList<BookListItemDto>>> SearchBooksAsync(
+   public async Task<ActionResult<IReadOnlyList<BookDto>>> SearchBooksAsync(
       [FromQuery] BookSearchField searchField,
       [FromQuery] string searchText,
       [FromQuery] bool includeInactive = false,
       CancellationToken ct = default
    ) {
-      var search = new BookSearchDto(searchField, searchText);
-
       var result = await bookReadModel.SearchAsync(
-         search, includeInactive, ct);
-      
+         searchField, searchText, includeInactive, ct);
+
       if (result.IsSuccess)
          return Ok(result.Value);
 
@@ -245,6 +278,7 @@ public sealed class BooksController(
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden, "application/problem+json")]
    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound, "application/problem+json")]
+   [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict, "application/problem+json")]
    public async Task<ActionResult<BookDto>> DeactivateBookAsync(
       [FromRoute] Guid bookId,
       CancellationToken ct
@@ -267,6 +301,7 @@ public sealed class BooksController(
          WebErrorStatus.Unauthorized => Unauthorized(problem),
          WebErrorStatus.Forbidden => StatusCode(StatusCodes.Status403Forbidden, problem),
          WebErrorStatus.NotFound => NotFound(problem),
+         WebErrorStatus.Conflict => Conflict(problem),
          _ => BadRequest(problem)
       };
    }

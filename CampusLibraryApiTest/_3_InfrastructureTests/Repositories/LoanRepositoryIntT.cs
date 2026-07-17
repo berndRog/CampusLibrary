@@ -1,7 +1,6 @@
 using AwesomeAssertions;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
-using CampusLibraryApi._3_Core.Loans._3_Domain.Enums;
 using CampusLibraryApiTest.TestInfrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -51,8 +50,6 @@ public sealed class LoanRepositoryIntT : TestBaseIntegration {
       actualLoan.BookItemId.Should().Be(loan1.BookItemId);
       actualLoan.LoanDate.Should().Be(loan1.LoanDate);
       actualLoan.DueDate.Should().Be(loan1.DueDate);
-      actualLoan.ReturnedAt.Should().Be(loan1.ReturnedAt);
-      actualLoan.Status.Should().Be(LoanStatus.Borrowed);
       actualLoan.RenewalCount.Should().Be(loan1.RenewalCount);
    }
 
@@ -108,8 +105,6 @@ public sealed class LoanRepositoryIntT : TestBaseIntegration {
       actualLoan.Should().NotBeNull();
       actualLoan!.Id.Should().Be(loan1.Id);
       actualLoan.BookItemId.Should().Be(loan1.BookItemId);
-      actualLoan.Status.Should().Be(LoanStatus.Borrowed);
-      actualLoan.ReturnedAt.Should().BeNull();
    }
 
    [Fact]
@@ -146,44 +141,6 @@ public sealed class LoanRepositoryIntT : TestBaseIntegration {
    }
 
    [Fact]
-   public async Task FindBorrowedByBookItemIdAsync_returned_loan_returns_null() {
-      using var scope = Root.CreateDefaultScope();
-      var ct = TestContext.Current.CancellationToken;
-      var repository = scope.ServiceProvider.GetRequiredService<ILoanRepository>();
-      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
-
-      // Arrange
-      var loan1 = seed.Loan1();
-
-      var resultReturned = loan1.ReturnAtDesk(
-         returnedAt: loan1.LoanDate.AddDays(1)
-      );
-
-      resultReturned.IsSuccess.Should().BeTrue();
-
-      repository.Add(
-         loan: loan1
-      );
-
-      await unitOfWork.SaveAllChangesAsync(
-         "Returned loan inserted",
-         ct
-      );
-
-      unitOfWork.ClearChangeTracker();
-
-      // Act
-      var actualLoan = await repository.FindBorrowedByBookItemIdAsync(
-         bookItemId: loan1.BookItemId,
-         ct: ct
-      );
-
-      // Assert
-      actualLoan.Should().BeNull();
-   }
-
-   [Fact]
    public async Task FindBorrowedByReaderIdAsync_ok() {
       using var scope = Root.CreateDefaultScope();
       var ct = TestContext.Current.CancellationToken;
@@ -207,10 +164,7 @@ public sealed class LoanRepositoryIntT : TestBaseIntegration {
       unitOfWork.ClearChangeTracker();
 
       var expectedLoanIds = loans
-         .Where(l =>
-            l.ReaderId == loan2.ReaderId &&
-            l.Status == LoanStatus.Borrowed &&
-            l.ReturnedAt is null)
+         .Where(l => l.ReaderId == loan2.ReaderId)
          .OrderBy(l => l.DueDate)
          .ThenBy(l => l.LoanDate)
          .ThenBy(l => l.Id)
@@ -235,9 +189,7 @@ public sealed class LoanRepositoryIntT : TestBaseIntegration {
          );
 
       actualLoans.Should().OnlyContain(l =>
-         l.ReaderId == loan2.ReaderId &&
-         l.Status == LoanStatus.Borrowed &&
-         l.ReturnedAt == null
+         l.ReaderId == loan2.ReaderId
       );
    }
 
@@ -267,45 +219,6 @@ public sealed class LoanRepositoryIntT : TestBaseIntegration {
       // Act
       var actualLoans = await repository.FindBorrowedByReaderIdAsync(
          readerId: readerWithoutBorrowedLoansId,
-         ct: ct
-      );
-
-      // Assert
-      actualLoans.Should().NotBeNull();
-      actualLoans.Should().BeEmpty();
-   }
-
-   [Fact]
-   public async Task FindBorrowedByReaderIdAsync_returned_loan_is_excluded() {
-      using var scope = Root.CreateDefaultScope();
-      var ct = TestContext.Current.CancellationToken;
-      var repository = scope.ServiceProvider.GetRequiredService<ILoanRepository>();
-      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
-
-      // Arrange
-      var loan1 = seed.Loan1();
-
-      var resultReturned = loan1.ReturnAtDesk(
-         returnedAt: loan1.LoanDate.AddDays(1)
-      );
-
-      resultReturned.IsSuccess.Should().BeTrue();
-
-      repository.Add(
-         loan: loan1
-      );
-
-      await unitOfWork.SaveAllChangesAsync(
-         "Returned loan inserted",
-         ct
-      );
-
-      unitOfWork.ClearChangeTracker();
-
-      // Act
-      var actualLoans = await repository.FindBorrowedByReaderIdAsync(
-         readerId: loan1.ReaderId,
          ct: ct
       );
 
@@ -345,6 +258,56 @@ public sealed class LoanRepositoryIntT : TestBaseIntegration {
       // Assert
       actualLoan.Should().NotBeNull();
       actualLoan!.Id.Should().Be(loan1.Id);
-      actualLoan.Status.Should().Be(LoanStatus.Borrowed);
    }
+
+   [Fact]
+   public async Task Remove_ok_deletes_loan() {
+      using var scope = Root.CreateDefaultScope();
+      var ct = TestContext.Current.CancellationToken;
+      var repository = scope.ServiceProvider.GetRequiredService<ILoanRepository>();
+      var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
+
+      // Arrange
+      var loan1 = seed.Loan1();
+
+      repository.Add(
+         loan: loan1
+      );
+
+      await unitOfWork.SaveAllChangesAsync(
+         "Loan inserted",
+         ct
+      );
+
+      unitOfWork.ClearChangeTracker();
+
+      var persistedLoan = await repository.FindByIdAsync(
+         id: loan1.Id,
+         ct: ct
+      );
+
+      persistedLoan.Should().NotBeNull();
+
+      // Act
+      repository.Remove(
+         loan: persistedLoan!
+      );
+
+      await unitOfWork.SaveAllChangesAsync(
+         "Loan removed",
+         ct
+      );
+
+      unitOfWork.ClearChangeTracker();
+
+      var deletedLoan = await repository.FindByIdAsync(
+         id: loan1.Id,
+         ct: ct
+      );
+
+      // Assert
+      deletedLoan.Should().BeNull();
+   }
+
 }

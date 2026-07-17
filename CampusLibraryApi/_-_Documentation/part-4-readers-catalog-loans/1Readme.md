@@ -17,7 +17,7 @@ Part 4 extends the Readers + Catalog modular monolith with a Loans module. Reade
 Final automated test result for this part:
 
 ```text
-202 tests
+196 tests
 0 failed
 0 skipped
 Build succeeded
@@ -93,7 +93,7 @@ Book read model
 BooksController
 ```
 
-A Book represents the bibliographic work. A BookItem represents a physical copy.
+A Book represents the bibliographic work. A BookItem represents a physical copy. The copy is identified only by its unique `BookItem.Id`. There is no separate `InventoryNumber` anymore; when the UI or teaching material uses the term inventory number, it refers to `BookItemId`.
 
 There is no Author aggregate and no Author API. Authors are stored in `Book.AuthorsText`. Author-last-name search parses the comma-separated author text.
 
@@ -140,6 +140,19 @@ BookItemLoanInfoDto
 ```
 
 The implementations live in Infrastructure.
+
+Current DTO decisions:
+
+```text
+ReaderLoanInfoDto additionally contains Email.
+LoanDetailDto additionally contains Email.
+LoanDetailDto no longer contains InventoryNumber.
+LoanListItemDto no longer contains InventoryNumber.
+BookItemAddDto contains only the optional Id.
+BookItemDto no longer contains InventoryNumber.
+```
+
+The UI derives the functional inventory number from `BookItemId`. The API property remains `BookItemId`.
 
 Ownership rule:
 

@@ -5,14 +5,13 @@ using CampusLibraryApi._3_Core.Catalog._3_Domain.Errors;
 namespace CampusLibraryApi._3_Core.Catalog._3_Domain.Entities;
 
 public sealed class BookItem : Entity {
-   
+
    //--- properties ------------------------------------------------------------
    // Inherited from Entity / AggregateRoot:
    // public Guid Id { get; protected set; }
    public Guid BookId { get; private set; }
-   public string InventoryNumber { get; private set; } = string.Empty;
    public BookItemStatus Status { get; private set; }
-   
+
    //--- constructors ----------------------------------------------------------
    // Required by EF Core.
    private BookItem() {
@@ -20,12 +19,10 @@ public sealed class BookItem : Entity {
    // Domain ctor
    internal BookItem(
       Guid id,
-      Guid bookId,
-      string inventoryNumber
+      Guid bookId
    ) {
       Id = id;
       BookId = bookId;
-      InventoryNumber = inventoryNumber;
       Status = BookItemStatus.Available;
    }
 
@@ -34,22 +31,17 @@ public sealed class BookItem : Entity {
    // Validation errors are returned as Result failures.
    internal static Result<BookItem> Create(
       Guid id,
-      Guid bookId,
-      string inventoryNumber
+      Guid bookId
    ) {
-      inventoryNumber = inventoryNumber.Trim();
-      
+
       if (id == Guid.Empty)
          return Result<BookItem>.Failure(CatalogErrors.BookItemIdRequired);
       if(bookId == Guid.Empty)
          return Result<BookItem>.Failure(CatalogErrors.BookIdRequired);
-      if (string.IsNullOrWhiteSpace(inventoryNumber))
-         return Result<BookItem>.Failure(CatalogErrors.BookItemInventoryNumberIsRequired);
 
       var bookItem = new BookItem(
          id,
-         bookId,
-         inventoryNumber
+         bookId
       );
 
       return Result<BookItem>.Success(bookItem);
@@ -57,7 +49,7 @@ public sealed class BookItem : Entity {
 
    public void MarkAsUnavailable() =>
       Status = BookItemStatus.Unavailable;
-   
+
    public void MarkAsAvailable() =>
       Status = BookItemStatus.Available;
 
@@ -66,5 +58,5 @@ public sealed class BookItem : Entity {
 
    public void MarkAsDamaged() =>
       Status = BookItemStatus.Damaged;
-   
+
 }

@@ -2,11 +2,11 @@ using AwesomeAssertions;
 using CampusLibraryApi._2_BuildingBlocks._1_Ports;
 using CampusLibraryApi._3_Core.Catalog._1_Ports.Outbound;
 using CampusLibraryApi._3_Core.Loans._1_Ports.Outbound;
-using CampusLibraryApi._3_Core.Loans._3_Domain.Enums;
 using CampusLibraryApi._3_Core.Loans._3_Domain.Errors;
 using CampusLibraryApi._3_Core.Readers._1_Ports.Outbound;
 using CampusLibraryApiTest.TestInfrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using CampusLibraryApi._2_BuildingBlocks._3_Domain.Errors;
 
 namespace CampusLibraryApiTest._3_InfrastructureTests.ReadModels;
 
@@ -73,7 +73,6 @@ public sealed class LoanReadModelIntT : TestBaseIntegration {
 
       actualLoanDto.BookItemId.Should().Be(loan1.BookItemId);
       actualLoanDto.BookId.Should().Be(book.Id);
-      actualLoanDto.InventoryNumber.Should().Be(bookItem.InventoryNumber);
 
       actualLoanDto.Title.Should().Be(book.Title);
       actualLoanDto.Subtitle.Should().Be(book.Subtitle);
@@ -85,9 +84,7 @@ public sealed class LoanReadModelIntT : TestBaseIntegration {
 
       actualLoanDto.LoanDate.Should().Be(loan1.LoanDate);
       actualLoanDto.DueDate.Should().Be(loan1.DueDate);
-      actualLoanDto.ReturnedAt.Should().Be(loan1.ReturnedAt);
 
-      actualLoanDto.Status.Should().Be((int)loan1.Status);
       actualLoanDto.RenewalCount.Should().Be(loan1.RenewalCount);
 
       actualLoanDto.IsOverdue.Should().BeFalse();
@@ -152,10 +149,7 @@ public sealed class LoanReadModelIntT : TestBaseIntegration {
       );
 
       var expLoanIds = loans
-         .Where(l =>
-            l.Status == LoanStatus.Borrowed &&
-            l.ReturnedAt is null)
-         .OrderBy(l => l.DueDate)
+                  .OrderBy(l => l.DueDate)
          .ThenBy(l => l.LoanDate)
          .ThenBy(l => l.Id)
          .Select(l => l.Id)
@@ -181,9 +175,6 @@ public sealed class LoanReadModelIntT : TestBaseIntegration {
          options => options.WithStrictOrdering()
       );
 
-      actualLoanDtos.Should().OnlyContain(l =>
-         l.Status == (int)LoanStatus.Borrowed
-      );
    }
 
    [Fact]
@@ -237,7 +228,6 @@ public sealed class LoanReadModelIntT : TestBaseIntegration {
       actualLoanDto.Lastname.Should().Be(reader.Lastname);
 
       actualLoanDto.BookItemId.Should().Be(bookItem.Id);
-      actualLoanDto.InventoryNumber.Should().Be(bookItem.InventoryNumber);
 
       actualLoanDto.Title.Should().Be(book.Title);
       actualLoanDto.Subtitle.Should().Be(book.Subtitle);
@@ -245,8 +235,103 @@ public sealed class LoanReadModelIntT : TestBaseIntegration {
       actualLoanDto.LoanDate.Should().Be(loan1.LoanDate);
       actualLoanDto.DueDate.Should().Be(loan1.DueDate);
 
-      actualLoanDto.Status.Should().Be((int)LoanStatus.Borrowed);
       actualLoanDto.IsOverdue.Should().BeFalse();
+   }
+
+   [Fact]
+   public async Task FindAllBorrowedAsync_deactivated_reader_keeps_existing_loan_visible() {
+      using var scope = Root.CreateDefaultScope();
+      var ct = TestContext.Current.CancellationToken;
+      var readModel = scope.ServiceProvider.GetRequiredService<ILoanReadModel>();
+      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
+
+      // Arrange
+      var readers = seed.Readers.ToList();
+      var loan = seed.Loan1();
+      var reader = readers.Single(candidate =>
+         candidate.Id == loan.ReaderId
+      );
+
+      var deactivateResult = reader.Deactivate(
+         updatedAt: reader.CreatedAt.AddDays(1)
+      );
+      deactivateResult.IsSuccess.Should().BeTrue();
+
+      await InsertLoanReadModelDataAsync(
+         scope: scope,
+         readers: readers,
+         books: seed.Books,
+         loans: [loan],
+         ct: ct
+      );
+
+      // Act
+      var result = await readModel.FindAllBorrowedAsync(
+         ct: ct
+      );
+
+      // Assert
+      result.IsSuccess.Should().BeTrue();
+      result.Value.Should().ContainSingle(item =>
+         item.Id == loan.Id && item.ReaderId == reader.Id
+      );
+   }
+
+   [Fact]
+   public async Task FindBorrowedByReaderIdAsync_returns_only_reader_loans() {
+      using var scope = Root.CreateDefaultScope();
+      var ct = TestContext.Current.CancellationToken;
+      var readModel = scope.ServiceProvider.GetRequiredService<ILoanReadModel>();
+      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
+
+      var loans = seed.Loans;
+      var expectedLoan = loans[0];
+
+      await InsertLoanReadModelDataAsync(
+         scope: scope,
+         readers: seed.Readers,
+         books: seed.Books,
+         loans: loans,
+         ct: ct
+      );
+
+      var result = await readModel.FindBorrowedByReaderIdAsync(
+         readerId: expectedLoan.ReaderId,
+         ct: ct
+      );
+
+      result.IsSuccess.Should().BeTrue();
+      result.Value.Should().ContainSingle();
+      result.Value[0].Id.Should().Be(expectedLoan.Id);
+      result.Value[0].ReaderId.Should().Be(expectedLoan.ReaderId);
+   }
+
+   [Fact]
+   public async Task FindByIdForReaderAsync_other_reader_returns_not_found() {
+      using var scope = Root.CreateDefaultScope();
+      var ct = TestContext.Current.CancellationToken;
+      var readModel = scope.ServiceProvider.GetRequiredService<ILoanReadModel>();
+      var seed = scope.ServiceProvider.GetRequiredService<TestSeed>();
+
+      var loan = seed.Loan1();
+      var otherReader = seed.Reader2();
+
+      await InsertLoanReadModelDataAsync(
+         scope: scope,
+         readers: seed.Readers,
+         books: seed.Books,
+         loans: [loan],
+         ct: ct
+      );
+
+      var result = await readModel.FindByIdForReaderAsync(
+         id: loan.Id,
+         readerId: otherReader.Id,
+         ct: ct
+      );
+
+      result.IsFailure.Should().BeTrue();
+      result.Error.Should().Be(LoanErrors.LoanNotFound);
    }
 
    [Fact]

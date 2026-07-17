@@ -77,7 +77,7 @@ DELETE /camplib/v1/readers/{id}
 
 # Books API
 
-Books API is unchanged from Part 3.
+Books API still uses Books and BookItems. A BookItem is now identified only by its unique `Id`. There is no separate `InventoryNumber` anymore.
 
 Important endpoints:
 
@@ -94,6 +94,22 @@ PATCH /camplib/v1/books/{bookId}/deactivate
 
 There is no Author API.
 
+When adding a BookItem, the client may optionally provide an id. The inventory number is no longer transferred as a separate field.
+
+```csharp
+public sealed record BookItemAddDto(
+   string? Id
+);
+
+public sealed record BookItemDto(
+   Guid Id,
+   Guid BookId,
+   int Status
+);
+```
+
+The UI may still display `BookItemId` as the inventory number.
+
 # Loans API
 
 Loans describe the borrowing lifecycle of concrete BookItems.
@@ -107,6 +123,66 @@ Cancelled = 3
 ```
 
 DTOs expose the status as a numeric API value. The domain still uses the `LoanStatus` enum internally.
+
+Current DTO rule: `InventoryNumber` has been removed from the loan DTOs. The unique physical-copy identity is `BookItemId`. Reader-related loan DTOs now also contain `Email`.
+
+```csharp
+public sealed record ReaderLoanInfoDto(
+   Guid Id,
+   string Firstname,
+   string Lastname,
+   string Email,
+   bool IsActive
+);
+
+public sealed record LoanListItemDto(
+   Guid Id,
+
+   Guid ReaderId,
+   string Firstname,
+   string Lastname,
+
+   Guid BookItemId,
+
+   string Title,
+   string? Subtitle,
+
+   DateTime LoanDate,
+   DateTime DueDate,
+
+   int Status,
+   bool IsOverdue
+);
+
+public sealed record LoanDetailDto(
+   Guid Id,
+
+   Guid ReaderId,
+   string Firstname,
+   string Lastname,
+   string Email,
+
+   Guid BookItemId,
+
+   Guid BookId,
+   string AuthorsText,
+   string Title,
+   string? Subtitle,
+   string Isbn,
+   bool BookIsActive,
+   bool IsAvailableForLoan,
+
+   DateTime LoanDate,
+   DateTime DueDate,
+   DateTime? ReturnedAt,
+
+   int Status,
+   int RenewalCount,
+
+   bool IsOverdue,
+   bool CanRenew
+);
+```
 
 ## Get borrowed loans
 
